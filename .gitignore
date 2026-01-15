@@ -1,0 +1,16 @@
+# Local dev environment
+.direnv/
+.envrc
+
+# Arduino CLI
+.arduino-data/
+.arduino-user/
+arduino-cli.yaml
+
+# Build artifacts
+build/
+out/
+result
+
+# Local config (keep example tracked)
+config.h
