@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "NmraDcc": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1759440844,
-        "narHash": "sha256-pKk/ILiAH4ul4LVjMN+xKFRrHGqVBoLoBe3W63z5e1M=",
-        "owner": "mrrwa",
-        "repo": "NmraDcc",
-        "rev": "17ea5af701e9408953470e37d2f2dbad36389e3f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "mrrwa",
-        "repo": "NmraDcc",
-        "type": "github"
-      }
-    },
     "arduino-indexes": {
       "flake": false,
       "locked": {
@@ -66,7 +50,6 @@
     },
     "root": {
       "inputs": {
-        "NmraDcc": "NmraDcc",
         "arduino-indexes": "arduino-indexes",
         "arduino-nix": "arduino-nix",
         "nixpkgs": "nixpkgs"

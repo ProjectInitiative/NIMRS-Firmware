@@ -15,21 +15,9 @@
       url = "github:clerie/arduino-nix/clerie/arduino-env";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # NmraDcc Library
-    NmraDcc = {
-      url = "github:mrrwa/NmraDcc";
-      flake = false;
-    };
-
-    # WiFiManager
-    WiFiManager = {
-      url = "github:tzapu/WiFiManager";
-      flake = false;
-    };
   };
 
-  outputs = { self, nixpkgs, arduino-indexes, arduino-nix, NmraDcc, WiFiManager, ... }@inputs:
+  outputs = { self, nixpkgs, arduino-indexes, arduino-nix, ... }@inputs:
   let
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
@@ -42,7 +30,7 @@
       {
         # Clean build method using arduino-nix-env
         default = import ./build-with-env.nix {
-          inherit pkgs arduino-nix arduino-indexes NmraDcc WiFiManager;
+          inherit pkgs arduino-nix arduino-indexes;
           src = ./.;
         };
       });
