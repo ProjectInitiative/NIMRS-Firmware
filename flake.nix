@@ -21,9 +21,15 @@
       url = "github:mrrwa/NmraDcc";
       flake = false;
     };
+
+    # WiFiManager
+    WiFiManager = {
+      url = "github:tzapu/WiFiManager";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, arduino-indexes, arduino-nix, NmraDcc, ... }@inputs:
+  outputs = { self, nixpkgs, arduino-indexes, arduino-nix, NmraDcc, WiFiManager, ... }@inputs:
   let
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
@@ -36,7 +42,7 @@
       {
         # Clean build method using arduino-nix-env
         default = import ./build-with-env.nix {
-          inherit pkgs arduino-nix arduino-indexes NmraDcc;
+          inherit pkgs arduino-nix arduino-indexes NmraDcc WiFiManager;
           src = ./.;
         };
       });
@@ -103,7 +109,10 @@
              cp config.example.h config.h
           fi
 
-          # The wrapped arduino-cli already knows where tools and core are.
+          # If the local data dir is empty, we might need to tell it where the nix tools are
+          # or simply rely on the user having run 'arduino-cli core install'
+          # Alternatively, we can use the --additional-urls if needed.
+          
           arduino-cli compile \
             --fqbn esp32:esp32:esp32s3 \
             --output-dir build \
@@ -151,8 +160,11 @@
             echo "------------------------------------------------"
             echo ""
             
-            # Use the wrapped data directory
-            export ARDUINO_DIRECTORIES_DATA=${arduino-cli-wrapped.dataPath}
+            # Setup local writable directories for arduino-cli
+            export ARDUINO_DIRECTORIES_DATA="$PWD/.direnv/arduino/data"
+            export ARDUINO_DIRECTORIES_USER="$PWD/.direnv/arduino/user"
+            
+            mkdir -p "$ARDUINO_DIRECTORIES_DATA" "$ARDUINO_DIRECTORIES_USER"
             
             echo "Commands available:"
             echo "  setup-local-source     : Copy source to .direnv/src/NIMRS-Firmware for dev"
