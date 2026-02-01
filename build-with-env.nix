@@ -1,4 +1,4 @@
-{ pkgs, src, arduino-nix, arduino-indexes, ... }:
+{ pkgs, src, arduino-nix, arduino-indexes, NmraDcc, ... }:
 
 let
   # Create overlays for the Arduino environment
@@ -28,6 +28,10 @@ let
     mkdir -p $out/NIMRS-Firmware
     cp -r ${src}/* $out/NIMRS-Firmware/
     chmod -R +w $out
+
+    # Copy NmraDcc library files directly to sketch directory (Vendor)
+    cp ${NmraDcc}/NmraDcc.h $out/NIMRS-Firmware/
+    cp ${NmraDcc}/NmraDcc.cpp $out/NIMRS-Firmware/
     
     # Ensure config.h exists
     if [ ! -f $out/NIMRS-Firmware/config.h ]; then
@@ -36,8 +40,12 @@ let
   '';
 
 in
-  arduinoEnv.passthru.buildArduinoSketch {
+  (arduinoEnv.passthru.buildArduinoSketch {
     name = "nimrs-firmware";
     src = "${preparedSrc}/NIMRS-Firmware";
     fqbn = "esp32:esp32:esp32s3";
-  }
+  }).overrideAttrs (oldAttrs: {
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [
+      (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
+    ];
+  })
