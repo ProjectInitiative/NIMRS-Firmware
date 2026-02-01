@@ -144,7 +144,7 @@
         default = pkgs.mkShell {
           packages = with pkgs; [
             # Core Arduino tools
-            arduino-cli-wrapped
+            arduino-cli
             # Tools for ESP32 often needed
             python3
             esptool
