@@ -4,6 +4,7 @@
  */
 
 #include "config.h"
+#include "NmraDcc.h"
 
 void setup() {
   Serial.begin(115200);

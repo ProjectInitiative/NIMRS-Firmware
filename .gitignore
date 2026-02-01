@@ -1,6 +1,5 @@
 # Local dev environment
 .direnv/
-.envrc
 
 # Arduino CLI
 .arduino-data/
@@ -14,3 +13,4 @@ result
 
 # Local config (keep example tracked)
 config.h
+vendor/
