@@ -14,3 +14,5 @@ result
 # Local config (keep example tracked)
 config.h
 vendor/
+arduino_data/
+Arduino/

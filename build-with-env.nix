@@ -1,4 +1,4 @@
-{ pkgs, src, arduino-nix, arduino-indexes, NmraDcc, ... }:
+{ pkgs, src, arduino-nix, arduino-indexes, ... }:
 
 let
   # Create overlays for the Arduino environment
@@ -20,7 +20,10 @@ let
     packages = with pkgsWithArduino.arduinoPackages; [
       platforms.esp32.esp32."2.0.14" # Stable version for S3
     ];
-    libraries = [ ]; 
+    libraries = [
+      pkgsWithArduino.arduinoLibraries.NmraDcc."2.0.17"
+      pkgsWithArduino.arduinoLibraries.WiFiManager."2.0.17"
+    ]; 
   };
 
   # Prepare source with config.h and correct directory name
@@ -28,10 +31,6 @@ let
     mkdir -p $out/NIMRS-Firmware
     cp -r ${src}/* $out/NIMRS-Firmware/
     chmod -R +w $out
-
-    # Copy NmraDcc library files directly to sketch directory (Vendor)
-    cp ${NmraDcc}/NmraDcc.h $out/NIMRS-Firmware/
-    cp ${NmraDcc}/NmraDcc.cpp $out/NIMRS-Firmware/
     
     # Ensure config.h exists
     if [ ! -f $out/NIMRS-Firmware/config.h ]; then
