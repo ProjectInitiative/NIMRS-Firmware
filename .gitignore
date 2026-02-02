@@ -16,3 +16,5 @@ config.h
 vendor/
 arduino_data/
 Arduino/
+
+GEMINI.md
