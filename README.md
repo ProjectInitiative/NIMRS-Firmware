@@ -1,7 +1,7 @@
 # NIMRS-21Pin-Decoder Firmware
 
 ## Overview
-This project contains the firmware for the open-source NIMRS-21Pin-Decoder, based on the ESP32-S3 microcontroller. The firmware is built using the Arduino framework on top of ESP-IDF, leveraging a reproducible Nix-based development environment.
+This project contains the firmware for the open-source [NIMRS-21Pin-Decoder](https://github.com/CDFER/NIMRS-21Pin-Decoder), based on the ESP32-S3 microcontroller. The firmware is built using the Arduino framework on top of ESP-IDF, leveraging a reproducible Nix-based development environment.
 
 ## NIMRS-21Pin-Decoder Project Roadmap
 
