@@ -1,0 +1,50 @@
+name: Build Firmware
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+
+    - name: Build Firmware
+      run: nix build
+
+    - name: Prepare Artifacts
+      run: |
+        mkdir -p artifacts
+        cp result/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
+        cp result/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
+        cp result/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
+        cp result/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
+        cp partitions.csv artifacts/partitions.csv
+
+    - name: Upload Nightly Artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: nimrs-firmware-nightly
+        path: artifacts/
+
+    - name: Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/nimrs-firmware.bin
+          artifacts/nimrs-firmware.elf
+          artifacts/partitions.bin
+          artifacts/bootloader.bin
+          artifacts/partitions.csv

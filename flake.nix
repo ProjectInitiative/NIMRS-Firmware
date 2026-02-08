@@ -78,6 +78,11 @@
             echo "Creating config.h from example..."
             cp .direnv/src/NIMRS-Firmware/config.example.h .direnv/src/NIMRS-Firmware/config.h
           fi
+
+          # Ensure partitions.csv exists
+          if [ ! -f ".direnv/src/NIMRS-Firmware/partitions.csv" ]; then
+             echo "Warning: partitions.csv not found in source!"
+          fi
           
           echo "Done. Source is in .direnv/src/NIMRS-Firmware"
         '';
@@ -103,6 +108,9 @@
           
           arduino-cli compile \
             --fqbn esp32:esp32:esp32s3 \
+            --board-options "FlashSize=8M" \
+            --board-options "PartitionScheme=custom" \
+            --build-property "build.partitions=partitions.csv" \
             --output-dir build \
             --warnings all \
             .
@@ -127,7 +135,11 @@
           # Fix permissions on the port (requires sudo)
           sudo chmod 666 "$1"
           
-          arduino-cli upload -p "$1" --fqbn esp32:esp32:esp32s3 .
+          arduino-cli upload -p "$1" \
+            --fqbn esp32:esp32:esp32s3 \
+            --board-options "FlashSize=8M" \
+            --board-options "PartitionScheme=custom" \
+            .
         '';
 
         # Script to monitor firmware
