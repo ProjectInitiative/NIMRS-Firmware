@@ -52,3 +52,25 @@ direnv allow
 setup-local-source
 build-firmware
 ```
+
+## Flashing & Monitoring
+
+### Initial Flashing (Manual Bootloader)
+If the device is blank or stuck in a loop, you may need to manually enter "Download Mode":
+1.  Connect **IO0** (GPIO 0 / BOOT) to **GND**.
+2.  Connect the programmer/Apply Power.
+3.  Run the upload command:
+    ```bash
+    upload-firmware /dev/ttyUSB0
+    ```
+4.  Once the upload starts (or finishes), disconnect IO0 from GND and power cycle the board.
+
+### Serial Monitor
+To monitor the device without triggering the DTR/RTS reset signals (which can hold the chip in reset):
+```bash
+monitor-firmware /dev/ttyUSB0
+```
+This command automatically disables DTR and RTS.
+
+## Architecture
+-   **Platform:** ESP32-S3 (`esp32:esp32:esp32s3`)
