@@ -23,6 +23,7 @@ let
     libraries = [
       pkgsWithArduino.arduinoLibraries.NmraDcc."2.0.17"
       pkgsWithArduino.arduinoLibraries.WiFiManager."2.0.17"
+      pkgsWithArduino.arduinoLibraries.ArduinoJson."7.3.0"
     ]; 
   };
 

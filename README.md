@@ -74,3 +74,12 @@ This command automatically disables DTR and RTS.
 
 ## Architecture
 -   **Platform:** ESP32-S3 (`esp32:esp32:esp32s3`)
+-   **Flash Size:** 8MB (Quad SPI)
+-   **Framework:** Arduino (via `arduino-esp32` core 3.x)
+-   **Partitioning:** Custom 8MB layout (see `partitions.csv`)
+
+### Partition Layout (8MB)
+We use a custom partition table to support large firmware sizes and ample storage for audio files:
+-   **App Slots (2MB x 2):** Two identical partitions (`app0`, `app1`) enable safe A/B Over-The-Air (OTA) updates.
+-   **File System (~3.9MB):** A large `spiffs` partition (mounted as LittleFS) for storing WAV/MP3 files and configuration data.
+-   **NVS (20KB):** Non-volatile storage for WiFi credentials and persistent settings.
