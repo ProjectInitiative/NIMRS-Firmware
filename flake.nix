@@ -112,7 +112,7 @@
         uploadFirmware = pkgs.writeShellScriptBin "upload-firmware" ''
           if [ -z "$1" ]; then
             echo "Usage: upload-firmware <port>"
-            echo "Example: upload-firmware /dev/ttyACM0"
+            echo "Example: upload-firmware /dev/ttyUSB0"
             exit 1
           fi
 
@@ -124,7 +124,27 @@
           echo "Uploading firmware to $1..."
           cd .direnv/src/NIMRS-Firmware
           
+          # Fix permissions on the port (requires sudo)
+          sudo chmod 666 "$1"
+          
           arduino-cli upload -p "$1" --fqbn esp32:esp32:esp32s3 .
+        '';
+
+        # Script to monitor firmware
+        monitorFirmware = pkgs.writeShellScriptBin "monitor-firmware" ''
+          if [ -z "$1" ]; then
+            echo "Usage: monitor-firmware <port>"
+            echo "Example: monitor-firmware /dev/ttyUSB0"
+            exit 1
+          fi
+
+          echo "Starting Serial Monitor on $1..."
+          echo "Note: DTR/RTS are disabled to prevent resetting the board."
+          
+          # Fix permissions on the port (requires sudo)
+          sudo chmod 666 "$1"
+          
+          arduino-cli monitor -p "$1" --config baudrate=115200,dtr=off,rts=off
         '';
 
       in
@@ -141,6 +161,7 @@
             setupLocalSource
             buildFirmware
             uploadFirmware
+            monitorFirmware
           ];
 
           shellHook = ''
@@ -158,6 +179,7 @@
             echo "  setup-local-source     : Copy source to .direnv/src/NIMRS-Firmware for dev"
             echo "  build-firmware         : Build the firmware from .direnv/src/NIMRS-Firmware"
             echo "  upload-firmware <port> : Upload the firmware (e.g. /dev/ttyACM0)"
+            echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
             echo "  nix build              : Clean build of the firmware"
           '';
         };
