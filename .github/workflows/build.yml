@@ -22,15 +22,16 @@ jobs:
           sandbox = false
 
     - name: Build Firmware
-      run: nix build
+      run: nix develop --command build-firmware
 
     - name: Prepare Artifacts
       run: |
         mkdir -p artifacts
-        cp result/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
-        cp result/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
-        cp result/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
-        cp result/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
+        # build-firmware outputs to build/ directory
+        cp build/*.bin artifacts/nimrs-firmware.bin 2>/dev/null || cp build/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
+        cp build/*.elf artifacts/nimrs-firmware.elf 2>/dev/null || cp build/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
+        cp build/partitions.bin artifacts/partitions.bin 2>/dev/null || cp build/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
+        cp build/bootloader.bin artifacts/bootloader.bin 2>/dev/null || cp build/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
         cp partitions.csv artifacts/partitions.csv
 
     - name: Upload Nightly Artifact
