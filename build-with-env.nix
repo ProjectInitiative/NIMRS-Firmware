@@ -43,12 +43,6 @@ in
     ];
 
     buildPhase = ''
-      # We need to copy source to a writable directory because arduino-cli creates build/ inside it
-      # and the source from nix store is read-only.
-      mkdir -p build_dir
-      cp -r ./* build_dir/
-      cd build_dir
-
       echo "Building NIMRS Firmware..."
       ${import ./build-command.nix { outputDir = "$out"; }}
     '';
