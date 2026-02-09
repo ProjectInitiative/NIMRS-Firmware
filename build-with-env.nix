@@ -20,11 +20,7 @@ let
     packages = with pkgsWithArduino.arduinoPackages; [
       platforms.esp32.esp32."2.0.14" # Stable version for S3
     ];
-    libraries = [
-      pkgsWithArduino.arduinoLibraries.NmraDcc."2.0.17"
-      pkgsWithArduino.arduinoLibraries.WiFiManager."2.0.17"
-      pkgsWithArduino.arduinoLibraries.ArduinoJson."7.3.0"
-    ]; 
+    libraries = import ./common-libs.nix { inherit pkgsWithArduino; };
   };
 
   # Prepare source with config.h and correct directory name
@@ -44,6 +40,13 @@ in
     name = "nimrs-firmware";
     src = "${preparedSrc}/NIMRS-Firmware";
     fqbn = "esp32:esp32:esp32s3";
+    boardOptions = [
+      "FlashSize=8M"
+      "PartitionScheme=default_8MB"
+    ];
+    buildProperties = [
+      "build.partitions=${preparedSrc}/NIMRS-Firmware/partitions.csv"
+    ];
   }).overrideAttrs (oldAttrs: {
     nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [
       (pkgs.python3.withPackages (ps: [ ps.pyserial ]))

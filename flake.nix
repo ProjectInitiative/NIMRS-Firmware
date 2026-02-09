@@ -51,68 +51,33 @@
           ];
         };
 
-        # Wrapped arduino-cli with ESP32 platform
+        # Libraries to link for local dev
+        buildLibs = import ./common-libs.nix { inherit pkgsWithArduino; };
+
+        # Wrapped arduino-cli with ESP32 platform and libraries
         arduino-cli-wrapped = pkgsWithArduino.wrapArduinoCLI {
           packages = with pkgsWithArduino.arduinoPackages; [
              platforms.esp32.esp32."2.0.14"
           ];
+          libraries = buildLibs;
         };
-
-        # Script to setup local source
-        setupLocalSource = pkgs.writeShellScriptBin "setup-local-source" ''
-          echo "Setting up local source in .direnv/src..."
-          mkdir -p .direnv/src
-          if [ -d ".direnv/src/NIMRS-Firmware" ]; then
-            echo "Removing existing source..."
-            rm -rf .direnv/src/NIMRS-Firmware
-          fi
-          
-          # Copy current directory files to the work dir, excluding git and direnv
-          echo "Copying source..."
-          mkdir -p .direnv/src/NIMRS-Firmware
-          rsync -av --exclude '.git' --exclude '.direnv' --exclude '.arduino-data' . .direnv/src/NIMRS-Firmware/
-          chmod -R +w .direnv/src/NIMRS-Firmware
-          
-          # Create config.h
-          if [ ! -f ".direnv/src/NIMRS-Firmware/config.h" ]; then
-            echo "Creating config.h from example..."
-            cp .direnv/src/NIMRS-Firmware/config.example.h .direnv/src/NIMRS-Firmware/config.h
-          fi
-
-          # Ensure partitions.csv exists
-          if [ ! -f ".direnv/src/NIMRS-Firmware/partitions.csv" ]; then
-             echo "Warning: partitions.csv not found in source!"
-          fi
-          
-          echo "Done. Source is in .direnv/src/NIMRS-Firmware"
-        '';
 
         # Script to build firmware manually
         buildFirmware = pkgs.writeShellScriptBin "build-firmware" ''
-          if [ ! -d ".direnv/src/NIMRS-Firmware" ]; then
-            echo "Error: Local source not found. Run 'setup-local-source' first."
-            exit 1
-          fi
-          
-          echo "Building firmware from .direnv/src/NIMRS-Firmware..."
-          cd .direnv/src/NIMRS-Firmware
+          echo "Building firmware from current directory..."
           
           # Ensure config.h exists
           if [ ! -f "config.h" ]; then
              cp config.example.h config.h
           fi
 
-          # If the local data dir is empty, we might need to tell it where the nix tools are
-          # or simply rely on the user having run 'arduino-cli core install'
-          # Alternatively, we can use the --additional-urls if needed.
-          
           arduino-cli compile \
             --fqbn esp32:esp32:esp32s3 \
             --board-options "FlashSize=8M" \
-            --board-options "PartitionScheme=custom" \
-            --build-property "build.partitions=partitions.csv" \
+            --board-options "PartitionScheme=default_8MB" \
+            --build-property "build.partitions=$PWD/partitions.csv" \
             --output-dir build \
-            --warnings all \
+            --warnings default \
             .
         '';
 
@@ -124,13 +89,7 @@
             exit 1
           fi
 
-          if [ ! -d ".direnv/src/NIMRS-Firmware" ]; then
-            echo "Error: Local source not found. Run 'setup-local-source' first."
-            exit 1
-          fi
-          
           echo "Uploading firmware to $1..."
-          cd .direnv/src/NIMRS-Firmware
           
           # Fix permissions on the port (requires sudo)
           sudo chmod 666 "$1"
@@ -138,7 +97,8 @@
           arduino-cli upload -p "$1" \
             --fqbn esp32:esp32:esp32s3 \
             --board-options "FlashSize=8M" \
-            --board-options "PartitionScheme=custom" \
+            --board-options "PartitionScheme=default_8MB" \
+            --input-dir build \
             .
         '';
 
@@ -163,14 +123,13 @@
       {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            # Core Arduino tools
-            arduino-cli
+            # Core Arduino tools (Wrapped)
+            arduino-cli-wrapped
             # Tools for ESP32 often needed
             python3
             esptool
             
             # Helper scripts
-            setupLocalSource
             buildFirmware
             uploadFirmware
             monitorFirmware
@@ -179,17 +138,15 @@
           shellHook = ''
             echo "NIMRS-Firmware Development Environment (ESP32-S3)"
             echo "------------------------------------------------"
+            echo "Arduino CLI is wrapped with libraries and platform."
             echo ""
             
-            # Setup local writable directories for arduino-cli
-            export ARDUINO_DIRECTORIES_DATA="$PWD/.direnv/arduino/data"
-            export ARDUINO_DIRECTORIES_USER="$PWD/.direnv/arduino/user"
-            
-            mkdir -p "$ARDUINO_DIRECTORIES_DATA" "$ARDUINO_DIRECTORIES_USER"
+            # We do NOT set ARDUINO_DIRECTORIES_... here to avoid breaking the wrapper.
+            # But we might need a user directory for temp files? 
+            # The wrapper typically handles the read-only parts.
             
             echo "Commands available:"
-            echo "  setup-local-source     : Copy source to .direnv/src/NIMRS-Firmware for dev"
-            echo "  build-firmware         : Build the firmware from .direnv/src/NIMRS-Firmware"
+            echo "  build-firmware         : Build the firmware from current directory"
             echo "  upload-firmware <port> : Upload the firmware (e.g. /dev/ttyACM0)"
             echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
             echo "  nix build              : Clean build of the firmware"
