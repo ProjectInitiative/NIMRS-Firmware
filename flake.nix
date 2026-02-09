@@ -98,6 +98,7 @@
             --fqbn esp32:esp32:esp32s3 \
             --board-options "FlashSize=8M" \
             --board-options "PartitionScheme=default_8MB" \
+            --board-options "UploadSpeed=115200" \
             --input-dir build \
             .
         '';
