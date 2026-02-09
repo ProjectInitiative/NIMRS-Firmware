@@ -18,6 +18,8 @@ jobs:
     - uses: cachix/install-nix-action@v25
       with:
         nix_path: nixpkgs=channel:nixos-unstable
+        extra_nix_config: |
+          sandbox = false
 
     - name: Build Firmware
       run: nix build
