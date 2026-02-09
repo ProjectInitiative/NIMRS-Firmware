@@ -1,7 +1,6 @@
 { pkgs, src, arduino-nix, arduino-indexes, ... }:
 
 let
-  # Create overlays for the Arduino environment
   overlays = [
     (arduino-nix.overlay)
     (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_index.json"))
@@ -9,46 +8,53 @@ let
     (arduino-nix.mkArduinoLibraryOverlay (arduino-indexes + "/index/library_index.json"))
   ];
 
-  # Helper to get the package set with the overlays applied
   pkgsWithArduino = import pkgs.path {
     inherit (pkgs) system;
     inherit overlays;
   };
 
-  # Define the Arduino Environment for ESP32
+  # The wrapped environment (executable)
   arduinoEnv = pkgsWithArduino.mkArduinoEnv {
     packages = with pkgsWithArduino.arduinoPackages; [
-      platforms.esp32.esp32."2.0.14" # Stable version for S3
+      platforms.esp32.esp32."2.0.14"
     ];
     libraries = import ./common-libs.nix { inherit pkgsWithArduino; };
   };
 
-  # Prepare source with config.h and correct directory name
+  # Prepare source
   preparedSrc = pkgs.runCommand "nimrs-firmware-src" {} ''
     mkdir -p $out/NIMRS-Firmware
     cp -r ${src}/* $out/NIMRS-Firmware/
     chmod -R +w $out
     
-    # Ensure config.h exists
     if [ ! -f $out/NIMRS-Firmware/config.h ]; then
       cp $out/NIMRS-Firmware/config.example.h $out/NIMRS-Firmware/config.h
     fi
   '';
 
 in
-  (arduinoEnv.passthru.buildArduinoSketch {
+  pkgs.stdenv.mkDerivation {
     name = "nimrs-firmware";
     src = "${preparedSrc}/NIMRS-Firmware";
-    fqbn = "esp32:esp32:esp32s3";
-    boardOptions = [
-      "FlashSize=8M"
-      "PartitionScheme=default_8MB"
-    ];
-    buildProperties = [
-      "build.partitions=${preparedSrc}/NIMRS-Firmware/partitions.csv"
-    ];
-  }).overrideAttrs (oldAttrs: {
-    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [
+
+    nativeBuildInputs = [
+      arduinoEnv
       (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
     ];
-  })
+
+    buildPhase = ''
+      # We need to copy source to a writable directory because arduino-cli creates build/ inside it
+      # and the source from nix store is read-only.
+      mkdir -p build_dir
+      cp -r ./* build_dir/
+      cd build_dir
+
+      echo "Building NIMRS Firmware..."
+      ${import ./build-command.nix { outputDir = "$out"; }}
+    '';
+
+    installPhase = ''
+      # Artifacts are already in $out due to --output-dir
+      echo "Build complete. Artifacts in $out"
+    '';
+  }
