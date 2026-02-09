@@ -76,6 +76,7 @@
             --board-options "FlashSize=8M" \
             --board-options "PartitionScheme=default_8MB" \
             --build-property "build.partitions=$PWD/partitions.csv" \
+            --build-property "upload.maximum_size=2097152" \
             --output-dir build \
             --warnings default \
             .
