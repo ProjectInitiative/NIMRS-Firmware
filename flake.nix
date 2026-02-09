@@ -13,7 +13,6 @@
     # Arduino Nix with Env patch
     arduino-nix = {
       url = "github:clerie/arduino-nix/clerie/arduino-env";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -42,7 +41,7 @@
         
         # Helper to get the package set with overlays
         pkgsWithArduino = import nixpkgs {
-          inherit system;
+          system = pkgs.stdenv.hostPlatform.system;
           overlays = [
             arduino-nix.overlay
             (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_index.json"))
