@@ -18,8 +18,24 @@ jobs:
     - uses: cachix/install-nix-action@v25
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-        extra_nix_config: |
-          sandbox = false
+        # extra_nix_config: |
+        #   sandbox = false
+
+    - name: AppArmor Fix for Bubblewrap
+      run: |
+        # Allow any bwrap binary in the Nix store to use user namespaces
+        cat <<EOF | sudo tee /etc/apparmor.d/bwrap-nix
+        abi <abi/4.0>,
+        include <tunables/global>
+
+        profile bwrap-nix /nix/store/*/bin/bwrap flags=(unconfined) {
+          userns,
+          include if exists <local/bwrap>
+        }
+        EOF
+
+        sudo systemctl reload apparmor
+        echo "AppArmor reloaded."
 
     - name: Build Firmware
       run: nix build
@@ -27,10 +43,11 @@ jobs:
     - name: Prepare Artifacts
       run: |
         mkdir -p artifacts
-        cp result/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
-        cp result/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
-        cp result/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
-        cp result/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
+        # Copy build artifacts from result symlink
+        cp result/*.bin artifacts/nimrs-firmware.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
+        cp result/*.elf artifacts/nimrs-firmware.elf 2>/dev/null || cp result/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
+        cp result/partitions.bin artifacts/partitions.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
+        cp result/bootloader.bin artifacts/bootloader.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
         cp partitions.csv artifacts/partitions.csv
 
     - name: Upload Nightly Artifact
