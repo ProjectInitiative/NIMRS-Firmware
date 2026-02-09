@@ -1,9 +1,10 @@
 #include "MotorController.h"
+#include "Logger.h"
 
 MotorController::MotorController() {}
 
 void MotorController::setup() {
-    Serial.println("MotorController: Initializing...");
+    Log.println("MotorController: Initializing...");
 
     // Setup Pins
     pinMode(_in1Pin, OUTPUT);
@@ -25,15 +26,46 @@ void MotorController::setup() {
     ledcAttachPin(_in2Pin, _pwmChannel2);
 
     _drive(0, true);
-    Serial.println("MotorController: Ready.");
+    Log.println("MotorController: Ready.");
 }
 
 void MotorController::loop() {
     SystemState& state = SystemContext::getInstance().getState();
+    uint8_t targetSpeed = state.speed;
+    bool targetDir = state.direction;
+
+    unsigned long now = millis();
     
-    // In a future version, we would implement momentum here
-    // For now, we drive directly
-    _drive(state.speed, state.direction);
+    uint8_t cv3 = DccController::getInstance().getDcc().getCV(3);
+    uint8_t cv4 = DccController::getInstance().getDcc().getCV(4);
+    
+    if (cv3 == 0) cv3 = 1;
+    if (cv4 == 0) cv4 = 1;
+
+    float accelDelay = cv3 * 3.5f;
+    float decelDelay = cv4 * 3.5f;
+
+    unsigned long dt = now - _lastMomentumUpdate;
+    if (dt < 2) return; 
+    
+    _lastMomentumUpdate = now;
+
+    float accelStep = (float)dt / accelDelay;
+    float decelStep = (float)dt / decelDelay;
+    
+    if (accelStep > 5.0f) accelStep = 5.0f;
+    if (decelStep > 5.0f) decelStep = 5.0f;
+
+    if ((float)targetSpeed > _currentSpeed) {
+        _currentSpeed += accelStep;
+        if (_currentSpeed > targetSpeed) _currentSpeed = targetSpeed;
+    } 
+    else if ((float)targetSpeed < _currentSpeed) {
+        _currentSpeed -= decelStep;
+        if (_currentSpeed < targetSpeed) _currentSpeed = targetSpeed;
+    }
+
+    _drive((uint8_t)_currentSpeed, targetDir);
 }
 
 void MotorController::setGain(bool high) {
@@ -41,11 +73,6 @@ void MotorController::setGain(bool high) {
 }
 
 void MotorController::_drive(uint8_t speed, bool direction) {
-    // DRV8213 Logic (PWM Mode):
-    // FWD: IN1 = PWM, IN2 = LOW
-    // REV: IN1 = LOW, IN2 = PWM
-    // COAST: IN1 = LOW, IN2 = LOW
-    
     if (speed == 0) {
         ledcWrite(_pwmChannel1, 0);
         ledcWrite(_pwmChannel2, 0);
