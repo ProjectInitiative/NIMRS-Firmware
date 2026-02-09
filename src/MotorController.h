@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "SystemContext.h"
+#include "DccController.h"
 
 class MotorController {
 public:
@@ -24,6 +25,10 @@ private:
     const uint8_t _pwmResolution = 8;
     const uint8_t _pwmChannel1 = 0;
     const uint8_t _pwmChannel2 = 1;
+
+    // Momentum State
+    float _currentSpeed = 0.0f; // Float for smooth integration
+    unsigned long _lastMomentumUpdate = 0;
 
     void _drive(uint8_t speed, bool direction);
 };

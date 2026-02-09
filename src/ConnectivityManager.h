@@ -7,6 +7,7 @@
 #include <WiFiManager.h>
 #include <LittleFS.h>
 #include "SystemContext.h"
+#include "Logger.h"
 
 class ConnectivityManager {
 public:
