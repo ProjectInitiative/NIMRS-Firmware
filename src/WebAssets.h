@@ -56,8 +56,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     <br>
                     <div class="card" style="margin-top: 10px;">
                         <h3>Motor Control</h3>
-                        <label>Speed: <span id="speed-display">0</span></label>
-                        <input type="range" id="speed-slider" min="0" max="255" value="0" style="width:100%" onchange="setSpeed(this.value)" oninput="document.getElementById('speed-display').innerText=this.value">
+                        <label>Speed Step: <span id="speed-display">0</span>/126</label>
+                        <input type="range" id="speed-slider" min="0" max="126" value="0" style="width:100%" onchange="setSpeed(this.value)" oninput="document.getElementById('speed-display').innerText=this.value">
                         <br><br>
                         <label>Direction: 
                             <button id="dir-btn" class="btn" onclick="toggleDir()">FWD</button>

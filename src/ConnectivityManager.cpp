@@ -63,7 +63,11 @@ void ConnectivityManager::setup() {
         
         // Use the configured address from NmraDcc, not just the last packet address
         doc["address"] = DccController::getInstance().getDcc().getAddr();
-        doc["speed"] = state.speed;
+        
+        // Map internal 0-255 speed to DCC 0-126 steps for UI display
+        uint8_t dccSpeed = map(state.speed, 0, 255, 0, 126);
+        doc["speed"] = dccSpeed;
+        
         doc["direction"] = state.direction ? "forward" : "reverse";
         doc["wifi"] = state.wifiConnected;
         doc["uptime"] = millis() / 1000;
@@ -276,8 +280,10 @@ void ConnectivityManager::handleControl() {
         state.functions[0] = !state.functions[0];
         Log.printf("Web: Lights %s\n", state.functions[0] ? "ON" : "OFF");
     } else if (action == "set_speed") {
-        state.speed = doc["value"];
-        Log.printf("Web: Speed %d\n", state.speed);
+        int val = doc["value"];
+        // Map 0-126 (DCC steps) to 0-255 (PWM)
+        state.speed = map(val, 0, 126, 0, 255);
+        Log.printf("Web: Speed Step %d -> PWM %d\n", val, state.speed);
     } else if (action == "set_direction") {
         state.direction = doc["value"];
         Log.printf("Web: Dir %s\n", state.direction ? "FWD" : "REV");
