@@ -74,6 +74,7 @@ void notifyCVResetFactoryDefault() {
 
 uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
     Log.printf("DCC: Write CV%d = %d\n", CV, Value);
+    EEPROM.write(CV, Value);
     EEPROM.commit();
     return Value;
 }
