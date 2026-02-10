@@ -17,8 +17,7 @@ LightingController lightingController;
 
 void setup() {
     // 1. Initialize Logging (Sets up Serial)
-    Log.begin(115200);
-    
+    // Log.begin(115200);
     Log.println("\n\nNIMRS Decoder Starting...");
 
     // 2. Connectivity (WiFi, Web, Filesystem)
@@ -55,6 +54,9 @@ void loop() {
         // Log status every second
         Log.debug("Status: Spd=%d Dir=%d WiFi=%d F0=%d F1=%d\n", 
             state.speed, state.direction, state.wifiConnected, state.functions[0], state.functions[1]);
+            
+        // Debug: Check if pin is toggling
+        Log.printf("DCC Pin %d State: %d\n", DCC_PIN, digitalRead(DCC_PIN));
     }
 }
 
