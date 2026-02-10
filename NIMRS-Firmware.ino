@@ -52,7 +52,7 @@ void loop() {
         
         SystemState& state = SystemContext::getInstance().getState();
         // Log status every second
-        Log.printf("Status: Spd=%d Dir=%d WiFi=%d F0=%d F1=%d\n", 
+        Log.debug("Status: Spd=%d Dir=%d WiFi=%d F0=%d F1=%d\n", 
             state.speed, state.direction, state.wifiConnected, state.functions[0], state.functions[1]);
     }
 }

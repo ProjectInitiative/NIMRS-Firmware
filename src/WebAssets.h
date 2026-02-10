@@ -628,12 +628,11 @@ function pollLogs() {
         .then(r => r.json())
         .then(lines => {
             const viewer = document.getElementById('log-viewer');
-            const wasAtBottom = viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 10;
             
             // Simple replace for now, could be optimized to append only new
             viewer.innerHTML = lines.join('\n');
 
-            if (document.getElementById('auto-scroll').checked && wasAtBottom) {
+            if (document.getElementById('auto-scroll').checked) {
                 viewer.scrollTop = viewer.scrollHeight;
             }
         });
