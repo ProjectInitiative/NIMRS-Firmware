@@ -30,6 +30,7 @@ void setup() {
 
     // 4. DCC Input
     DccController::getInstance().setup();
+    Log.printf("DCC: Configured Pin: %d\n", DCC_PIN);
 
     // 5. Heartbeat Pin
     #ifdef STATUS_LED_PIN
