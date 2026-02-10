@@ -39,6 +39,7 @@ in
 
     nativeBuildInputs = [
       arduinoEnv
+      pkgs.git
       (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
     ];
 
