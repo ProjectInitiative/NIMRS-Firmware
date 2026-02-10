@@ -19,6 +19,16 @@ private:
     WebServer _server;
     HTTPUpdateServer _httpUpdater;
     WiFiManager _wifiManager;
+
+    // File Manager Handlers
+    void handleFileList();
+    void handleFileUpload();
+    void handleFileDelete();
+    void handleStaticFile(); // Catch-all for FS files
+
+    // WiFi Management Handlers
+    void handleWifiSave();
+    void handleWifiReset();
 };
 
 #endif
