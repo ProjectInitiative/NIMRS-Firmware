@@ -287,6 +287,10 @@ void ConnectivityManager::handleControl() {
     } else if (action == "set_direction") {
         state.direction = doc["value"];
         Log.printf("Web: Dir %s\n", state.direction ? "FWD" : "REV");
+    } else if (action == "set_log_level") {
+        int level = doc["value"]; // 0=Debug, 1=Info
+        Log.setLevel((LogLevel)level);
+        Log.printf("Web: Log Level %d\n", level);
     } else {
         _server.send(400, "text/plain", "Unknown action");
         return;

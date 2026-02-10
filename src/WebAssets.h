@@ -120,6 +120,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <section id="logs" class="tab-content">
                 <div class="log-controls">
                     <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+                    <label><input type="checkbox" id="debug-logs" onchange="toggleDebugLogs(this)"> Debug Mode</label>
                     <button class="btn small" onclick="clearLogs()">Clear View</button>
                 </div>
                 <div id="log-viewer" class="terminal"></div>
@@ -640,6 +641,11 @@ function pollLogs() {
 
 function clearLogs() {
     document.getElementById('log-viewer').innerHTML = '';
+}
+
+function toggleDebugLogs(el) {
+    // 0 = DEBUG, 1 = INFO
+    sendAction('set_log_level', el.checked ? 0 : 1);
 }
 
 // Utils
