@@ -22,7 +22,7 @@
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     
     # Get git hash from flake input
-    gitHash = if (self ? rev) then (builtins.substring 0 7 self.rev) else "dirty";
+    gitHash = self.shortRev or "dirty";
   in
   {
     packages = forAllSystems (system:
@@ -125,6 +125,8 @@
             # Tools for ESP32 often needed
             python3
             esptool
+            # Ensure git is available for build script
+            git
             
             # Helper scripts
             buildFirmware
