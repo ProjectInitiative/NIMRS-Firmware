@@ -69,7 +69,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <!-- CV Tab -->
             <section id="cvs" class="tab-content">
                 <div class="card">
-                    <h3>CV Configuration</h3>
+                    <h3>CV Configuration <button class="btn small" onclick="loadAllCVs()">Refresh</button></h3>
                     <table id="cv-table">
                         <thead><tr><th>CV</th><th>Description</th><th>Value</th><th>Action</th></tr></thead>
                         <tbody></tbody>
@@ -469,15 +469,19 @@ function renderCVTable() {
         tr.innerHTML = `
             <td>${item.cv}</td>
             <td>${item.desc}</td>
-            <td><input type="number" id="cv-val-${item.cv}" style="width:60px"></td>
+            <td><input type="number" id="cv-val-${item.cv}" style="width:60px" placeholder="?"></td>
             <td>
-                <button class="btn small" onclick="readCV(${item.cv})">R</button>
-                <button class="btn small" onclick="writeCV(${item.cv})">W</button>
+                <button class="btn small" onclick="writeCV(${item.cv})">Save</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
     cvListRendered = true;
+    loadAllCVs();
+}
+
+function loadAllCVs() {
+    COMMON_CVS.forEach(item => readCV(item.cv));
 }
 
 function readCV(cv) {
@@ -510,8 +514,12 @@ function doWriteCV(cv, val) {
         body: JSON.stringify({ cmd: 'write', cv: cv, value: val })
     })
     .then(r => {
-        if (r.ok) alert(`CV${cv} Written`);
-        else alert("Write Failed");
+        if (r.ok) {
+            // Optional: visual feedback?
+            alert(`CV${cv} Saved`); 
+        } else {
+            alert("Write Failed");
+        }
     });
 }
 
