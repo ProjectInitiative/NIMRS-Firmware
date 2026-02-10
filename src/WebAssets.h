@@ -63,6 +63,13 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                             <button id="dir-btn" class="btn" onclick="toggleDir()">FWD</button>
                         </label>
                     </div>
+
+                    <div class="card" style="margin-top: 10px;">
+                        <h3>Functions</h3>
+                        <div id="func-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px;">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -349,6 +356,7 @@ const COMMON_CVS = [
 document.addEventListener('DOMContentLoaded', () => {
     // Determine initial tab (maybe from hash)
     showTab('dashboard');
+    renderFunctions();
 
     // Start polling status
     pollStatus();
@@ -357,6 +365,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup File Upload
     document.getElementById('upload-form').addEventListener('submit', handleUpload);
 });
+
+function renderFunctions() {
+    const grid = document.getElementById('func-grid');
+    if(!grid) return;
+    grid.innerHTML = '';
+    for(let i=0; i<=28; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'btn small';
+        btn.id = `f${i}-btn`;
+        btn.innerText = `F${i}`;
+        btn.style.backgroundColor = '#444';
+        btn.onclick = () => toggleFunc(i);
+        grid.appendChild(btn);
+    }
+}
+
+function toggleFunc(i) {
+    const btn = document.getElementById(`f${i}-btn`);
+    const newState = !btn.classList.contains('active-func');
+    // Optimistic update
+    updateFuncBtn(i, newState);
+    
+    sendAction('set_function', newState, i);
+}
+
+function updateFuncBtn(i, active) {
+    const btn = document.getElementById(`f${i}-btn`);
+    if(!btn) return;
+    if(active) {
+        btn.classList.add('active-func');
+        btn.style.backgroundColor = 'var(--primary-color)';
+        btn.style.color = '#000';
+    } else {
+        btn.classList.remove('active-func');
+        btn.style.backgroundColor = '#444';
+        btn.style.color = '#fff';
+    }
+}
 
 function showTab(tabId) {
     // Update Nav
@@ -403,14 +449,12 @@ function pollStatus() {
             document.getElementById('dcc-address').innerText = data.address || '--';
             document.getElementById('dcc-speed').innerText = data.speed || '0';
             
-            const dirStr = data.direction; // "forward" or "reverse" ? No, boolean in earlier code, but string in API?
-            // Wait, API sends: doc["direction"] = state.direction ? "forward" : "reverse";
+            const dirStr = data.direction; 
             document.getElementById('dcc-direction').innerText = dirStr;
             
             document.getElementById('uptime').innerText = formatUptime(data.uptime);
             
             // Sync controls
-            // Only update slider if not dragging? Simple check: active element
             if (document.activeElement.id !== 'speed-slider') {
                 document.getElementById('speed-slider').value = data.speed;
                 document.getElementById('speed-display').innerText = data.speed;
@@ -419,7 +463,14 @@ function pollStatus() {
             const isFwd = (dirStr === "forward");
             const btn = document.getElementById('dir-btn');
             btn.innerText = isFwd ? "FWD" : "REV";
-            btn.dataset.dir = isFwd; // store boolean
+            btn.dataset.dir = isFwd; 
+            
+            // Sync Functions
+            if (data.functions) {
+                data.functions.forEach((state, idx) => {
+                    updateFuncBtn(idx, state);
+                });
+            }
             
             // System tab detail
             document.getElementById('wifi-details').innerText = `Connected: ${data.wifi ? 'Yes' : 'No'}`;
@@ -432,9 +483,10 @@ function pollStatus() {
         });
 }
 
-function sendAction(action, value) {
+function sendAction(action, value, index) {
     const payload = { action };
     if (value !== undefined) payload.value = value;
+    if (index !== undefined) payload.index = index;
 
     fetch('/api/control', { 
         method: 'POST', 

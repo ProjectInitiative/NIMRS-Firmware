@@ -74,6 +74,9 @@ void ConnectivityManager::setup() {
         doc["version"] = BUILD_VERSION;
         doc["hash"] = GIT_HASH;
 
+        JsonArray funcs = doc["functions"].to<JsonArray>();
+        for(int i=0; i<29; i++) funcs.add(state.functions[i]);
+
         String output;
         serializeJson(doc, output);
         _server.send(200, "application/json", output);
@@ -279,6 +282,13 @@ void ConnectivityManager::handleControl() {
     } else if (action == "toggle_lights") {
         state.functions[0] = !state.functions[0];
         Log.printf("Web: Lights %s\n", state.functions[0] ? "ON" : "OFF");
+    } else if (action == "set_function") {
+        int idx = doc["index"];
+        bool val = doc["value"];
+        if(idx >= 0 && idx < 29) {
+            state.functions[idx] = val;
+            Log.printf("Web: F%d %s\n", idx, val ? "ON" : "OFF");
+        }
     } else if (action == "set_speed") {
         int val = doc["value"];
         // Map 0-126 (DCC steps) to 0-255 (PWM)
