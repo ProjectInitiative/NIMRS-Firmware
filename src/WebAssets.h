@@ -623,6 +623,7 @@ function performDelete(filename) {
 }
 
 // --- Logs ---
+let clearedTimestamp = 0;
 
 function pollLogs() {
     fetch('/api/logs')
@@ -630,8 +631,16 @@ function pollLogs() {
         .then(lines => {
             const viewer = document.getElementById('log-viewer');
             
-            // Simple replace for now, could be optimized to append only new
-            viewer.innerHTML = lines.join('\n');
+            // Filter logs based on cleared timestamp
+            const newLines = lines.filter(line => {
+                const match = line.match(/^\[(\d+)\]/);
+                if (match) {
+                    return parseInt(match[1]) > clearedTimestamp;
+                }
+                return true; 
+            });
+
+            viewer.innerHTML = newLines.join('\n');
 
             if (document.getElementById('auto-scroll').checked) {
                 viewer.scrollTop = viewer.scrollHeight;
@@ -640,7 +649,18 @@ function pollLogs() {
 }
 
 function clearLogs() {
-    document.getElementById('log-viewer').innerHTML = '';
+    fetch('/api/logs')
+        .then(r => r.json())
+        .then(lines => {
+            if (lines.length > 0) {
+                const lastLine = lines[lines.length - 1];
+                const match = lastLine.match(/^\[(\d+)\]/);
+                if (match) {
+                    clearedTimestamp = parseInt(match[1]);
+                }
+            }
+            document.getElementById('log-viewer').innerHTML = '';
+        });
 }
 
 function toggleDebugLogs(el) {
