@@ -117,12 +117,30 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     <h3>WiFi Settings</h3>
                     <p>Update WiFi credentials. The device will restart.</p>
                     <form id="wifi-form" onsubmit="saveWifi(event)">
-                        <label>SSID: <input type="text" id="wifi-ssid" required></label><br>
-                        <label>Pass: <input type="password" id="wifi-pass" required></label><br><br>
+                        <label>SSID: 
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="wifi-ssid" required style="flex-grow:1;">
+                                <button type="button" class="btn small" onclick="scanWifi()">Scan</button>
+                            </div>
+                        </label>
+                        <div id="scan-results" style="display:none; margin: 10px 0; border: 1px solid #444; padding: 5px;"></div>
+                        <br>
+                        <label>Pass: 
+                            <div style="display:flex; gap:5px;">
+                                <input type="password" id="wifi-pass" required style="flex-grow:1;">
+                                <button type="button" class="btn small" onclick="togglePass()">Show</button>
+                            </div>
+                        </label><br><br>
                         <button type="submit" class="btn primary">Save & Connect</button>
                     </form>
                     <br>
                     <button class="btn danger" onclick="resetWifi()">Reset to Access Point</button>
+                </div>
+
+                <div class="card">
+                   <h3>System Info</h3>
+                   <p>Version: <span id="sys-version">--</span></p>
+                   <p>Build: <span id="sys-hash">--</span></p>
                 </div>
             </section>
         </main>

@@ -29,6 +29,7 @@ private:
     // WiFi Management Handlers
     void handleWifiSave();
     void handleWifiReset();
+    void handleWifiScan();
 };
 
 #endif

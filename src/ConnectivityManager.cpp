@@ -2,6 +2,14 @@
 #include "WebAssets.h"
 #include <ArduinoJson.h>
 
+#ifndef BUILD_VERSION
+#define BUILD_VERSION "dev"
+#endif
+
+#ifndef GIT_HASH
+#define GIT_HASH "unknown"
+#endif
+
 ConnectivityManager::ConnectivityManager() : _server(80) {}
 
 void ConnectivityManager::setup() {
@@ -57,6 +65,8 @@ void ConnectivityManager::setup() {
         doc["direction"] = state.direction ? "forward" : "reverse";
         doc["wifi"] = state.wifiConnected;
         doc["uptime"] = millis() / 1000;
+        doc["version"] = BUILD_VERSION;
+        doc["hash"] = GIT_HASH;
 
         String output;
         serializeJson(doc, output);
@@ -84,6 +94,7 @@ void ConnectivityManager::setup() {
     // API: WiFi Management
     _server.on("/api/wifi/save", HTTP_POST, [this]() { handleWifiSave(); });
     _server.on("/api/wifi/reset", HTTP_POST, [this]() { handleWifiReset(); });
+    _server.on("/api/wifi/scan", HTTP_GET, [this]() { handleWifiScan(); });
 
     // OTA Updater
     _httpUpdater.setup(&_server, "/update");
@@ -205,6 +216,25 @@ void ConnectivityManager::handleWifiSave() {
     
     delay(1000);
     ESP.restart();
+}
+
+void ConnectivityManager::handleWifiScan() {
+    Log.println("Scanning WiFi Networks...");
+    int n = WiFi.scanNetworks();
+    
+    JsonDocument doc;
+    JsonArray array = doc.to<JsonArray>();
+    
+    for (int i = 0; i < n; ++i) {
+        JsonObject obj = array.add<JsonObject>();
+        obj["ssid"] = WiFi.SSID(i);
+        obj["rssi"] = WiFi.RSSI(i);
+        obj["enc"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+    }
+    
+    String output;
+    serializeJson(doc, output);
+    _server.send(200, "application/json", output);
 }
 
 void ConnectivityManager::handleWifiReset() {
