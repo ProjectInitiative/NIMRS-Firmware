@@ -20,6 +20,9 @@
   let
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+    
+    # Get git hash from flake input
+    gitHash = if (self ? rev) then (builtins.substring 0 7 self.rev) else "dirty";
   in
   {
     packages = forAllSystems (system:
@@ -30,6 +33,7 @@
         # Clean build method using arduino-nix-env
         default = import ./build-with-env.nix {
           inherit pkgs arduino-nix arduino-indexes;
+          inherit gitHash;
           src = ./.;
         };
       });

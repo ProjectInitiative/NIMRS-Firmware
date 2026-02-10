@@ -1,4 +1,4 @@
-{ pkgs, src, arduino-nix, arduino-indexes, ... }:
+{ pkgs, src, arduino-nix, arduino-indexes, gitHash ? "unknown", ... }:
 
 let
   overlays = [
@@ -42,6 +42,9 @@ in
       pkgs.git
       (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
     ];
+    
+    # Pass git hash if provided
+    GIT_HASH_ENV = gitHash;
 
     buildPhase = ''
       echo "Building NIMRS Firmware..."
