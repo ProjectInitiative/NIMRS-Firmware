@@ -15,7 +15,8 @@ void DccController::setup() {
         Log.println("DccController: EEPROM Initialized");
     }
     
-    _dcc.init(MAN_ID_DIY, 10, 0, 0); 
+    // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
+    _dcc.init(MAN_ID_DIY, 10, 0x02, 0); 
     
     Log.printf("DccController: Listening on Pin %d\n", DCC_PIN);
     #else
@@ -55,6 +56,21 @@ void DccController::updateFunction(uint8_t functionIndex, bool active) {
 }
 
 // --- Global Callbacks ---
+
+void notifyCVResetFactoryDefault() {
+    Log.println("DCC: Factory Reset - Writing Defaults...");
+    NmraDcc& dcc = DccController::getInstance().getDcc();
+    
+    dcc.setCV(1, 3);   // Primary Address
+    dcc.setCV(2, 0);   // Vstart
+    dcc.setCV(3, 2);   // Accel
+    dcc.setCV(4, 2);   // Decel
+    dcc.setCV(5, 255); // Vhigh
+    dcc.setCV(6, 128); // Vmid
+    dcc.setCV(29, 6);  // Config (28/128 steps, analog enabled)
+    
+    Log.println("DCC: Factory Reset Complete");
+}
 
 uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
     Log.printf("DCC: Write CV%d = %d\n", CV, Value);
