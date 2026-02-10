@@ -61,7 +61,8 @@ void ConnectivityManager::setup() {
         SystemState& state = SystemContext::getInstance().getState();
         JsonDocument doc;
         
-        doc["address"] = state.dccAddress;
+        // Use the configured address from NmraDcc, not just the last packet address
+        doc["address"] = DccController::getInstance().getDcc().getAddr();
         doc["speed"] = state.speed;
         doc["direction"] = state.direction ? "forward" : "reverse";
         doc["wifi"] = state.wifiConnected;
