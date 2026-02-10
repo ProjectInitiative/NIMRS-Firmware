@@ -80,23 +80,39 @@
         # Script to upload firmware
         uploadFirmware = pkgs.writeShellScriptBin "upload-firmware" ''
           if [ -z "$1" ]; then
-            echo "Usage: upload-firmware <port>"
-            echo "Example: upload-firmware /dev/ttyUSB0"
+            echo "Usage: upload-firmware <port|IP>"
+            echo "Example Serial: upload-firmware /dev/ttyUSB0"
+            echo "Example OTA:    upload-firmware 192.168.1.100"
             exit 1
           fi
 
-          echo "Uploading firmware to $1..."
-          
-          # Fix permissions on the port (requires sudo)
-          sudo chmod 666 "$1"
-          
-          arduino-cli upload -p "$1" \
-            --fqbn esp32:esp32:esp32s3 \
-            --board-options "FlashSize=8M" \
-            --board-options "PartitionScheme=default_8MB" \
-            --board-options "UploadSpeed=115200" \
-            --input-dir build \
-            .
+          TARGET="$1"
+
+          if [[ "$TARGET" == /dev/* ]]; then
+              echo "Uploading via Serial to $TARGET..."
+              
+              # Fix permissions on the port (requires sudo)
+              sudo chmod 666 "$TARGET"
+              
+              arduino-cli upload -p "$TARGET" \
+                --fqbn esp32:esp32:esp32s3 \
+                --board-options "FlashSize=8M" \
+                --board-options "PartitionScheme=default_8MB" \
+                --board-options "UploadSpeed=115200" \
+                --input-dir build \
+                .
+          else
+              echo "Uploading via OTA to $TARGET..."
+              BIN_FILE="build/NIMRS-Firmware.ino.bin"
+              
+              if [ ! -f "$BIN_FILE" ]; then
+                  echo "Error: Binary not found at $BIN_FILE. Run build-firmware first."
+                  exit 1
+              fi
+
+              curl --progress-bar -F "update=@$BIN_FILE" "http://$TARGET/update" | cat
+              echo -e "\nDone."
+          fi
         '';
 
         # Script to monitor firmware
@@ -127,6 +143,8 @@
             esptool
             # Ensure git is available for build script
             git
+            # For OTA upload
+            curl
             
             # Helper scripts
             buildFirmware
@@ -146,7 +164,7 @@
             
             echo "Commands available:"
             echo "  build-firmware         : Build the firmware from current directory"
-            echo "  upload-firmware <port> : Upload the firmware (e.g. /dev/ttyACM0)"
+            echo "  upload-firmware <port> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
             echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
             echo "  nix build              : Clean build of the firmware"
           '';
