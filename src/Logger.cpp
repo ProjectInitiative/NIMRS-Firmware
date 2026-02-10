@@ -60,6 +60,39 @@ size_t Logger::printf(const char *format, ...) {
     return len;
 }
 
+void Logger::debug(const char *format, ...) {
+    if (_minLevel > LOG_DEBUG) return;
+
+    char loc_buf[64];
+    char * temp = loc_buf;
+    va_list arg;
+    va_list copy;
+    va_start(arg, format);
+    va_copy(copy, arg);
+    int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
+    va_end(copy);
+    if (len < 0) {
+        va_end(arg);
+        return;
+    };
+    if (len >= sizeof(loc_buf)){
+        temp = (char*) malloc(len+1);
+        if (temp == NULL) {
+            va_end(arg);
+            return;
+        }
+        len = vsnprintf(temp, len+1, format, arg);
+    }
+    va_end(arg);
+    
+    // Write
+    write((uint8_t*)temp, len);
+    
+    if (temp != loc_buf){
+        free(temp);
+    }
+}
+
 void Logger::_addToBuffer(const String& line) {
     // Add timestamp
     String entry = "[" + String(millis()) + "] " + line;
