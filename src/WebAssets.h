@@ -288,11 +288,13 @@ th { color: #888; }
     color: #0f0;
     font-family: monospace;
     height: 400px;
+    min-height: 200px;
     overflow-y: auto;
     padding: 10px;
     border-radius: 4px;
     border: 1px solid #333;
     white-space: pre-wrap;
+    resize: vertical;
 }
 .log-controls { margin-bottom: 5px; display: flex; justify-content: space-between; }
 )rawliteral";
