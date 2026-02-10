@@ -128,7 +128,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         <label>Pass: 
                             <div style="display:flex; gap:5px;">
                                 <input type="password" id="wifi-pass" required style="flex-grow:1;">
-                                <button type="button" class="btn small" onclick="togglePass()">Show</button>
+                                <button type="button" class="btn small" onclick="togglePass(this)">Show</button>
                             </div>
                         </label><br><br>
                         <button type="submit" class="btn primary">Save & Connect</button>
@@ -361,6 +361,8 @@ function pollStatus() {
             
             // System tab detail
             document.getElementById('wifi-details').innerText = `Connected: ${data.wifi ? 'Yes' : 'No'}`;
+            if(document.getElementById('sys-version')) document.getElementById('sys-version').innerText = data.version || 'Unknown';
+            if(document.getElementById('sys-hash')) document.getElementById('sys-hash').innerText = data.hash || 'Unknown';
         })
         .catch(e => {
             document.getElementById('connection-status').classList.remove('connected');
@@ -491,6 +493,47 @@ function formatUptime(s) {
 }
 
 // --- WiFi Management ---
+
+function togglePass(btn) {
+    const el = document.getElementById('wifi-pass');
+    if (el.type === "password") {
+        el.type = "text";
+        btn.innerText = "Hide";
+    } else {
+        el.type = "password";
+        btn.innerText = "Show";
+    }
+}
+
+function scanWifi() {
+    const res = document.getElementById('scan-results');
+    res.style.display = 'block';
+    res.innerText = 'Scanning...';
+    
+    fetch('/api/wifi/scan')
+        .then(r => r.json())
+        .then(nets => {
+            res.innerHTML = '';
+            if (nets.length === 0) {
+                res.innerText = "No networks found";
+                return;
+            }
+            nets.forEach(n => {
+                const div = document.createElement('div');
+                div.innerHTML = `<a href="#" onclick="selectNetwork('${n.ssid}')">${n.ssid}</a> (${n.rssi} dBm)`;
+                div.style.padding = "5px";
+                div.style.cursor = "pointer";
+                div.style.borderBottom = "1px solid #333";
+                res.appendChild(div);
+            });
+        })
+        .catch(e => res.innerText = "Scan failed: " + e);
+}
+
+function selectNetwork(ssid) {
+    document.getElementById('wifi-ssid').value = ssid;
+    document.getElementById('scan-results').style.display = 'none';
+}
 
 function saveWifi(e) {
     e.preventDefault();
