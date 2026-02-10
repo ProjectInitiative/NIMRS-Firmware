@@ -58,20 +58,24 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <!-- File Manager Tab -->
             <section id="files" class="tab-content">
                 <div class="file-upload">
-                    <h3>Upload File</h3>
+                    <h3>Upload Files</h3>
                     <form id="upload-form">
-                        <input type="file" id="file-input" required>
-                        <button type="submit" class="btn primary">Upload</button>
+                        <input type="file" id="file-input" multiple required>
+                        <button type="submit" class="btn primary">Upload Selected</button>
                     </form>
                     <div id="upload-status"></div>
                 </div>
 
                 <div class="file-list-container">
                     <h3>Filesystem</h3>
-                    <button class="btn small" onclick="loadFiles()">Refresh</button>
+                    <div class="table-controls">
+                        <button class="btn small" onclick="loadFiles()">Refresh</button>
+                        <button class="btn small danger" onclick="deleteSelected()">Delete Selected</button>
+                    </div>
                     <table id="file-table">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" onclick="toggleAll(this)"></th>
                                 <th>Name</th>
                                 <th>Size</th>
                                 <th>Actions</th>
@@ -364,6 +368,7 @@ function loadFiles() {
             files.forEach(f => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td><input type="checkbox" class="file-check" value="${f.name}"></td>
                     <td>${f.name}</td>
                     <td>${f.size}</td>
                     <td>
@@ -376,44 +381,65 @@ function loadFiles() {
         });
 }
 
-function handleUpload(e) {
+function toggleAll(source) {
+    document.querySelectorAll('.file-check').forEach(c => c.checked = source.checked);
+}
+
+async function handleUpload(e) {
     e.preventDefault();
     const input = document.getElementById('file-input');
-    if (!input.files.length) return;
-
-    const file = input.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
+    const files = input.files;
+    if (!files.length) return;
 
     const statusDiv = document.getElementById('upload-status');
-    statusDiv.innerText = "Uploading...";
+    statusDiv.innerText = "Starting upload...";
 
-    fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(r => {
-        if (r.ok) {
-            statusDiv.innerText = "Upload Complete!";
-            loadFiles();
-            input.value = ''; // Reset
-        } else {
-            statusDiv.innerText = "Upload Failed: " + r.statusText;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        statusDiv.innerText = `Uploading ${i+1}/${files.length}: ${file.name}...`;
+        
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const r = await fetch('/api/files/upload', {
+                method: 'POST',
+                body: formData
+            });
+            if (!r.ok) throw new Error(r.statusText);
+        } catch (err) {
+            statusDiv.innerText = `Error uploading ${file.name}: ${err}`;
+            return;
         }
-    })
-    .catch(err => {
-        statusDiv.innerText = "Error: " + err;
-    });
+    }
+
+    statusDiv.innerText = "All uploads complete!";
+    input.value = ''; 
+    loadFiles();
 }
 
 function deleteFile(filename) {
     if (!confirm(`Delete ${filename}?`)) return;
+    performDelete(filename).then(() => loadFiles());
+}
 
-    fetch('/api/files/delete', {
-        method: 'POST', // or DELETE
+async function deleteSelected() {
+    const checked = document.querySelectorAll('.file-check:checked');
+    if (!checked.length) return alert("No files selected");
+    if (!confirm(`Delete ${checked.length} files?`)) return;
+
+    for (const c of checked) {
+        await performDelete(c.value);
+    }
+    loadFiles();
+}
+
+function performDelete(filename) {
+    return fetch('/api/files/delete', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `path=/${filename}`
-    }).then(() => loadFiles());
+    });
 }
 
 // --- Logs ---
