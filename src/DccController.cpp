@@ -18,6 +18,9 @@ void DccController::setup() {
     // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
     _dcc.init(MAN_ID_DIY, 10, 0x02, 0); 
     
+    // Enable internal pullup (1) - Mandatory for Optocoupler circuits!
+    _dcc.pin(0, DCC_PIN, 1);
+    
     Log.printf("DccController: Listening on Pin %d\n", DCC_PIN);
     #else
     Log.println("DccController: Error - DCC_PIN not defined!");
@@ -94,8 +97,8 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed, DCC_DI
     state.direction = direction;
     state.lastDccPacketTime = millis();
     
-    // Optional: Log every speed packet? Too noisy.
-    // Log.printf("DCC Packet: Addr %d Spd %d\n", Addr, Speed);
+    // Log packet for debug
+    Log.debug("DCC Packet: Addr %d Spd %d\n", Addr, Speed);
 }
 
 void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp, uint8_t FuncState) {
@@ -127,4 +130,10 @@ void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp, uint
         }
     }
     // Log function updates could be useful here if we want to trace all packets
+}
+
+void notifyDccMsg(DCC_MSG * Msg) {
+    // Only log if debug is enabled to avoid crashing the web UI with 8kHz logs!
+    // But useful for verifying signal is being decoded at all.
+    // Log.debug("DCC RAW: %d bytes\n", Msg->Size); 
 }
