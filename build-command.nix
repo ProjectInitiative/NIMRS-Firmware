@@ -6,8 +6,14 @@ if [ ! -f "partitions.csv" ]; then
   exit 1
 fi
 
-# Get Git Info (or fallback)
-GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+# Get Git Info (or fallback to environment variable or "unknown")
+# In Nix build, GIT_HASH_ENV is set. In local shell, we try git command.
+if [ -n "$GIT_HASH_ENV" ] && [ "$GIT_HASH_ENV" != "unknown" ]; then
+  GIT_HASH="$GIT_HASH_ENV"
+else
+  GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+fi
+
 BUILD_VERSION="0.1.0"
 
 echo "Compiling firmware (Version: $BUILD_VERSION, Hash: $GIT_HASH)..."
