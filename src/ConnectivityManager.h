@@ -30,6 +30,10 @@ private:
     void handleWifiSave();
     void handleWifiReset();
     void handleWifiScan();
+
+    // Control Handler
+    void handleControl();
+    void handleCV();
 };
 
 #endif

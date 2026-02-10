@@ -1,5 +1,6 @@
 #include "ConnectivityManager.h"
 #include "WebAssets.h"
+#include "DccController.h"
 #include <ArduinoJson.h>
 
 #ifndef BUILD_VERSION
@@ -95,6 +96,10 @@ void ConnectivityManager::setup() {
     _server.on("/api/wifi/save", HTTP_POST, [this]() { handleWifiSave(); });
     _server.on("/api/wifi/reset", HTTP_POST, [this]() { handleWifiReset(); });
     _server.on("/api/wifi/scan", HTTP_GET, [this]() { handleWifiScan(); });
+
+    // API: Control
+    _server.on("/api/control", HTTP_POST, [this]() { handleControl(); });
+    _server.on("/api/cv", HTTP_POST, [this]() { handleCV(); });
 
     // OTA Updater
     _httpUpdater.setup(&_server, "/update");
@@ -218,6 +223,15 @@ void ConnectivityManager::handleWifiSave() {
     ESP.restart();
 }
 
+void ConnectivityManager::handleWifiReset() {
+    Log.println("Resetting WiFi Settings...");
+    _wifiManager.resetSettings();
+    _server.send(200, "text/plain", "WiFi settings reset. Restarting into AP mode...");
+    
+    delay(1000);
+    ESP.restart();
+}
+
 void ConnectivityManager::handleWifiScan() {
     Log.println("Scanning WiFi Networks...");
     int n = WiFi.scanNetworks();
@@ -237,11 +251,65 @@ void ConnectivityManager::handleWifiScan() {
     _server.send(200, "application/json", output);
 }
 
-void ConnectivityManager::handleWifiReset() {
-    Log.println("Resetting WiFi Settings...");
-    _wifiManager.resetSettings();
-    _server.send(200, "text/plain", "WiFi settings reset. Restarting into AP mode...");
+void ConnectivityManager::handleControl() {
+    if (!_server.hasArg("plain")) {
+        _server.send(400, "text/plain", "Body missing");
+        return;
+    }
     
-    delay(1000);
-    ESP.restart();
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, _server.arg("plain"));
+    
+    if (error) {
+        _server.send(400, "text/plain", "Invalid JSON");
+        return;
+    }
+
+    String action = doc["action"];
+    SystemState& state = SystemContext::getInstance().getState();
+    
+    if (action == "stop") {
+        state.speed = 0;
+        Log.println("Web: STOP");
+    } else if (action == "toggle_lights") {
+        state.functions[0] = !state.functions[0];
+        Log.printf("Web: Lights %s\n", state.functions[0] ? "ON" : "OFF");
+    } else if (action == "set_speed") {
+        state.speed = doc["value"];
+        Log.printf("Web: Speed %d\n", state.speed);
+    } else if (action == "set_direction") {
+        state.direction = doc["value"];
+        Log.printf("Web: Dir %s\n", state.direction ? "FWD" : "REV");
+    } else {
+        _server.send(400, "text/plain", "Unknown action");
+        return;
+    }
+    
+    _server.send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
+void ConnectivityManager::handleCV() {
+    if (!_server.hasArg("plain")) {
+        _server.send(400, "text/plain", "Body missing");
+        return;
+    }
+    
+    JsonDocument doc;
+    deserializeJson(doc, _server.arg("plain"));
+    String cmd = doc["cmd"];
+    
+    if (cmd == "read") {
+        int cv = doc["cv"];
+        int val = DccController::getInstance().getDcc().getCV(cv);
+        char buf[32];
+        sprintf(buf, "{\"cv\":%d,\"value\":%d}", cv, val);
+        _server.send(200, "application/json", buf);
+    } else if (cmd == "write") {
+        int cv = doc["cv"];
+        int val = doc["value"];
+        DccController::getInstance().getDcc().setCV(cv, val);
+        _server.send(200, "application/json", "{\"status\":\"ok\"}");
+    } else {
+        _server.send(400, "text/plain", "Unknown cmd");
+    }
 }

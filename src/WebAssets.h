@@ -19,6 +19,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
         <nav>
             <button class="nav-btn active" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="showTab('cvs')">CVs</button>
             <button class="nav-btn" onclick="showTab('files')">Files</button>
             <button class="nav-btn" onclick="showTab('logs')">Logs</button>
             <button class="nav-btn" onclick="showTab('system')">System</button>
@@ -52,6 +53,33 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         <button class="btn danger" onclick="sendAction('stop')">STOP</button>
                         <button class="btn primary" onclick="sendAction('toggle_lights')">Toggle Lights</button>
                     </div>
+                    <br>
+                    <div class="card" style="margin-top: 10px;">
+                        <h3>Motor Control</h3>
+                        <label>Speed: <span id="speed-display">0</span></label>
+                        <input type="range" id="speed-slider" min="0" max="255" value="0" style="width:100%" onchange="setSpeed(this.value)" oninput="document.getElementById('speed-display').innerText=this.value">
+                        <br><br>
+                        <label>Direction: 
+                            <button id="dir-btn" class="btn" onclick="toggleDir()">FWD</button>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CV Tab -->
+            <section id="cvs" class="tab-content">
+                <div class="card">
+                    <h3>CV Configuration</h3>
+                    <table id="cv-table">
+                        <thead><tr><th>CV</th><th>Description</th><th>Value</th><th>Action</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <br>
+                    <h4>Custom CV</h4>
+                    <input type="number" id="custom-cv" placeholder="CV #" style="width:60px">
+                    <input type="number" id="custom-val" placeholder="Value" style="width:60px">
+                    <button class="btn small" onclick="rwCustomCV('read')">Read</button>
+                    <button class="btn small" onclick="rwCustomCV('write')">Write</button>
                 </div>
             </section>
 
@@ -304,6 +332,17 @@ const char APP_JS[] PROGMEM = R"rawliteral(
 let currentTab = 'dashboard';
 let logInterval = null;
 let statusInterval = null;
+let cvListRendered = false;
+
+const COMMON_CVS = [
+    {cv: 1, desc: "Primary Address"},
+    {cv: 2, desc: "Vstart (Min Speed)"},
+    {cv: 3, desc: "Acceleration Rate"},
+    {cv: 4, desc: "Deceleration Rate"},
+    {cv: 5, desc: "Vhigh (Max Speed)"},
+    {cv: 6, desc: "Vmid (Mid Speed)"},
+    {cv: 29, desc: "Configuration Register"}
+];
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -345,6 +384,10 @@ function showTab(tabId) {
     if (tabId === 'files') {
         loadFiles();
     }
+    
+    if (tabId === 'cvs') {
+        renderCVTable();
+    }
 }
 
 // --- API Interactions ---
@@ -358,8 +401,24 @@ function pollStatus() {
             
             document.getElementById('dcc-address').innerText = data.address || '--';
             document.getElementById('dcc-speed').innerText = data.speed || '0';
-            document.getElementById('dcc-direction').innerText = data.direction;
+            
+            const dirStr = data.direction; // "forward" or "reverse" ? No, boolean in earlier code, but string in API?
+            // Wait, API sends: doc["direction"] = state.direction ? "forward" : "reverse";
+            document.getElementById('dcc-direction').innerText = dirStr;
+            
             document.getElementById('uptime').innerText = formatUptime(data.uptime);
+            
+            // Sync controls
+            // Only update slider if not dragging? Simple check: active element
+            if (document.activeElement.id !== 'speed-slider') {
+                document.getElementById('speed-slider').value = data.speed;
+                document.getElementById('speed-display').innerText = data.speed;
+            }
+            
+            const isFwd = (dirStr === "forward");
+            const btn = document.getElementById('dir-btn');
+            btn.innerText = isFwd ? "FWD" : "REV";
+            btn.dataset.dir = isFwd; // store boolean
             
             // System tab detail
             document.getElementById('wifi-details').innerText = `Connected: ${data.wifi ? 'Yes' : 'No'}`;
@@ -372,11 +431,101 @@ function pollStatus() {
         });
 }
 
-function sendAction(action) {
-    // For now, these are just placeholders as the backend API for controls isn't fully defined yet.
-    // We'll use a generic POST endpoint if/when implemented.
-    console.log("Action:", action);
-    // fetch('/api/control', { method: 'POST', body: JSON.stringify({ action }) });
+function sendAction(action, value) {
+    const payload = { action };
+    if (value !== undefined) payload.value = value;
+
+    fetch('/api/control', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload) 
+    })
+    .then(r => {
+        if (!r.ok) console.error("Control failed");
+        else pollStatus(); 
+    });
+}
+
+function setSpeed(val) {
+    sendAction('set_speed', parseInt(val));
+}
+
+function toggleDir() {
+    // Current dir is stored in dataset or inferred from text
+    const btn = document.getElementById('dir-btn');
+    const currentFwd = (btn.innerText === "FWD");
+    sendAction('set_direction', !currentFwd);
+}
+
+// --- CV Management ---
+
+function renderCVTable() {
+    if (cvListRendered) return;
+    const tbody = document.querySelector('#cv-table tbody');
+    tbody.innerHTML = '';
+    
+    COMMON_CVS.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.cv}</td>
+            <td>${item.desc}</td>
+            <td><input type="number" id="cv-val-${item.cv}" style="width:60px"></td>
+            <td>
+                <button class="btn small" onclick="readCV(${item.cv})">R</button>
+                <button class="btn small" onclick="writeCV(${item.cv})">W</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    cvListRendered = true;
+}
+
+function readCV(cv) {
+    fetch('/api/cv', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ cmd: 'read', cv: cv })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const input = document.getElementById(`cv-val-${cv}`);
+        if (input) input.value = data.value;
+        else if (cv === parseInt(document.getElementById('custom-cv').value)) {
+             document.getElementById('custom-val').value = data.value;
+        }
+    });
+}
+
+function writeCV(cv) {
+    const input = document.getElementById(`cv-val-${cv}`);
+    if (!input || input.value === '') return;
+    
+    doWriteCV(cv, parseInt(input.value));
+}
+
+function doWriteCV(cv, val) {
+    fetch('/api/cv', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ cmd: 'write', cv: cv, value: val })
+    })
+    .then(r => {
+        if (r.ok) alert(`CV${cv} Written`);
+        else alert("Write Failed");
+    });
+}
+
+function rwCustomCV(mode) {
+    const cv = parseInt(document.getElementById('custom-cv').value);
+    if (!cv) return;
+    
+    if (mode === 'read') {
+        readCV(cv);
+    } else {
+        const val = parseInt(document.getElementById('custom-val').value);
+        if (isNaN(val)) return;
+        doWriteCV(cv, val);
+    }
 }
 
 // --- File Manager ---
