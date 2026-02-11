@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <deque>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 // Max log lines to keep in RAM
 #define MAX_LOG_LINES 50
@@ -24,6 +26,7 @@ public:
     // Initialize (call in setup)
     void begin(unsigned long baud) {
         Serial.begin(baud);
+        _serialEnabled = true;
         println("Logger: Initialized");
     }
     
@@ -44,10 +47,14 @@ public:
     String getLogsJSON();
 
 private:
-    Logger() {}
+    Logger() {
+        _mutex = xSemaphoreCreateMutex();
+    }
     std::deque<String> _lines;
     String _currentLine; // Buffer for partial writes (print vs println)
     LogLevel _minLevel = LOG_INFO; // Default to INFO to suppress debug noise
+    bool _serialEnabled = false;
+    SemaphoreHandle_t _mutex;
 
     void _addToBuffer(const String& line);
 };

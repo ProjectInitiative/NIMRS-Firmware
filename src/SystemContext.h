@@ -2,6 +2,8 @@
 #define SYSTEM_CONTEXT_H
 
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 struct SystemState {
     uint16_t dccAddress = 3;
@@ -23,9 +25,24 @@ public:
     
     SystemState& getState() { return _state; }
 
+    void lock() { xSemaphoreTake(_mutex, portMAX_DELAY); }
+    void unlock() { xSemaphoreGive(_mutex); }
+
 private:
-    SystemContext() {}
+    SystemContext() {
+        _mutex = xSemaphoreCreateMutex();
+    }
     SystemState _state;
+    SemaphoreHandle_t _mutex;
+};
+
+// Helper macro for scoped lock
+class ScopedLock {
+public:
+    ScopedLock(SystemContext& context) : _ctx(context) { _ctx.lock(); }
+    ~ScopedLock() { _ctx.unlock(); }
+private:
+    SystemContext& _ctx;
 };
 
 #endif

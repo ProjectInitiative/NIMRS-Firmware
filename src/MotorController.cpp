@@ -25,9 +25,16 @@ void MotorController::setup() {
 }
 
 void MotorController::loop() {
-    SystemState& state = SystemContext::getInstance().getState();
-    uint8_t targetSpeed = state.speed;
-    bool reqDirection = state.direction;
+    uint8_t targetSpeed;
+    bool reqDirection;
+
+    {
+        SystemContext& ctx = SystemContext::getInstance();
+        ScopedLock lock(ctx);
+        SystemState& state = ctx.getState();
+        targetSpeed = state.speed;
+        reqDirection = state.direction;
+    }
 
     // Safety Logic:
     // If requested direction differs from current physical direction,

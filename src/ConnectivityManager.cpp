@@ -58,7 +58,9 @@ void ConnectivityManager::setup() {
 
     // API: System Status
     _server.on("/api/status", HTTP_GET, [this]() {
-        SystemState& state = SystemContext::getInstance().getState();
+        SystemContext& ctx = SystemContext::getInstance();
+        ScopedLock lock(ctx);
+        SystemState& state = ctx.getState();
         JsonDocument doc;
         
         // Use the configured address from NmraDcc, not just the last packet address
@@ -274,7 +276,9 @@ void ConnectivityManager::handleControl() {
     }
 
     String action = doc["action"];
-    SystemState& state = SystemContext::getInstance().getState();
+    SystemContext& ctx = SystemContext::getInstance();
+    ScopedLock lock(ctx);
+    SystemState& state = ctx.getState();
     
     if (action == "stop") {
         state.speed = 0;

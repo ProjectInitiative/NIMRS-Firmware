@@ -342,14 +342,22 @@ let logInterval = null;
 let statusInterval = null;
 let cvListRendered = false;
 
-const COMMON_CVS = [
+let trackableCVS = [
     {cv: 1, desc: "Primary Address"},
     {cv: 2, desc: "Vstart (Min Speed)"},
     {cv: 3, desc: "Acceleration Rate"},
     {cv: 4, desc: "Deceleration Rate"},
     {cv: 5, desc: "Vhigh (Max Speed)"},
     {cv: 6, desc: "Vmid (Mid Speed)"},
-    {cv: 29, desc: "Configuration Register"}
+    {cv: 29, desc: "Configuration Register"},
+    {cv: 33, desc: "Front Light Function (0-28)"},
+    {cv: 34, desc: "Rear Light Function (0-28)"},
+    {cv: 35, desc: "AUX 1 Function (0-28)"},
+    {cv: 36, desc: "AUX 2 Function (0-28)"},
+    {cv: 37, desc: "AUX 3 Function (0-28)"},
+    {cv: 38, desc: "AUX 4 Function (0-28)"},
+    {cv: 39, desc: "AUX 5 Function (0-28)"},
+    {cv: 40, desc: "AUX 6 Function (0-28)"}
 ];
 
 // Initialization
@@ -513,16 +521,25 @@ function toggleDir() {
 // --- CV Management ---
 
 function renderCVTable() {
-    if (cvListRendered) return;
     const tbody = document.querySelector('#cv-table tbody');
+    // Capture existing values to avoid losing them on re-render
+    const existingValues = {};
+    document.querySelectorAll('[id^="cv-val-"]').forEach(input => {
+        existingValues[input.id.replace('cv-val-', '')] = input.value;
+    });
+
     tbody.innerHTML = '';
     
-    COMMON_CVS.forEach(item => {
+    // Sort CVs by number
+    trackableCVS.sort((a, b) => a.cv - b.cv);
+
+    trackableCVS.forEach(item => {
         const tr = document.createElement('tr');
+        const val = existingValues[item.cv] || '';
         tr.innerHTML = `
             <td>${item.cv}</td>
             <td>${item.desc}</td>
-            <td><input type="number" id="cv-val-${item.cv}" style="width:60px" placeholder="?"></td>
+            <td><input type="number" id="cv-val-${item.cv}" style="width:60px" value="${val}" placeholder="?"></td>
             <td>
                 <button class="btn small" onclick="writeCV(${item.cv})">Save</button>
             </td>
@@ -530,11 +547,10 @@ function renderCVTable() {
         tbody.appendChild(tr);
     });
     cvListRendered = true;
-    loadAllCVs();
 }
 
 function loadAllCVs() {
-    COMMON_CVS.forEach(item => readCV(item.cv));
+    trackableCVS.forEach(item => readCV(item.cv));
 }
 
 function readCV(cv) {
@@ -545,9 +561,16 @@ function readCV(cv) {
     })
     .then(r => r.json())
     .then(data => {
+        // If this CV isn't in our list, add it
+        if (!trackableCVS.find(c => c.cv === cv)) {
+            trackableCVS.push({cv: cv, desc: "Custom CV"});
+            renderCVTable();
+        }
         const input = document.getElementById(`cv-val-${cv}`);
         if (input) input.value = data.value;
-        else if (cv === parseInt(document.getElementById('custom-cv').value)) {
+        
+        // Also update custom fields if they match
+        if (cv === parseInt(document.getElementById('custom-cv').value)) {
              document.getElementById('custom-val').value = data.value;
         }
     });
@@ -568,7 +591,11 @@ function doWriteCV(cv, val) {
     })
     .then(r => {
         if (r.ok) {
-            // Optional: visual feedback?
+            // If this CV was new, make sure it's in the table
+            if (!trackableCVS.find(c => c.cv === cv)) {
+                trackableCVS.push({cv: cv, desc: "Custom CV"});
+                renderCVTable();
+            }
             alert(`CV${cv} Saved`); 
         } else {
             alert("Write Failed");
