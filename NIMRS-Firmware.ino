@@ -23,12 +23,17 @@ TaskHandle_t ControlPlaneTaskHandle;
 void controlPlaneTask(void *pvParameters) {
     Log.println("ControlPlane: Task started on Core 0");
     
-    // Initialize DCC on Core 0 to ensure interrupt affinity
-    DccController::getInstance().setup();
-    Log.printf("DCC: Configured Pin: %d (Core 0)\n", DCC_PIN);
-
-    for(;;)
- {
+        // Initialize DCC on Core 0 to ensure interrupt affinity
+    
+        DccController::getInstance().setup();
+    
+        Log.printf("DCC: Configured Pin: %d (Core 0)\n", Pinout::TRACK_LEFT_3V3);
+    
+    
+    
+        for(;;) {
+    
+    
         // High priority loops
         DccController::getInstance().loop();
         motorController.loop();

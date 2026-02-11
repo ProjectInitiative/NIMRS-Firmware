@@ -357,7 +357,9 @@ let trackableCVS = [
     {cv: 37, desc: "AUX 3 Function (0-28)"},
     {cv: 38, desc: "AUX 4 Function (0-28)"},
     {cv: 39, desc: "AUX 5 Function (0-28)"},
-    {cv: 40, desc: "AUX 6 Function (0-28)"}
+    {cv: 40, desc: "AUX 6 Function (0-28)"},
+    {cv: 41, desc: "AUX 7 Function (0-28)"},
+    {cv: 42, desc: "AUX 8 Function (0-28)"}
 ];
 
 // Initialization
