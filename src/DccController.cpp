@@ -5,6 +5,9 @@
 
 DccController::DccController() {}
 
+// Forward declaration
+void notifyCVResetFactoryDefault();
+
 void DccController::setup() {
     #ifdef DCC_PIN
     // 1. Setup Pin first so init() knows which interrupt to attach
@@ -17,8 +20,15 @@ void DccController::setup() {
     }
     
     // 2. Initialize library (attaches interrupt)
-    // 0x03 = FLAGS_MY_ADDRESS_ONLY (0x01) | FLAGS_AUTO_FACTORY_DEFAULT (0x02)
-    _dcc.init(MAN_ID_DIY, 10, 0x03, 0); 
+    // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
+    _dcc.init(MAN_ID_DIY, 10, 0x02, 0); 
+    
+    // Force reset to apply corrected F0 mapping
+    // If CV 33 is not 0 (F0), force a reset to standard defaults
+    if (_dcc.getCV(33) != 0) {
+        Log.println("DCC: Restoring standard DCC mapping...");
+        notifyCVResetFactoryDefault();
+    }
     
     Log.printf("DccController: Listening on Pin %d\n", DCC_PIN);
     #else
@@ -46,7 +56,6 @@ void DccController::updateSpeed(uint8_t speed, bool direction) {
         state.lastDccPacketTime = millis();
     }
     
-    // Log outside lock to prevent deadlock
     Log.debug("DCC: Speed Update\n");
 }
 
@@ -63,7 +72,6 @@ void DccController::updateFunction(uint8_t functionIndex, bool active) {
 }
 
 // --- Global Callbacks ---
-volatile unsigned long dccInterruptCount = 0;
 
 void notifyCVResetFactoryDefault() {
     Log.println("DCC: Factory Reset - Writing Defaults...");
@@ -72,15 +80,14 @@ void notifyCVResetFactoryDefault() {
     dcc.setCV(1, 3);   // Primary Address
     dcc.setCV(17, 192); // Long Address MSB
     dcc.setCV(18, 3);   // Long Address LSB
-    dcc.setCV(2, 0);     // Vstart
+    dcc.setCV(2, 60);    // Vstart (Tuned for test motor)
     dcc.setCV(3, 2);     // Accel
     dcc.setCV(4, 2);     // Decel
     dcc.setCV(5, 255);   // Vhigh
     dcc.setCV(6, 128);   // Vmid
-    dcc.setCV(29, 38);   // Config: 28/128 steps, analog enabled, LONG ADDRESS enabled
+    dcc.setCV(29, 38);   // Config: LONG ADDRESS enabled
     
-    // Function Mapping Defaults (CV 33-40)
-    // Value = DCC Function Number (0-28)
+    // Standard DCC Mapping (Output -> Function)
     dcc.setCV(33, 0); // Front Light -> F0
     dcc.setCV(34, 0); // Rear Light  -> F0
     dcc.setCV(35, 1); // AUX 1       -> F1
@@ -118,7 +125,6 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed, DCC_DI
         state.lastDccPacketTime = millis();
     }
     
-    // Log outside lock
     Log.debug("DCC Packet: Addr %d Spd %d\n", Addr, Speed);
 }
 
@@ -153,5 +159,5 @@ void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp, uint
 }
 
 void notifyDccMsg(DCC_MSG * Msg) {
-    // DCC RAW logging disabled to prevent UI flood
+    // DCC RAW logging disabled
 }
