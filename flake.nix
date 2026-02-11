@@ -164,7 +164,7 @@
             
             echo "Commands available:"
             echo "  build-firmware         : Build the firmware from current directory"
-            echo "  upload-firmware <port> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
+            echo "  upload-firmware <port|IP> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
             echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
             echo "  nix build              : Clean build of the firmware"
           '';

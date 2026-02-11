@@ -2,7 +2,7 @@
 #include <ArduinoJson.h>
 
 size_t Logger::write(uint8_t c) {
-    Serial.write(c);
+    if (_serialEnabled) Serial.write(c);
     
     if (c == '\n') {
         _addToBuffer(_currentLine);
@@ -14,7 +14,7 @@ size_t Logger::write(uint8_t c) {
 }
 
 size_t Logger::write(const uint8_t *buffer, size_t size) {
-    Serial.write(buffer, size);
+    if (_serialEnabled) Serial.write(buffer, size);
     
     for (size_t i = 0; i < size; i++) {
         char c = (char)buffer[i];
@@ -94,19 +94,25 @@ void Logger::debug(const char *format, ...) {
 }
 
 void Logger::_addToBuffer(const String& line) {
-    // Add timestamp
-    String entry = "[" + String(millis()) + "] " + line;
-    
-    _lines.push_back(entry);
-    if (_lines.size() > MAX_LOG_LINES) {
-        _lines.pop_front();
+    if (xSemaphoreTake(_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        // Add timestamp
+        String entry = "[" + String(millis()) + "] " + line;
+        
+        _lines.push_back(entry);
+        if (_lines.size() > MAX_LOG_LINES) {
+            _lines.pop_front();
+        }
+        xSemaphoreGive(_mutex);
     }
 }
 
 String Logger::getLogsHTML() {
     String html = "";
-    for (const auto& line : _lines) {
-        html += line + "<br>\n";
+    if (xSemaphoreTake(_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        for (const auto& line : _lines) {
+            html += line + "<br>\n";
+        }
+        xSemaphoreGive(_mutex);
     }
     return html;
 }
@@ -115,8 +121,11 @@ String Logger::getLogsJSON() {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
     
-    for (const auto& line : _lines) {
-        arr.add(line);
+    if (xSemaphoreTake(_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        for (const auto& line : _lines) {
+            arr.add(line);
+        }
+        xSemaphoreGive(_mutex);
     }
     
     String output;

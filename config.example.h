@@ -7,8 +7,8 @@
 #define STATUS_LED_PIN 2
 
 // DCC Input Sensing (Primary)
-// CAUTION: GPIO 0 is a strapping pin. Using it can cause boot loops on some testers.
-// GPIO 1 (TRACK_LEFT) is preferred as it is safe from boot strapping issues.
+// CAUTION: GPIO 0 is a strapping pin and signal appears dead in burst tests.
+// GPIO 1 (TRACK_LEFT) shows active signal and is safe from boot strapping issues.
 #define DCC_PIN 1
 
 // Motor Driver (DRV8213)
