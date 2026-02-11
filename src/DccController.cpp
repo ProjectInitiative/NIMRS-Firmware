@@ -2,6 +2,7 @@
 #include "../config.h"
 #include <EEPROM.h>
 #include "Logger.h"
+#include "nimrs-pinout.h"
 
 DccController::DccController() {}
 
@@ -9,9 +10,8 @@ DccController::DccController() {}
 void notifyCVResetFactoryDefault();
 
 void DccController::setup() {
-    #ifdef DCC_PIN
     // 1. Setup Pin first so init() knows which interrupt to attach
-    _dcc.pin(DCC_PIN, 1);
+    _dcc.pin(Pinout::TRACK_LEFT_3V3, 1);
     
     if (!EEPROM.begin(512)) {
         Log.println("DccController: EEPROM Init Failed!");
@@ -23,17 +23,13 @@ void DccController::setup() {
     // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
     _dcc.init(MAN_ID_DIY, 10, 0x02, 0); 
     
-    // Force reset to apply corrected F0 mapping
-    // If CV 33 is not 0 (F0), force a reset to standard defaults
-    if (_dcc.getCV(33) != 0) {
-        Log.println("DCC: Restoring standard DCC mapping...");
+    // Force Pin Finder Mapping if uninitialized
+    if (_dcc.getCV(35) == 255) {
+        Log.println("DCC: Forcing Default Mapping...");
         notifyCVResetFactoryDefault();
     }
     
-    Log.printf("DccController: Listening on Pin %d\n", DCC_PIN);
-    #else
-    Log.println("DccController: Error - DCC_PIN not defined!");
-    #endif
+    Log.printf("DccController: Listening on Pin %d\n", Pinout::TRACK_LEFT_3V3);
 }
 
 void DccController::loop() {
@@ -56,6 +52,7 @@ void DccController::updateSpeed(uint8_t speed, bool direction) {
         state.lastDccPacketTime = millis();
     }
     
+    // Log outside lock to prevent deadlock
     Log.debug("DCC: Speed Update\n");
 }
 
@@ -85,17 +82,19 @@ void notifyCVResetFactoryDefault() {
     dcc.setCV(4, 2);     // Decel
     dcc.setCV(5, 255);   // Vhigh
     dcc.setCV(6, 128);   // Vmid
-    dcc.setCV(29, 38);   // Config: LONG ADDRESS enabled
+    dcc.setCV(29, 38);   // Config
     
-    // Standard DCC Mapping (Output -> Function)
-    dcc.setCV(33, 0); // Front Light -> F0
-    dcc.setCV(34, 0); // Rear Light  -> F0
-    dcc.setCV(35, 1); // AUX 1       -> F1
-    dcc.setCV(36, 2); // AUX 2       -> F2
-    dcc.setCV(37, 3); // AUX 3       -> F3
-    dcc.setCV(38, 4); // AUX 4       -> F4
-    dcc.setCV(39, 5); // AUX 5       -> F5
-    dcc.setCV(40, 6); // AUX 6       -> F6
+    // Default Mapping (Output -> Function)
+    dcc.setCV(33, 0); // Front -> F0
+    dcc.setCV(34, 0); // Rear  -> F0
+    dcc.setCV(35, 1); // AUX 1 -> F1
+    dcc.setCV(36, 2); // AUX 2 -> F2
+    dcc.setCV(37, 3); // AUX 3 -> F3
+    dcc.setCV(38, 4); // AUX 4 -> F4
+    dcc.setCV(39, 5); // AUX 5 -> F5
+    dcc.setCV(40, 6); // AUX 6 -> F6
+    dcc.setCV(41, 7); // AUX 7 -> F7
+    dcc.setCV(42, 8); // AUX 8 -> F8
     
     Log.println("DCC: Factory Reset Complete");
 }

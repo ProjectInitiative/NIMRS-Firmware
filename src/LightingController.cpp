@@ -2,33 +2,38 @@
 #include "DccController.h"
 #include "Logger.h"
 
+// Set this to true if lights are ON when pin is LOW
+static const bool INVERT_OUTPUTS = false; 
+
 LightingController::LightingController() {}
 
 void LightingController::setup() {
     Log.println("OutputController: Initializing...");
 
-    pinMode(_frontPin, OUTPUT);
-    pinMode(_rearPin, OUTPUT);
-    pinMode(_aux1Pin, OUTPUT);
-    pinMode(_aux2Pin, OUTPUT);
-    pinMode(_aux3Pin, OUTPUT);
-    pinMode(_aux4Pin, OUTPUT);
-    pinMode(_aux5Pin, OUTPUT);
-    pinMode(_aux6Pin, OUTPUT);
-    
-    // Setup Inputs
-    pinMode(_in1Pin, INPUT);
-    pinMode(_in2Pin, INPUT);
+    // Initialize all mapped pins as OUTPUT
+    pinMode(Pinout::LIGHT_FRONT, OUTPUT);
+    pinMode(Pinout::LIGHT_REAR,  OUTPUT);
+    pinMode(Pinout::AUX1,        OUTPUT);
+    pinMode(Pinout::AUX2,        OUTPUT);
+    pinMode(Pinout::AUX3,        OUTPUT);
+    pinMode(Pinout::AUX4,        OUTPUT);
+    pinMode(Pinout::AUX5,        OUTPUT);
+    pinMode(Pinout::AUX6,        OUTPUT);
+    pinMode(Pinout::INPUT1_AUX7, OUTPUT);
+    pinMode(Pinout::INPUT2_AUX8, OUTPUT);
 
-    // All OFF initially
-    digitalWrite(_frontPin, LOW);
-    digitalWrite(_rearPin, LOW);
-    digitalWrite(_aux1Pin, LOW);
-    digitalWrite(_aux2Pin, LOW);
-    digitalWrite(_aux3Pin, LOW);
-    digitalWrite(_aux4Pin, LOW);
-    digitalWrite(_aux5Pin, LOW);
-    digitalWrite(_aux6Pin, LOW);
+    // Default state: OFF
+    uint8_t offVal = INVERT_OUTPUTS ? HIGH : LOW;
+    digitalWrite(Pinout::LIGHT_FRONT, offVal);
+    digitalWrite(Pinout::LIGHT_REAR,  offVal);
+    digitalWrite(Pinout::AUX1,        offVal);
+    digitalWrite(Pinout::AUX2,        offVal);
+    digitalWrite(Pinout::AUX3,        offVal);
+    digitalWrite(Pinout::AUX4,        offVal);
+    digitalWrite(Pinout::AUX5,        offVal);
+    digitalWrite(Pinout::AUX6,        offVal);
+    digitalWrite(Pinout::INPUT1_AUX7, offVal);
+    digitalWrite(Pinout::INPUT2_AUX8, offVal);
 
     Log.println("OutputController: Ready.");
 }
@@ -37,7 +42,6 @@ void LightingController::loop() {
     bool functions[29];
     bool direction;
 
-    // Thread-safe state capture
     {
         SystemContext& ctx = SystemContext::getInstance();
         ScopedLock lock(ctx);
@@ -46,43 +50,39 @@ void LightingController::loop() {
     }
 
     NmraDcc& dcc = DccController::getInstance().getDcc();
+    static bool lastPinState[50] = {false};
 
-    // Read mapping CVs
-    uint8_t f0f_map = dcc.getCV(33); // Front Light
-    uint8_t f0r_map = dcc.getCV(34); // Rear Light
-    uint8_t a1_map  = dcc.getCV(35); // AUX 1
-    uint8_t a2_map  = dcc.getCV(36); // AUX 2
-    uint8_t a3_map  = dcc.getCV(37); // AUX 3
-    uint8_t a4_map  = dcc.getCV(38); // AUX 4
-    uint8_t a5_map  = dcc.getCV(39); // AUX 5
-    uint8_t a6_map  = dcc.getCV(40); // AUX 6
-
-    // F0 Directional Logic:
-    // If a pin is mapped to F0, it only turns on if F0 is active AND direction matches.
-    // If it's mapped to any other F, it turns on if that F is active.
-
-    auto driveOutput = [&](uint8_t pin, uint8_t map, bool isFront, bool isRear) {
+    auto driveOutput = [&](const char* name, uint8_t pin, uint8_t fMap, bool isFront, bool isRear) {
         bool active = false;
-        if (map < 29) {
-            if (map == 0) { // F0 logic
+        if (fMap < 29) {
+            if (fMap == 0) { 
                 if (functions[0]) {
                     if (isFront) active = direction;
                     else if (isRear) active = !direction;
-                    else active = true; // Generic pin mapped to F0
+                    else active = true; 
                 }
             } else {
-                active = functions[map];
+                active = functions[fMap];
             }
         }
-        digitalWrite(pin, active ? HIGH : LOW);
+
+        uint8_t physVal = active ? (INVERT_OUTPUTS ? LOW : HIGH) : (INVERT_OUTPUTS ? HIGH : LOW);
+        digitalWrite(pin, physVal);
+
+        if (active != lastPinState[pin]) {
+            Log.printf("Output: %s (Pin %d) -> %s (F%d)\n", name, pin, active ? "ON" : "OFF", fMap);
+            lastPinState[pin] = active;
+        }
     };
 
-    driveOutput(_frontPin, f0f_map, true, false);
-    driveOutput(_rearPin, f0r_map, false, true);
-    driveOutput(_aux1Pin, a1_map, false, false);
-    driveOutput(_aux2Pin, a2_map, false, false);
-    driveOutput(_aux3Pin, a3_map, false, false);
-    driveOutput(_aux4Pin, a4_map, false, false);
-    driveOutput(_aux5Pin, a5_map, false, false);
-    driveOutput(_aux6Pin, a6_map, false, false);
+    driveOutput("FRONT", Pinout::LIGHT_FRONT, dcc.getCV(33), true, false);
+    driveOutput("REAR",  Pinout::LIGHT_REAR,  dcc.getCV(34), false, true);
+    driveOutput("AUX1",  Pinout::AUX1,        dcc.getCV(35), false, false);
+    driveOutput("AUX2",  Pinout::AUX2,        dcc.getCV(36), false, false);
+    driveOutput("AUX3",  Pinout::AUX3,        dcc.getCV(37), false, false);
+    driveOutput("AUX4",  Pinout::AUX4,        dcc.getCV(38), false, false);
+    driveOutput("AUX5",  Pinout::AUX5,        dcc.getCV(39), false, false);
+    driveOutput("AUX6",  Pinout::AUX6,        dcc.getCV(40), false, false);
+    driveOutput("AUX7",  Pinout::INPUT1_AUX7, dcc.getCV(41), false, false);
+    driveOutput("AUX8",  Pinout::INPUT2_AUX8, dcc.getCV(42), false, false);
 }

@@ -6,19 +6,19 @@ MotorController::MotorController() {}
 void MotorController::setup() {
     Log.println("MotorController: Initializing...");
 
-    pinMode(_in1Pin, OUTPUT);
-    pinMode(_in2Pin, OUTPUT);
-    pinMode(_gainPin, OUTPUT);
+    pinMode(Pinout::MOTOR_IN1, OUTPUT);
+    pinMode(Pinout::MOTOR_IN2, OUTPUT);
+    pinMode(Pinout::MOTOR_GAIN_SEL, OUTPUT);
     
-    digitalWrite(_in1Pin, LOW);
-    digitalWrite(_in2Pin, LOW);
-    digitalWrite(_gainPin, LOW);
+    digitalWrite(Pinout::MOTOR_IN1, LOW);
+    digitalWrite(Pinout::MOTOR_IN2, LOW);
+    digitalWrite(Pinout::MOTOR_GAIN_SEL, LOW);
 
     ledcSetup(_pwmChannel1, _pwmFreq, _pwmResolution);
-    ledcAttachPin(_in1Pin, _pwmChannel1);
+    ledcAttachPin(Pinout::MOTOR_IN1, _pwmChannel1);
 
     ledcSetup(_pwmChannel2, _pwmFreq, _pwmResolution);
-    ledcAttachPin(_in2Pin, _pwmChannel2);
+    ledcAttachPin(Pinout::MOTOR_IN2, _pwmChannel2);
 
     _drive(0, true);
     Log.println("MotorController: Ready.");
@@ -107,7 +107,7 @@ void MotorController::loop() {
 }
 
 void MotorController::setGain(bool high) {
-    digitalWrite(_gainPin, high ? HIGH : LOW);
+    digitalWrite(Pinout::MOTOR_GAIN_SEL, high ? HIGH : LOW);
 }
 
 void MotorController::_drive(uint8_t speed, bool direction) {

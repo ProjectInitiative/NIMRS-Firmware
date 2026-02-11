@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "SystemContext.h"
 #include "DccController.h"
+#include "nimrs-pinout.h"
 
 class MotorController {
 public:
@@ -15,11 +16,6 @@ public:
     void setGain(bool high);
 
 private:
-    // Pin assignments from CSV
-    const uint8_t _in1Pin = 41;
-    const uint8_t _in2Pin = 40;
-    const uint8_t _gainPin = 34;
-    
     // PWM Configuration
     const uint32_t _pwmFreq = 20000; // 20kHz (Silent)
     const uint8_t _pwmResolution = 8;
