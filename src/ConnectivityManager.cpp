@@ -1,6 +1,7 @@
 #include "ConnectivityManager.h"
 #include "WebAssets.h"
 #include "DccController.h"
+#include "AudioController.h"
 #include "CvRegistry.h"
 #include <ArduinoJson.h>
 
@@ -111,6 +112,7 @@ void ConnectivityManager::setup() {
     // API: Control
     _server.on("/api/control", HTTP_POST, [this]() { handleControl(); });
     _server.on("/api/cv", HTTP_POST, [this]() { handleCV(); });
+    _server.on("/api/audio/play", HTTP_POST, [this]() { handleAudioPlay(); });
     
     // API: CV Definitions
     _server.on("/api/cv/defs", HTTP_GET, [this]() {
@@ -351,6 +353,20 @@ void ConnectivityManager::handleCV() {
         DccController::getInstance().getDcc().setCV(cv, val);
         _server.send(200, "application/json", "{\"status\":\"ok\"}");
     } else {
-        _server.send(400, "text/plain", "Unknown cmd");
+    _server.send(200, "text/plain", "Unknown cmd");
     }
 }
+
+void ConnectivityManager::handleAudioPlay() {
+    if (!_server.hasArg("file")) {
+        _server.send(400, "text/plain", "Missing file arg");
+        return;
+    }
+    String file = _server.arg("file");
+    // Ensure leading slash
+    if (!file.startsWith("/")) file = "/" + file;
+    
+    AudioController::getInstance().playFile(file.c_str());
+    _server.send(200, "text/plain", "Playing");
+}
+

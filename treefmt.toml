@@ -1,0 +1,9 @@
+[formatter.clang-format]
+command = "clang-format"
+options = ["-i"]
+includes = ["*.cpp", "*.h", "*.ino"]
+
+[formatter.prettier]
+command = "prettier"
+options = ["--write"]
+includes = ["*.json", "*.md", "*.yml", "*.yaml"]
