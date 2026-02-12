@@ -3,6 +3,8 @@
 #include <AudioFileSourceLittleFS.h>
 #include <AudioGeneratorWAV.h>
 #include <AudioOutputI2S.h>
+#include "DccController.h"
+#include "CvRegistry.h"
 
 AudioController::AudioController()
     : _out(nullptr), _wav(nullptr), _file(nullptr) {}
@@ -13,7 +15,10 @@ void AudioController::setup() {
   // I2S Setup
   _out = new AudioOutputI2S();
   _out->SetPinout(Pinout::AMP_BCLK, Pinout::AMP_LRCLK, Pinout::AMP_DIN);
-  _out->SetGain(0.1);
+  
+  // Initial Volume from CV
+  uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
+  _out->SetGain(vol / 255.0f);
 
   _wav = new AudioGeneratorWAV();
 
@@ -25,6 +30,14 @@ void AudioController::setup() {
 }
 
 void AudioController::loop() {
+  // Update Volume dynamically
+  // Note: DccController::getCV is fast (RAM read), so calling it every loop is okay-ish.
+  // Ideally we'd only do this on change, but polling 0-255 is cheap.
+  if (_out) {
+      uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
+      _out->SetGain(vol / 255.0f);
+  }
+
   if (_wav && _wav->isRunning()) {
     if (!_wav->loop()) {
       _wav->stop();

@@ -617,11 +617,13 @@ function loadFiles() {
             tbody.innerHTML = '';
             files.forEach(f => {
                 const tr = document.createElement('tr');
+                const isAudio = f.name.toLowerCase().endsWith('.wav') || f.name.toLowerCase().endsWith('.mp3');
                 tr.innerHTML = `
                     <td><input type="checkbox" class="file-check" value="${f.name}"></td>
                     <td>${f.name}</td>
                     <td>${f.size}</td>
                     <td>
+                        ${isAudio ? `<button class="btn small primary" onclick="playAudio('${f.name}')">Play</button>` : ''}
                         <a href="/${f.name}" class="btn small" download>DL</a>
                         <button class="btn small danger" onclick="deleteFile('${f.name}')">Del</button>
                     </td>
@@ -629,6 +631,13 @@ function loadFiles() {
                 tbody.appendChild(tr);
             });
         });
+}
+
+function playAudio(filename) {
+    fetch('/api/audio/play?file=' + encodeURIComponent(filename), { method: 'POST' })
+    .then(r => r.text())
+    .then(msg => console.log("Audio:", msg))
+    .catch(e => alert("Audio Error: " + e));
 }
 
 function toggleAll(source) {
