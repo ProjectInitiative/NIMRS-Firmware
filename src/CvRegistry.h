@@ -11,8 +11,8 @@ static constexpr uint16_t ACCEL = 3;
 static constexpr uint16_t DECEL = 4;
 static constexpr uint16_t V_HIGH = 5;
 static constexpr uint16_t V_MID = 6;
-static constexpr uint16_t VERSION = 7;
-static constexpr uint16_t MAN_ID = 8;
+static constexpr uint16_t DECODER_VERSION = 7;
+static constexpr uint16_t DECODER_MAN_ID = 8;
 static constexpr uint16_t ADDR_LONG_MSB = 17;
 static constexpr uint16_t ADDR_LONG_LSB = 18;
 static constexpr uint16_t CONFIG = 29;
@@ -49,8 +49,8 @@ static const CvDef CV_DEFS[] = {
     {CV::DECEL, 2, "Deceleration", "Momentum Delay (Rate)"},
     {CV::V_HIGH, 255, "Vhigh", "Max Voltage/Speed"},
     {CV::V_MID, 128, "Vmid", "Mid-range Speed Curve"},
-    {CV::VERSION, 10, "Version ID", "Read-only Version"},
-    {CV::MAN_ID, 13, "Manufacturer", "Read-only Man ID (DIY=13)"},
+    {CV::DECODER_VERSION, 10, "Version ID", "Read-only Version"},
+    {CV::DECODER_MAN_ID, 13, "Manufacturer", "Read-only Man ID (DIY=13)"},
     {CV::ADDR_LONG_MSB, 192, "Long Addr MSB", "Upper byte of Long Address"},
     {CV::ADDR_LONG_LSB, 3, "Long Addr LSB", "Lower byte of Long Address"},
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
