@@ -2,8 +2,11 @@
 #include "AudioController.h"
 #include "CvRegistry.h"
 #include "DccController.h"
+#include "LameJs.h"
 #include "WebAssets.h"
 #include <ArduinoJson.h>
+#include <LittleFS.h>
+#include <Preferences.h>
 
 #ifndef BUILD_VERSION
 #define BUILD_VERSION "dev"
@@ -28,13 +31,21 @@ void ConnectivityManager::setup() {
   }
 
   // 2. WiFi Setup
+  Preferences prefs;
+  prefs.begin("config", true); // Read-only mode
+  String hostname = prefs.getString("hostname", "NIMRS-Decoder");
+  prefs.end();
+
+  Log.printf("ConnectivityManager: Hostname: %s\n", hostname.c_str());
+  WiFi.setHostname(hostname.c_str());
+
   _wifiManager.setConfigPortalTimeout(180);
   _wifiManager.setAPCallback([](WiFiManager *wm) {
     Log.println("ConnectivityManager: Entered Config Portal");
   });
   _wifiManager.setDebugOutput(true);
 
-  if (!_wifiManager.autoConnect("NIMRS-Decoder")) {
+  if (!_wifiManager.autoConnect(hostname.c_str())) {
     Log.println("ConnectivityManager: Failed to connect, restarting...");
     delay(3000);
     ESP.restart();
@@ -55,6 +66,9 @@ void ConnectivityManager::setup() {
              [this]() { _server.send(200, "text/css", STYLE_CSS); });
   _server.on("/app.js", HTTP_GET,
              [this]() { _server.send(200, "application/javascript", APP_JS); });
+  _server.on("/lame.min.js", HTTP_GET, [this]() {
+    _server.send_P(200, "application/javascript", LAME_MIN_JS);
+  });
 
   // API: System Status
   _server.on("/api/status", HTTP_GET, [this]() {
@@ -75,6 +89,15 @@ void ConnectivityManager::setup() {
     doc["uptime"] = millis() / 1000;
     doc["version"] = BUILD_VERSION;
     doc["hash"] = GIT_HASH;
+    
+    // Retrieve hostname dynamically (in case it changed)
+    Preferences prefs;
+    prefs.begin("config", true);
+    doc["hostname"] = prefs.getString("hostname", "NIMRS-Decoder");
+    prefs.end();
+
+    doc["fs_total"] = LittleFS.totalBytes();
+    doc["fs_used"] = LittleFS.usedBytes();
 
     JsonArray funcs = doc["functions"].to<JsonArray>();
     for (int i = 0; i < 29; i++)
@@ -83,6 +106,24 @@ void ConnectivityManager::setup() {
     String output;
     serializeJson(doc, output);
     _server.send(200, "application/json", output);
+  });
+
+  // API: Hostname Config
+  _server.on("/api/config/hostname", HTTP_POST, [this]() {
+    if (!_server.hasArg("name")) {
+        _server.send(400, "text/plain", "Missing name");
+        return;
+    }
+    String newName = _server.arg("name");
+    if(newName.length() > 0 && newName.length() < 32) {
+        Preferences prefs;
+        prefs.begin("config", false); // Read-write
+        prefs.putString("hostname", newName);
+        prefs.end();
+        _server.send(200, "text/plain", "Hostname saved. Restart required.");
+    } else {
+        _server.send(400, "text/plain", "Invalid name length");
+    }
   });
 
   // API: Logs

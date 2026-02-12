@@ -1,11 +1,27 @@
 {
   outputDir ? "build",
+  lamejs ? null,
 }:
 ''
   # Ensure we have the partition table
   if [ ! -f "partitions.csv" ]; then
     echo "Error: partitions.csv not found in $PWD"
     exit 1
+  fi
+
+  # Generate LameJs.h if lamejs is provided
+  if [ -n "${toString lamejs}" ]; then
+    echo "Embedding lame.min.js into src/LameJs.h..."
+    mkdir -p src
+    {
+      echo "#ifndef LAME_JS_H"
+      echo "#define LAME_JS_H"
+      echo "#include <Arduino.h>"
+      echo "const char LAME_MIN_JS[] PROGMEM = R\"rawliteral("
+      cat ${lamejs}
+      echo ")rawliteral\";"
+      echo "#endif"
+    } > src/LameJs.h
   fi
 
   # Get Git Info (or fallback to environment variable or "unknown")

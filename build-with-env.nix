@@ -4,6 +4,7 @@
   arduino-nix,
   arduino-indexes,
   gitHash ? "unknown",
+  lamejs ? null,
   ...
 }:
 
@@ -55,7 +56,10 @@ pkgs.stdenv.mkDerivation {
 
   buildPhase = ''
     echo "Building NIMRS Firmware..."
-    ${import ./build-command.nix { outputDir = "$out"; }}
+    ${import ./build-command.nix {
+      outputDir = "$out";
+      inherit lamejs;
+    }}
   '';
 
   installPhase = ''

@@ -14,6 +14,12 @@
     arduino-nix = {
       url = "github:clerie/arduino-nix/clerie/arduino-env";
     };
+
+    # Lame.js for client-side MP3 compression
+    lamejs = {
+      url = "https://raw.githubusercontent.com/zhuker/lamejs/master/lame.min.js";
+      flake = false;
+    };
   };
 
   outputs =
@@ -22,6 +28,7 @@
       nixpkgs,
       arduino-indexes,
       arduino-nix,
+      lamejs,
       ...
     }@inputs:
     let
@@ -44,7 +51,7 @@
           # Clean build method using arduino-nix-env
           default = import ./build-with-env.nix {
             inherit pkgs arduino-nix arduino-indexes;
-            inherit gitHash;
+            inherit gitHash lamejs;
             src = ./.;
           };
         }
@@ -87,7 +94,10 @@
                cp config.example.h config.h
             fi
 
-            ${import ./build-command.nix { outputDir = "build"; }}
+            ${import ./build-command.nix {
+              outputDir = "build";
+              inherit lamejs;
+            }}
           '';
 
           # Script to upload firmware

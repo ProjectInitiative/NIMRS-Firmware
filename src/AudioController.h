@@ -7,7 +7,7 @@
 
 // Forward declarations
 class AudioOutputI2S;
-class AudioGeneratorWAV;
+class AudioGenerator; // Base class
 class AudioFileSourceLittleFS;
 
 class AudioController {
@@ -27,7 +27,7 @@ private:
   AudioController();
 
   AudioOutputI2S *_out;
-  AudioGeneratorWAV *_wav;
+  AudioGenerator *_generator; // Polymorphic generator (WAV or MP3)
   AudioFileSourceLittleFS *_file;
 
   bool _playing = false;

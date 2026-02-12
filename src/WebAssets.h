@@ -9,6 +9,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NIMRS Decoder</title>
     <link rel="stylesheet" href="style.css">
+    <script src="lame.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -92,10 +93,23 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
             <!-- File Manager Tab -->
             <section id="files" class="tab-content">
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>Storage Usage</h3>
+                    <div class="quota-container">
+                        <div id="quota-bar" style="height: 20px; background: #333; border-radius: 10px; overflow: hidden;">
+                            <div id="quota-fill" style="height: 100%; width: 0%; background: var(--primary-color); transition: width 0.5s;"></div>
+                        </div>
+                        <p id="quota-text">Loading storage info...</p>
+                    </div>
+                </div>
+
                 <div class="file-upload">
                     <h3>Upload Files</h3>
                     <form id="upload-form">
                         <input type="file" id="file-input" multiple required>
+                        <div style="margin: 10px 0;">
+                            <label><input type="checkbox" id="compress-mp3"> Compress .wav to .mp3 (saves space)</label>
+                        </div>
                         <button type="submit" class="btn primary">Upload Selected</button>
                     </form>
                     <div id="upload-status"></div>
@@ -177,6 +191,18 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                    <h3>System Info</h3>
                    <p>Version: <span id="sys-version">--</span></p>
                    <p>Build: <span id="sys-hash">--</span></p>
+                   <p>Device Name: <span id="sys-hostname">--</span></p>
+                </div>
+
+                <div class="card">
+                    <h3>Device Settings</h3>
+                    <label>Device Name:
+                        <div style="display:flex; gap:5px;">
+                             <input type="text" id="config-hostname" placeholder="NIMRS-Decoder" style="flex-grow:1;">
+                             <button class="btn primary" onclick="saveHostname()">Save</button>
+                        </div>
+                    </label>
+                    <p><small>Changes require restart.</small></p>
                 </div>
             </section>
         </main>
@@ -476,6 +502,25 @@ function pollStatus() {
             document.getElementById('wifi-details').innerText = `Connected: ${data.wifi ? 'Yes' : 'No'}`;
             if(document.getElementById('sys-version')) document.getElementById('sys-version').innerText = data.version || 'Unknown';
             if(document.getElementById('sys-hash')) document.getElementById('sys-hash').innerText = data.hash || 'Unknown';
+            if(document.getElementById('sys-hostname')) {
+                document.getElementById('sys-hostname').innerText = data.hostname || 'NIMRS-Decoder';
+                // Only update input if not focused to avoid typing interruption
+                const hnInput = document.getElementById('config-hostname');
+                if (hnInput && document.activeElement !== hnInput && !hnInput.value) {
+                    hnInput.value = data.hostname || 'NIMRS-Decoder';
+                }
+            }
+
+            // Quota
+            if (data.fs_total) {
+                const used = data.fs_used || 0;
+                const total = data.fs_total;
+                const perc = Math.round((used / total) * 100);
+                const fill = document.getElementById('quota-fill');
+                if (fill) fill.style.width = perc + '%';
+                const text = document.getElementById('quota-text');
+                if (text) text.innerText = `${formatBytes(used)} / ${formatBytes(total)} (${perc}%)`;
+            }
         })
         .catch(e => {
             const indicator = document.getElementById('connection-status');
@@ -621,7 +666,7 @@ function loadFiles() {
                 tr.innerHTML = `
                     <td><input type="checkbox" class="file-check" value="${f.name}"></td>
                     <td>${f.name}</td>
-                    <td>${f.size}</td>
+                    <td>${formatBytes(f.size)}</td>
                     <td>
                         ${isAudio ? `<button class="btn small primary" onclick="playAudio('${f.name}')">Play</button>` : ''}
                         <a href="/${f.name}" class="btn small" download>DL</a>
@@ -631,6 +676,15 @@ function loadFiles() {
                 tbody.appendChild(tr);
             });
         });
+}
+
+function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 function playAudio(filename) {
@@ -648,14 +702,29 @@ async function handleUpload(e) {
     e.preventDefault();
     const input = document.getElementById('file-input');
     const files = input.files;
+    const compress = document.getElementById('compress-mp3').checked;
     if (!files.length) return;
 
     const statusDiv = document.getElementById('upload-status');
     statusDiv.innerText = "Starting upload...";
 
     for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        statusDiv.innerText = `Uploading ${i+1}/${files.length}: ${file.name}...`;
+        let file = files[i];
+        let filename = file.name;
+
+        if (compress && filename.toLowerCase().endsWith('.wav')) {
+            statusDiv.innerText = `Compressing ${filename}...`;
+            try {
+                const mp3Data = await compressToMp3(file);
+                file = new File([mp3Data], filename.replace(/\.wav$/i, '.mp3'), { type: 'audio/mpeg' });
+                filename = file.name;
+            } catch (err) {
+                console.error("Compression failed", err);
+                statusDiv.innerText = `Compression failed for ${filename}, uploading original...`;
+            }
+        }
+
+        statusDiv.innerText = `Uploading ${i+1}/${files.length}: ${filename}...`;
         const formData = new FormData();
         formData.append("file", file);
         try {
@@ -665,13 +734,75 @@ async function handleUpload(e) {
             });
             if (!r.ok) throw new Error(r.statusText);
         } catch (err) {
-            statusDiv.innerText = `Error uploading ${file.name}: ${err}`;
+            statusDiv.innerText = `Error uploading ${filename}: ${err}`;
             return;
         }
     }
     statusDiv.innerText = "All uploads complete!";
     input.value = ''; 
     loadFiles();
+    pollStatus(); // Refresh quota
+}
+
+async function compressToMp3(file) {
+    if (typeof lamejs === 'undefined') {
+        throw new Error("lamejs library not loaded. Check /lame.min.js");
+    }
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const arrayBuffer = e.target.result;
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                
+                const channels = audioBuffer.numberOfChannels;
+                const sampleRate = audioBuffer.sampleRate;
+                const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128);
+                const mp3Data = [];
+
+                const samplesL = audioBuffer.getChannelData(0);
+                const samplesR = channels > 1 ? audioBuffer.getChannelData(1) : samplesL;
+                
+                // Convert Float32 samples to Int16
+                const convert = (samples) => {
+                    const int16 = new Int16Array(samples.length);
+                    for (let i = 0; i < samples.length; i++) {
+                        let s = Math.max(-1, Math.min(1, samples[i]));
+                        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    return int16;
+                };
+
+                const blockSide = 1152;
+                const int16L = convert(samplesL);
+                const int16R = channels > 1 ? convert(samplesR) : null;
+
+                for (let i = 0; i < int16L.length; i += blockSide) {
+                    const leftChunk = int16L.subarray(i, i + blockSide);
+                    let mp3buf;
+                    if (channels > 1) {
+                        const rightChunk = int16R.subarray(i, i + blockSide);
+                        mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+                    } else {
+                        mp3buf = mp3encoder.encodeBuffer(leftChunk);
+                    }
+                    if (mp3buf.length > 0) mp3Data.push(mp3buf);
+                }
+
+                const end = mp3encoder.flush();
+                if (end.length > 0) mp3Data.push(end);
+
+                console.log(`Compressed ${file.name}: ${file.size} -> ${new Blob(mp3Data).size} bytes`);
+                resolve(new Blob(mp3Data, { type: 'audio/mpeg' }));
+            } catch (err) {
+                console.error("Compression error:", err);
+                reject(err);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
 }
 
 function deleteFile(filename) {
@@ -793,6 +924,21 @@ function saveWifi(e) {
         body: `ssid=${encodeURIComponent(ssid)}&pass=${encodeURIComponent(pass)}`
     })
     .then(() => alert("Saved! Restarting..."))
+    .catch(e => alert("Error: " + e));
+}
+
+function saveHostname() {
+    const name = document.getElementById('config-hostname').value;
+    if (!name || name.length < 1) return alert("Invalid name");
+    if (!confirm(`Rename device to '${name}' and restart?`)) return;
+    
+    fetch('/api/config/hostname', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `name=${encodeURIComponent(name)}`
+    })
+    .then(r => r.text())
+    .then(msg => alert(msg))
     .catch(e => alert("Error: " + e));
 }
 
