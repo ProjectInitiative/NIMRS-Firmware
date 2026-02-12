@@ -254,6 +254,12 @@ void ConnectivityManager::handleFileUpload() {
     if (fsUploadFile) {
       fsUploadFile.close();
       Log.printf("Upload End: %u bytes\n", upload.totalSize);
+
+      // Hot-reload sound assets if the config file was just uploaded
+      if (upload.filename.endsWith("sound_assets.json")) {
+           Log.println("Audio: Hot-reloading assets...");
+           AudioController::getInstance().loadAssets();
+      }
     }
   }
 }
