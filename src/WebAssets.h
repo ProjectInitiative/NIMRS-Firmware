@@ -544,12 +544,14 @@ function renderCVTable() {
     cvListRendered = true;
 }
 
-function loadAllCVs() {
-    trackableCVS.forEach(item => readCV(item.cv));
+async function loadAllCVs() {
+    for (const item of trackableCVS) {
+        await readCV(item.cv);
+    }
 }
 
 function readCV(cv) {
-    fetch('/api/cv', {
+    return fetch('/api/cv', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ cmd: 'read', cv: cv })
@@ -564,6 +566,7 @@ function readCV(cv) {
         const input = document.getElementById(`cv-val-${cv}`);
         if (input) input.value = data.value;
         
+        // Also update custom fields if they match
         if (cv === parseInt(document.getElementById('custom-cv').value)) {
              document.getElementById('custom-val').value = data.value;
         }

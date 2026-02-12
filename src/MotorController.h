@@ -16,8 +16,12 @@ public:
     void setGain(bool high);
 
 private:
+    const uint8_t _gainPin = 34;
+    
     // PWM Configuration
-    const uint32_t _pwmFreq = 20000; // 20kHz (Silent)
+    // Low frequency (100Hz) improves low-speed torque. 
+    // DRV8213 handles current regulation to prevent buzzing issues.
+    const uint32_t _pwmFreq = 100; 
     const uint8_t _pwmResolution = 8;
     const uint8_t _pwmChannel1 = 0;
     const uint8_t _pwmChannel2 = 1;

@@ -54,14 +54,14 @@ static const CvDef CV_DEFS[] = {
 
     { CV::FRONT, 0, "Map: Front Light", "Function to map to Front Light (0-28)" },
     { CV::REAR,  0, "Map: Rear Light",  "Function to map to Rear Light (0-28)" },
-    { CV::AUX1,  1, "Map: AUX 1",       "Function to map to AUX 1" },
-    { CV::AUX2,  2, "Map: AUX 2",       "Function to map to AUX 2" },
-    { CV::AUX3,  3, "Map: AUX 3",       "Function to map to AUX 3" },
-    { CV::AUX4,  4, "Map: AUX 4",       "Function to map to AUX 4" },
-    { CV::AUX5,  5, "Map: AUX 5",       "Function to map to AUX 5" },
-    { CV::AUX6,  6, "Map: AUX 6",       "Function to map to AUX 6" },
-    { CV::AUX7,  7, "Map: AUX 7",       "Function to map to AUX 7" },
-    { CV::AUX8,  8, "Map: AUX 8",       "Function to map to AUX 8" }
+    { CV::AUX1,  1, "Map: AUX 1",       "Function to map to AUX 1 (0-28)" },
+    { CV::AUX2,  2, "Map: AUX 2",       "Function to map to AUX 2 (0-28)" },
+    { CV::AUX3,  3, "Map: AUX 3",       "Function to map to AUX 3 (0-28)" },
+    { CV::AUX4,  4, "Map: AUX 4",       "Function to map to AUX 4 (0-28)" },
+    { CV::AUX5,  5, "Map: AUX 5",       "Function to map to AUX 5 (0-28)" },
+    { CV::AUX6,  6, "Map: AUX 6",       "Function to map to AUX 6 (0-28)" },
+    { CV::AUX7,  7, "Map: AUX 7",       "Function to map to AUX 7 (0-28)" },
+    { CV::AUX8,  8, "Map: AUX 8",       "Function to map to AUX 8 (0-28)" }
 };
 
 static const size_t CV_DEFS_COUNT = sizeof(CV_DEFS) / sizeof(CvDef);
