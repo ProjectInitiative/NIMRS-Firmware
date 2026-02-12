@@ -35,6 +35,9 @@ private:
   void handleControl();
   void handleCV();
   void handleAudioPlay();
+
+  bool _shouldRestart = false;
+  uint32_t _restartTimer = 0;
 };
 
 #endif

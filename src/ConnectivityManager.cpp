@@ -121,6 +121,8 @@ void ConnectivityManager::setup() {
         prefs.putString("hostname", newName);
         prefs.end();
         _server.send(200, "text/plain", "Hostname saved. Restart required.");
+        _shouldRestart = true;
+        _restartTimer = millis();
     } else {
         _server.send(400, "text/plain", "Invalid name length");
     }
@@ -180,7 +182,13 @@ void ConnectivityManager::setup() {
   Log.println("ConnectivityManager: Web Server started on port 80");
 }
 
-void ConnectivityManager::loop() { _server.handleClient(); }
+void ConnectivityManager::loop() {
+    _server.handleClient();
+    if (_shouldRestart && millis() - _restartTimer > 1000) {
+        Log.println("Rebooting...");
+        ESP.restart();
+    }
+}
 
 // --- File Management Implementation ---
 
@@ -297,8 +305,8 @@ void ConnectivityManager::handleWifiSave() {
 
   _server.send(200, "text/plain", "WiFi credentials saved. Restarting...");
 
-  delay(1000);
-  ESP.restart();
+  _shouldRestart = true;
+  _restartTimer = millis();
 }
 
 void ConnectivityManager::handleWifiReset() {
@@ -307,8 +315,8 @@ void ConnectivityManager::handleWifiReset() {
   _server.send(200, "text/plain",
                "WiFi settings reset. Restarting into AP mode...");
 
-  delay(1000);
-  ESP.restart();
+  _shouldRestart = true;
+  _restartTimer = millis();
 }
 
 void ConnectivityManager::handleWifiScan() {
