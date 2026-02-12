@@ -7,3 +7,7 @@ includes = ["*.cpp", "*.h", "*.ino"]
 command = "prettier"
 options = ["--write"]
 includes = ["*.json", "*.md", "*.yml", "*.yaml"]
+
+[formatter.nixfmt]
+command = "nixfmt"
+includes = ["*.nix"]

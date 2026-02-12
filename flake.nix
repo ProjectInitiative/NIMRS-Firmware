@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    
+
     # Arduino Indexes for arduino-nix
     arduino-indexes = {
       url = "github:bouk/arduino-indexes";
@@ -16,165 +16,180 @@
     };
   };
 
-  outputs = { self, nixpkgs, arduino-indexes, arduino-nix, ... }@inputs:
-  let
-    supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-    
-    # Get git hash from flake input
-    gitHash = self.shortRev or "dirty";
-  in
-  {
-    packages = forAllSystems (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
-        # Clean build method using arduino-nix-env
-        default = import ./build-with-env.nix {
-          inherit pkgs arduino-nix arduino-indexes;
-          inherit gitHash;
-          src = ./.;
-        };
-      });
+  outputs =
+    {
+      self,
+      nixpkgs,
+      arduino-indexes,
+      arduino-nix,
+      ...
+    }@inputs:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
 
-    # Development shells
-    devShells = forAllSystems (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        
-        # Helper to get the package set with overlays
-        pkgsWithArduino = import nixpkgs {
-          system = pkgs.stdenv.hostPlatform.system;
-          overlays = [
-            arduino-nix.overlay
-            (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_index.json"))
-            (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_esp32_index.json"))
-            (arduino-nix.mkArduinoLibraryOverlay (arduino-indexes + "/index/library_index.json"))
-          ];
-        };
+      # Get git hash from flake input
+      gitHash = self.shortRev or "dirty";
+    in
+    {
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          # Clean build method using arduino-nix-env
+          default = import ./build-with-env.nix {
+            inherit pkgs arduino-nix arduino-indexes;
+            inherit gitHash;
+            src = ./.;
+          };
+        }
+      );
 
-        # Libraries to link for local dev
-        buildLibs = import ./common-libs.nix { inherit pkgsWithArduino; };
+      # Development shells
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
 
-        # Wrapped arduino-cli with ESP32 platform and libraries
-        arduino-cli-wrapped = pkgsWithArduino.wrapArduinoCLI {
-          packages = with pkgsWithArduino.arduinoPackages; [
-             platforms.esp32.esp32."2.0.14"
-          ];
-          libraries = buildLibs;
-        };
+          # Helper to get the package set with overlays
+          pkgsWithArduino = import nixpkgs {
+            system = pkgs.stdenv.hostPlatform.system;
+            overlays = [
+              arduino-nix.overlay
+              (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_index.json"))
+              (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_esp32_index.json"))
+              (arduino-nix.mkArduinoLibraryOverlay (arduino-indexes + "/index/library_index.json"))
+            ];
+          };
 
-        # Script to build firmware manually
-        buildFirmware = pkgs.writeShellScriptBin "build-firmware" ''
-          echo "Building firmware from current directory..."
-          
-          # Ensure config.h exists
-          if [ ! -f "config.h" ]; then
-             cp config.example.h config.h
-          fi
+          # Libraries to link for local dev
+          buildLibs = import ./common-libs.nix { inherit pkgsWithArduino; };
 
-          ${import ./build-command.nix { outputDir = "build"; }}
-        '';
+          # Wrapped arduino-cli with ESP32 platform and libraries
+          arduino-cli-wrapped = pkgsWithArduino.wrapArduinoCLI {
+            packages = with pkgsWithArduino.arduinoPackages; [
+              platforms.esp32.esp32."2.0.14"
+            ];
+            libraries = buildLibs;
+          };
 
-        # Script to upload firmware
-        uploadFirmware = pkgs.writeShellScriptBin "upload-firmware" ''
-          if [ -z "$1" ]; then
-            echo "Usage: upload-firmware <port|IP>"
-            echo "Example Serial: upload-firmware /dev/ttyUSB0"
-            echo "Example OTA:    upload-firmware 192.168.1.100"
-            exit 1
-          fi
+          # Script to build firmware manually
+          buildFirmware = pkgs.writeShellScriptBin "build-firmware" ''
+            echo "Building firmware from current directory..."
 
-          TARGET="$1"
+            # Ensure config.h exists
+            if [ ! -f "config.h" ]; then
+               cp config.example.h config.h
+            fi
 
-          if [[ "$TARGET" == /dev/* ]]; then
-              echo "Uploading via Serial to $TARGET..."
-              
-              # Fix permissions on the port (requires sudo)
-              sudo chmod 666 "$TARGET"
-              
-              arduino-cli upload -p "$TARGET" \
-                --fqbn esp32:esp32:esp32s3 \
-                --board-options "FlashSize=8M" \
-                --board-options "PartitionScheme=default_8MB" \
-                --board-options "UploadSpeed=115200" \
-                --input-dir build \
-                .
-          else
-              echo "Uploading via OTA to $TARGET..."
-              BIN_FILE="build/NIMRS-Firmware.ino.bin"
-              
-              if [ ! -f "$BIN_FILE" ]; then
-                  echo "Error: Binary not found at $BIN_FILE. Run build-firmware first."
-                  exit 1
-              fi
-
-              curl --progress-bar -F "update=@$BIN_FILE" "http://$TARGET/update" | cat
-              echo -e "\nDone."
-          fi
-        '';
-
-        # Script to monitor firmware
-        monitorFirmware = pkgs.writeShellScriptBin "monitor-firmware" ''
-          if [ -z "$1" ]; then
-            echo "Usage: monitor-firmware <port>"
-            echo "Example: monitor-firmware /dev/ttyUSB0"
-            exit 1
-          fi
-
-          echo "Starting Serial Monitor on $1..."
-          echo "Note: DTR/RTS are disabled to prevent resetting the board."
-          
-          # Fix permissions on the port (requires sudo)
-          sudo chmod 666 "$1"
-          
-          arduino-cli monitor -p "$1" --config baudrate=115200,dtr=off,rts=off
-        '';
-
-      in
-      {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            # Core Arduino tools (Wrapped)
-            arduino-cli-wrapped
-            # Tools for ESP32 often needed
-            python3
-            esptool
-            # Ensure git is available for build script
-            git
-            # For OTA upload
-            curl
-            
-            # Formatting & Linting
-            treefmt
-            clang-tools # clang-format
-            nodePackages.prettier # prettier
-            
-            # Helper scripts
-            buildFirmware
-            uploadFirmware
-            monitorFirmware
-          ];
-
-          shellHook = ''
-            echo "NIMRS-Firmware Development Environment (ESP32-S3)"
-            echo "------------------------------------------------"
-            echo "Arduino CLI is wrapped with libraries and platform."
-            echo ""
-            
-            # We do NOT set ARDUINO_DIRECTORIES_... here to avoid breaking the wrapper.
-            # But we might need a user directory for temp files? 
-            # The wrapper typically handles the read-only parts.
-            
-            echo "Commands available:"
-            echo "  build-firmware         : Build the firmware from current directory"
-            echo "  upload-firmware <port|IP> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
-            echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
-            echo "  treefmt                : Format all code (C++, JSON, MD)"
-            echo "  nix build              : Clean build of the firmware"
+            ${import ./build-command.nix { outputDir = "build"; }}
           '';
-        };
-      });
-  };
+
+          # Script to upload firmware
+          uploadFirmware = pkgs.writeShellScriptBin "upload-firmware" ''
+            if [ -z "$1" ]; then
+              echo "Usage: upload-firmware <port|IP>"
+              echo "Example Serial: upload-firmware /dev/ttyUSB0"
+              echo "Example OTA:    upload-firmware 192.168.1.100"
+              exit 1
+            fi
+
+            TARGET="$1"
+
+            if [[ "$TARGET" == /dev/* ]]; then
+                echo "Uploading via Serial to $TARGET..."
+                
+                # Fix permissions on the port (requires sudo)
+                sudo chmod 666 "$TARGET"
+                
+                arduino-cli upload -p "$TARGET" \
+                  --fqbn esp32:esp32:esp32s3 \
+                  --board-options "FlashSize=8M" \
+                  --board-options "PartitionScheme=default_8MB" \
+                  --board-options "UploadSpeed=115200" \
+                  --input-dir build \
+                  .
+            else
+                echo "Uploading via OTA to $TARGET..."
+                BIN_FILE="build/NIMRS-Firmware.ino.bin"
+                
+                if [ ! -f "$BIN_FILE" ]; then
+                    echo "Error: Binary not found at $BIN_FILE. Run build-firmware first."
+                    exit 1
+                fi
+
+                curl --progress-bar -F "update=@$BIN_FILE" "http://$TARGET/update" | cat
+                echo -e "\nDone."
+            fi
+          '';
+
+          # Script to monitor firmware
+          monitorFirmware = pkgs.writeShellScriptBin "monitor-firmware" ''
+            if [ -z "$1" ]; then
+              echo "Usage: monitor-firmware <port>"
+              echo "Example: monitor-firmware /dev/ttyUSB0"
+              exit 1
+            fi
+
+            echo "Starting Serial Monitor on $1..."
+            echo "Note: DTR/RTS are disabled to prevent resetting the board."
+
+            # Fix permissions on the port (requires sudo)
+            sudo chmod 666 "$1"
+
+            arduino-cli monitor -p "$1" --config baudrate=115200,dtr=off,rts=off
+          '';
+
+        in
+        {
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              # Core Arduino tools (Wrapped)
+              arduino-cli-wrapped
+              # Tools for ESP32 often needed
+              python3
+              esptool
+              # Ensure git is available for build script
+              git
+              # For OTA upload
+              curl
+
+              # Formatting & Linting
+              treefmt
+              clang-tools # clang-format
+              nodePackages.prettier # prettier
+              nixfmt
+
+              # Helper scripts
+              buildFirmware
+              uploadFirmware
+              monitorFirmware
+            ];
+
+            shellHook = ''
+              echo "NIMRS-Firmware Development Environment (ESP32-S3)"
+              echo "------------------------------------------------"
+              echo "Arduino CLI is wrapped with libraries and platform."
+              echo ""
+
+              # We do NOT set ARDUINO_DIRECTORIES_... here to avoid breaking the wrapper.
+              # But we might need a user directory for temp files? 
+              # The wrapper typically handles the read-only parts.
+
+              echo "Commands available:"
+              echo "  build-firmware         : Build the firmware from current directory"
+              echo "  upload-firmware <port|IP> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
+              echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
+              echo "  treefmt                : Format all code (C++, JSON, MD)"
+              echo "  nix build              : Clean build of the firmware"
+            '';
+          };
+        }
+      );
+    };
 }
