@@ -2,10 +2,10 @@ name: Build Firmware
 
 on:
   push:
-    branches: [ "main" ]
-    tags: [ "v*" ]
+    branches: ["main"]
+    tags: ["v*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -13,72 +13,72 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
-    
-    - uses: cachix/install-nix-action@v25
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        # extra_nix_config: |
-        #   sandbox = false
+      - uses: actions/checkout@v4
 
-    - name: AppArmor Fix for Bubblewrap
-      run: |
-        # Allow any bwrap binary in the Nix store to use user namespaces
-        cat <<EOF | sudo tee /etc/apparmor.d/bwrap-nix
-        abi <abi/4.0>,
-        include <tunables/global>
+      - uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          # extra_nix_config: |
+          #   sandbox = false
 
-        profile bwrap-nix /nix/store/*/bin/bwrap flags=(unconfined) {
-          userns,
-          include if exists <local/bwrap>
-        }
-        EOF
+      - name: AppArmor Fix for Bubblewrap
+        run: |
+          # Allow any bwrap binary in the Nix store to use user namespaces
+          cat <<EOF | sudo tee /etc/apparmor.d/bwrap-nix
+          abi <abi/4.0>,
+          include <tunables/global>
 
-        sudo systemctl reload apparmor
-        echo "AppArmor reloaded."
+          profile bwrap-nix /nix/store/*/bin/bwrap flags=(unconfined) {
+            userns,
+            include if exists <local/bwrap>
+          }
+          EOF
 
-    - name: Build Firmware
-      run: nix build
+          sudo systemctl reload apparmor
+          echo "AppArmor reloaded."
 
-    - name: Prepare Artifacts
-      run: |
-        mkdir -p artifacts
-        # Copy build artifacts from result symlink
-        cp result/*.bin artifacts/nimrs-firmware.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
-        cp result/*.elf artifacts/nimrs-firmware.elf 2>/dev/null || cp result/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
-        cp result/partitions.bin artifacts/partitions.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
-        cp result/bootloader.bin artifacts/bootloader.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
-        cp partitions.csv artifacts/partitions.csv
+      - name: Build Firmware
+        run: nix build
 
-    - name: Upload Nightly Artifact
-      if: github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v4
-      with:
-        name: nimrs-firmware-nightly
-        path: artifacts/
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p artifacts
+          # Copy build artifacts from result symlink
+          cp result/*.bin artifacts/nimrs-firmware.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.bin artifacts/nimrs-firmware.bin
+          cp result/*.elf artifacts/nimrs-firmware.elf 2>/dev/null || cp result/NIMRS-Firmware.ino.elf artifacts/nimrs-firmware.elf
+          cp result/partitions.bin artifacts/partitions.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.partitions.bin artifacts/partitions.bin
+          cp result/bootloader.bin artifacts/bootloader.bin 2>/dev/null || cp result/NIMRS-Firmware.ino.bootloader.bin artifacts/bootloader.bin
+          cp partitions.csv artifacts/partitions.csv
 
-    - name: Update Nightly Release
-      if: github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        name: Nightly Build
-        tag_name: nightly
-        body: "Rolling release of the latest main branch.\n\nCommit: ${{ github.sha }}"
-        files: |
-          artifacts/nimrs-firmware.bin
-          artifacts/nimrs-firmware.elf
-          artifacts/partitions.bin
-          artifacts/bootloader.bin
-          artifacts/partitions.csv
-        prerelease: true
+      - name: Upload Nightly Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimrs-firmware-nightly
+          path: artifacts/
 
-    - name: Release Tag
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          artifacts/nimrs-firmware.bin
-          artifacts/nimrs-firmware.elf
-          artifacts/partitions.bin
-          artifacts/bootloader.bin
-          artifacts/partitions.csv
+      - name: Update Nightly Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Nightly Build
+          tag_name: nightly
+          body: "Rolling release of the latest main branch.\n\nCommit: ${{ github.sha }}"
+          files: |
+            artifacts/nimrs-firmware.bin
+            artifacts/nimrs-firmware.elf
+            artifacts/partitions.bin
+            artifacts/bootloader.bin
+            artifacts/partitions.csv
+          prerelease: true
+
+      - name: Release Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/nimrs-firmware.bin
+            artifacts/nimrs-firmware.elf
+            artifacts/partitions.bin
+            artifacts/bootloader.bin
+            artifacts/partitions.csv
