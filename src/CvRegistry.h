@@ -19,6 +19,7 @@ static constexpr uint16_t CONFIG = 29;
 
 // Audio
 static constexpr uint16_t MASTER_VOL = 50;
+static constexpr uint16_t AUDIO_MAP_BASE = 100; // CV = 100 + SoundID. Value = Function (0-28)
 
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
@@ -56,6 +57,14 @@ static const CvDef CV_DEFS[] = {
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
 
     {CV::MASTER_VOL, 128, "Master Volume", "Audio Volume (0-255)"},
+
+    // Audio Mapping (Examples for common IDs)
+    {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1", "Function to trigger Sound 1 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 2, 0, "Map: Sound ID 2", "Function to trigger Sound 2 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 3, 0, "Map: Sound ID 3", "Function to trigger Sound 3 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 4, 0, "Map: Sound ID 4", "Function to trigger Sound 4 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 10, 0, "Map: Sound ID 10", "Function to trigger Sound 10 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 11, 0, "Map: Sound ID 11", "Function to trigger Sound 11 (0-28)"},
 
     {CV::FRONT, 0, "Map: Front Light", "Function to map to Front Light (0-28)"},
     {CV::REAR, 0, "Map: Rear Light", "Function to map to Rear Light (0-28)"},

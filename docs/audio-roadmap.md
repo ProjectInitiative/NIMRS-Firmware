@@ -94,12 +94,12 @@ Users map DCC Functions to Sound IDs using CVs.
   2.  Send POST request: `/api/audio/play?file=test.wav`.
   3.  Confirm audio output from speaker.
 
-### Phase 2: The Sound Asset Engine [TODO]
+### Phase 2: The Sound Asset Engine [DONE]
 
 - **Tasks:**
-  - Implement JSON parser for `sound_assets.json`.
-  - Implement `SoundAsset` class that handles the logic (intro/loop/outro).
-  - Implement `CV Registry` expansion for Audio Mapping (CV 100+).
+  - [x] Implement JSON parser for `sound_assets.json`.
+  - [x] Implement `SoundAsset` class that handles the logic (intro/loop/outro).
+  - [x] Implement `CV Registry` expansion for Audio Mapping (CV 100+).
 
 ### Phase 3: The Mixer [TODO]
 
