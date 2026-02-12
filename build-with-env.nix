@@ -1,4 +1,11 @@
-{ pkgs, src, arduino-nix, arduino-indexes, gitHash ? "unknown", ... }:
+{
+  pkgs,
+  src,
+  arduino-nix,
+  arduino-indexes,
+  gitHash ? "unknown",
+  ...
+}:
 
 let
   overlays = [
@@ -22,37 +29,37 @@ let
   };
 
   # Prepare source
-  preparedSrc = pkgs.runCommand "nimrs-firmware-src" {} ''
+  preparedSrc = pkgs.runCommand "nimrs-firmware-src" { } ''
     mkdir -p $out/NIMRS-Firmware
     cp -r ${src}/* $out/NIMRS-Firmware/
     chmod -R +w $out
-    
+
     if [ ! -f $out/NIMRS-Firmware/config.h ]; then
       cp $out/NIMRS-Firmware/config.example.h $out/NIMRS-Firmware/config.h
     fi
   '';
 
 in
-  pkgs.stdenv.mkDerivation {
-    name = "nimrs-firmware";
-    src = "${preparedSrc}/NIMRS-Firmware";
+pkgs.stdenv.mkDerivation {
+  name = "nimrs-firmware";
+  src = "${preparedSrc}/NIMRS-Firmware";
 
-    nativeBuildInputs = [
-      arduinoEnv
-      pkgs.git
-      (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
-    ];
-    
-    # Pass git hash if provided
-    GIT_HASH_ENV = gitHash;
+  nativeBuildInputs = [
+    arduinoEnv
+    pkgs.git
+    (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
+  ];
 
-    buildPhase = ''
-      echo "Building NIMRS Firmware..."
-      ${import ./build-command.nix { outputDir = "$out"; }}
-    '';
+  # Pass git hash if provided
+  GIT_HASH_ENV = gitHash;
 
-    installPhase = ''
-      # Artifacts are already in $out due to --output-dir
-      echo "Build complete. Artifacts in $out"
-    '';
-  }
+  buildPhase = ''
+    echo "Building NIMRS Firmware..."
+    ${import ./build-command.nix { outputDir = "$out"; }}
+  '';
+
+  installPhase = ''
+    # Artifacts are already in $out due to --output-dir
+    echo "Build complete. Artifacts in $out"
+  '';
+}
