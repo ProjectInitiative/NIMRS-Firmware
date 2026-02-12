@@ -32,6 +32,18 @@
         "type": "github"
       }
     },
+    "lamejs": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-C8GxZG2m3GQrVqUW/qReELwoxiwiK5oOo6unu5gYIxA=",
+        "type": "file",
+        "url": "https://raw.githubusercontent.com/zhuker/lamejs/master/lame.min.js"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://raw.githubusercontent.com/zhuker/lamejs/master/lame.min.js"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1769461804,
@@ -52,6 +64,7 @@
       "inputs": {
         "arduino-indexes": "arduino-indexes",
         "arduino-nix": "arduino-nix",
+        "lamejs": "lamejs",
         "nixpkgs": "nixpkgs"
       }
     }
