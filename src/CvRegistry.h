@@ -17,6 +17,9 @@ static constexpr uint16_t ADDR_LONG_MSB = 17;
 static constexpr uint16_t ADDR_LONG_LSB = 18;
 static constexpr uint16_t CONFIG = 29;
 
+// Audio
+static constexpr uint16_t MASTER_VOL = 50;
+
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
 static constexpr uint16_t REAR = 34;
@@ -51,6 +54,8 @@ static const CvDef CV_DEFS[] = {
     {CV::ADDR_LONG_MSB, 192, "Long Addr MSB", "Upper byte of Long Address"},
     {CV::ADDR_LONG_LSB, 3, "Long Addr LSB", "Lower byte of Long Address"},
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
+
+    {CV::MASTER_VOL, 128, "Master Volume", "Audio Volume (0-255)"},
 
     {CV::FRONT, 0, "Map: Front Light", "Function to map to Front Light (0-28)"},
     {CV::REAR, 0, "Map: Rear Light", "Function to map to Rear Light (0-28)"},
