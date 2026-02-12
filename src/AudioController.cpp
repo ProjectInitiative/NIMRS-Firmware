@@ -2,12 +2,13 @@
 #include "Logger.h"
 #include <AudioFileSourceLittleFS.h>
 #include <AudioGeneratorWAV.h>
+#include <AudioGeneratorMP3.h>
 #include <AudioOutputI2S.h>
 #include "DccController.h"
 #include "CvRegistry.h"
 
 AudioController::AudioController()
-    : _out(nullptr), _wav(nullptr), _file(nullptr) {}
+    : _out(nullptr), _generator(nullptr), _file(nullptr) {}
 
 void AudioController::setup() {
   Log.println("AudioController: Initializing...");
@@ -20,7 +21,7 @@ void AudioController::setup() {
   uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
   _out->SetGain(vol / 255.0f);
 
-  _wav = new AudioGeneratorWAV();
+  // Note: Generator is allocated on playFile()
 
   // Enable Amp
   pinMode(Pinout::AMP_SD_MODE, OUTPUT);
@@ -31,26 +32,30 @@ void AudioController::setup() {
 
 void AudioController::loop() {
   // Update Volume dynamically
-  // Note: DccController::getCV is fast (RAM read), so calling it every loop is okay-ish.
-  // Ideally we'd only do this on change, but polling 0-255 is cheap.
   if (_out) {
       uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
       _out->SetGain(vol / 255.0f);
   }
 
-  if (_wav && _wav->isRunning()) {
-    if (!_wav->loop()) {
-      _wav->stop();
+  if (_generator && _generator->isRunning()) {
+    if (!_generator->loop()) {
+      _generator->stop();
       Log.println("Audio: Playback Finished");
     }
   }
 }
 
 void AudioController::playFile(const char *filename) {
-  if (_wav->isRunning())
-    _wav->stop();
-  if (_file)
-    delete _file;
+  // Stop and clean up existing playback
+  if (_generator) {
+      if (_generator->isRunning()) _generator->stop();
+      delete _generator;
+      _generator = nullptr;
+  }
+  if (_file) {
+      delete _file;
+      _file = nullptr;
+  }
 
   if (!LittleFS.exists(filename)) {
     Log.printf("Audio: File not found: %s\n", filename);
@@ -58,15 +63,24 @@ void AudioController::playFile(const char *filename) {
   }
 
   _file = new AudioFileSourceLittleFS(filename);
-  _wav->begin(_file, _out);
+  
+  String fn = String(filename);
+  if (fn.endsWith(".mp3") || fn.endsWith(".MP3")) {
+      Log.println("Audio: Detected MP3");
+      _generator = new AudioGeneratorMP3();
+  } else {
+      Log.println("Audio: Detected WAV");
+      _generator = new AudioGeneratorWAV();
+  }
+
+  _generator->begin(_file, _out);
   Log.printf("Audio: Playing %s\n", filename);
 }
 
 void AudioController::stop() {
-  if (_wav && _wav->isRunning())
-    _wav->stop();
-  if (_file) {
-    delete _file;
-    _file = nullptr;
-  }
+  if (_generator && _generator->isRunning())
+    _generator->stop();
+    
+  if (_generator) { delete _generator; _generator = nullptr; }
+  if (_file) { delete _file; _file = nullptr; }
 }
