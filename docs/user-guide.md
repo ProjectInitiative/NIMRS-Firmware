@@ -4,22 +4,23 @@
 
 1.  **Power Up:** Connect the decoder to a 21-Pin tester or locomotive.
 2.  **WiFi Setup:**
-    *   On first boot, connect to the WiFi Access Point **`NIMRS-Decoder`**.
-    *   A "Sign In" or Config Portal should appear.
-    *   Enter your home WiFi credentials.
-    *   The decoder will reboot and connect to your network.
+    - On first boot, connect to the WiFi Access Point **`NIMRS-Decoder`**.
+    - A "Sign In" or Config Portal should appear.
+    - Enter your home WiFi credentials.
+    - The decoder will reboot and connect to your network.
 
 ## Web Dashboard
 
 Navigate to `http://<decoder-ip>/` (e.g., `http://192.168.1.50`).
 
-*   **Status:** Shows basic health (Speed, Direction, WiFi).
-*   **Live Logs:** Click **Live Logs** to see real-time debug information (DCC packets, Motor logic).
-*   **Firmware Update:** Click **Firmware Update** to upload a new version.
+- **Status:** Shows basic health (Speed, Direction, WiFi).
+- **Live Logs:** Click **Live Logs** to see real-time debug information (DCC packets, Motor logic).
+- **Firmware Update:** Click **Firmware Update** to upload a new version.
 
 ## Firmware Updates (OTA)
 
 You can update the decoder wirelessly:
+
 1.  Download the latest `nimrs-firmware.bin` from GitHub Releases.
 2.  Go to `http://<decoder-ip>/update`.
 3.  Select the `.bin` file.
@@ -28,13 +29,14 @@ You can update the decoder wirelessly:
 ## DCC Configuration
 
 The decoder supports standard NMRA CVs:
-*   **CV 1:** Short Address (Default: 3)
-*   **CV 3:** Acceleration Rate (Momentum)
-*   **CV 4:** Deceleration Rate (Momentum)
-*   **CV 29:** Configuration Register (Direction, Steps, Address Mode)
+
+- **CV 1:** Short Address (Default: 3)
+- **CV 3:** Acceleration Rate (Momentum)
+- **CV 4:** Deceleration Rate (Momentum)
+- **CV 29:** Configuration Register (Direction, Steps, Address Mode)
 
 ## Troubleshooting
 
-*   **Blue LED Flashing:** Hardware Serial traffic (TX).
-*   **No Motor Movement:** Check if `VMOTOR_PG` (Power Good) is high in logs. Check CV2 (Start Voltage).
-*   **Won't Connect to WiFi:** Reset the board 3 times quickly (TODO: Implement Factory Reset) or re-flash to clear NVS.
+- **Blue LED Flashing:** Hardware Serial traffic (TX).
+- **No Motor Movement:** Check if `VMOTOR_PG` (Power Good) is high in logs. Check CV2 (Start Voltage).
+- **Won't Connect to WiFi:** Reset the board 3 times quickly (TODO: Implement Factory Reset) or re-flash to clear NVS.
