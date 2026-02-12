@@ -34,6 +34,7 @@ private:
     // Control Handler
     void handleControl();
     void handleCV();
+    void handleAudioPlay();
 };
 
 #endif

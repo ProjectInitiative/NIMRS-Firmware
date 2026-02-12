@@ -9,11 +9,13 @@
 #include "src/DccController.h"
 #include "src/MotorController.h"
 #include "src/LightingController.h"
+#include "src/AudioController.h"
 #include "src/Logger.h"
 
 ConnectivityManager connectivityManager;
 MotorController motorController;
 LightingController lightingController;
+// AudioController is Singleton
 
 // Task handle
 TaskHandle_t ControlPlaneTaskHandle;
@@ -55,8 +57,11 @@ void setup() {
     // 3. Hardware Control - Setup pins
     motorController.setup();
     lightingController.setup();
+    AudioController::getInstance().setup();
 
     // 4. Create Real-time Task on Core 0
+    //
+    // To test dynamic scheduling change xTaskCreatePinnedToCore to xTaskCreate (which usually takes one less argument—the core ID—or ignores it depending on the wrapper). In the ESP32 Arduino framework xTaskCreate corresponds to xTaskCreatePinnedToCore with tskNO_AFFINITY (which is MAX_INT).
     xTaskCreatePinnedToCore(
         controlPlaneTask,        /* Task function. */
         "ControlPlane",          /* name of task. */
@@ -73,8 +78,9 @@ void setup() {
 }
 
 void loop() {
-    // Main loop handles Web Server and lower-priority tasks (Core 1)
+    // Core 1 handles Web Server, WiFi, Audio, and Logging
     connectivityManager.loop();
+    AudioController::getInstance().loop();
     
     static unsigned long lastHeartbeat = 0;
     if (millis() - lastHeartbeat > 1000) {

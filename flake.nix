@@ -146,6 +146,11 @@
             # For OTA upload
             curl
             
+            # Formatting & Linting
+            treefmt
+            clang-tools # clang-format
+            nodePackages.prettier # prettier
+            
             # Helper scripts
             buildFirmware
             uploadFirmware
@@ -166,6 +171,7 @@
             echo "  build-firmware         : Build the firmware from current directory"
             echo "  upload-firmware <port|IP> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
             echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
+            echo "  treefmt                : Format all code (C++, JSON, MD)"
             echo "  nix build              : Clean build of the firmware"
           '';
         };
