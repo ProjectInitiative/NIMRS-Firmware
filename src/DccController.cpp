@@ -3,6 +3,7 @@
 #include <EEPROM.h>
 #include "Logger.h"
 #include "nimrs-pinout.h"
+#include "CvRegistry.h"
 
 DccController::DccController() {}
 
@@ -10,6 +11,7 @@ DccController::DccController() {}
 void notifyCVResetFactoryDefault();
 
 void DccController::setup() {
+    #ifdef DCC_PIN
     // 1. Setup Pin first so init() knows which interrupt to attach
     _dcc.pin(Pinout::TRACK_LEFT_3V3, 1);
     
@@ -23,13 +25,17 @@ void DccController::setup() {
     // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
     _dcc.init(MAN_ID_DIY, 10, 0x02, 0); 
     
-    // Force Pin Finder Mapping if uninitialized
-    if (_dcc.getCV(35) == 255) {
+    // Check registry for uninitialized mapping
+    // If CV::AUX1 (35) is 255, we assume reset is needed.
+    if (_dcc.getCV(CV::AUX1) == 255) {
         Log.println("DCC: Forcing Default Mapping...");
         notifyCVResetFactoryDefault();
     }
     
     Log.printf("DccController: Listening on Pin %d\n", Pinout::TRACK_LEFT_3V3);
+    #else
+    Log.println("DccController: Error - DCC_PIN not defined!");
+    #endif
 }
 
 void DccController::loop() {
@@ -52,7 +58,6 @@ void DccController::updateSpeed(uint8_t speed, bool direction) {
         state.lastDccPacketTime = millis();
     }
     
-    // Log outside lock to prevent deadlock
     Log.debug("DCC: Speed Update\n");
 }
 
@@ -74,27 +79,10 @@ void notifyCVResetFactoryDefault() {
     Log.println("DCC: Factory Reset - Writing Defaults...");
     NmraDcc& dcc = DccController::getInstance().getDcc();
     
-    dcc.setCV(1, 3);   // Primary Address
-    dcc.setCV(17, 192); // Long Address MSB
-    dcc.setCV(18, 3);   // Long Address LSB
-    dcc.setCV(2, 60);    // Vstart (Tuned for test motor)
-    dcc.setCV(3, 2);     // Accel
-    dcc.setCV(4, 2);     // Decel
-    dcc.setCV(5, 255);   // Vhigh
-    dcc.setCV(6, 128);   // Vmid
-    dcc.setCV(29, 38);   // Config
-    
-    // Default Mapping (Output -> Function)
-    dcc.setCV(33, 0); // Front -> F0
-    dcc.setCV(34, 0); // Rear  -> F0
-    dcc.setCV(35, 1); // AUX 1 -> F1
-    dcc.setCV(36, 2); // AUX 2 -> F2
-    dcc.setCV(37, 3); // AUX 3 -> F3
-    dcc.setCV(38, 4); // AUX 4 -> F4
-    dcc.setCV(39, 5); // AUX 5 -> F5
-    dcc.setCV(40, 6); // AUX 6 -> F6
-    dcc.setCV(41, 7); // AUX 7 -> F7
-    dcc.setCV(42, 8); // AUX 8 -> F8
+    // Automate reset using Registry
+    for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
+        dcc.setCV(CV_DEFS[i].id, CV_DEFS[i].defaultValue);
+    }
     
     Log.println("DCC: Factory Reset Complete");
 }

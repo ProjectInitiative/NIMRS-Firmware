@@ -1,6 +1,7 @@
 #include "LightingController.h"
 #include "DccController.h"
 #include "Logger.h"
+#include "CvRegistry.h"
 
 // Set this to true if lights are ON when pin is LOW
 static const bool INVERT_OUTPUTS = false; 
@@ -70,25 +71,25 @@ void LightingController::loop() {
         digitalWrite(pin, physVal);
 
         if (active != lastPinState[pin]) {
-            Log.printf("Output: %s (Pin %d) mapped to F%d -> %s\n", name, pin, fMap, active ? "ON" : "OFF");
+            Log.debug("Output: %s (Pin %d) mapped to F%d -> %s\n", name, pin, fMap, active ? "ON" : "OFF");
             lastPinState[pin] = active;
         }
     };
 
-    driveOutput("FRONT", Pinout::LIGHT_FRONT, dcc.getCV(33), true, false);
-    driveOutput("REAR",  Pinout::LIGHT_REAR,  dcc.getCV(34), false, true);
-    driveOutput("AUX1",  Pinout::AUX1,        dcc.getCV(35), false, false);
-    driveOutput("AUX2",  Pinout::AUX2,        dcc.getCV(36), false, false);
+    driveOutput("FRONT", Pinout::LIGHT_FRONT, dcc.getCV(CV::FRONT), true, false);
+    driveOutput("REAR",  Pinout::LIGHT_REAR,  dcc.getCV(CV::REAR),  false, true);
+    driveOutput("AUX1",  Pinout::AUX1,        dcc.getCV(CV::AUX1),  false, false);
+    driveOutput("AUX2",  Pinout::AUX2,        dcc.getCV(CV::AUX2),  false, false);
     
-    // GPIO 35 is Input Only on S3 - keeping commented to avoid issues
-    // driveOutput("AUX3",  Pinout::AUX3,        dcc.getCV(37), false, false); 
+    // GPIO 35 is Input Only on S3
+    // driveOutput("AUX3",  Pinout::AUX3,        dcc.getCV(CV::AUX3),  false, false); 
     
-    driveOutput("AUX4",  Pinout::AUX4,        dcc.getCV(38), false, false);
+    driveOutput("AUX4",  Pinout::AUX4,        dcc.getCV(CV::AUX4),  false, false);
     
-    // GPIO 17 often PSRAM - keeping commented to avoid crashes
-    // driveOutput("AUX5",  Pinout::AUX5,        dcc.getCV(39), false, false); 
+    // GPIO 17 often PSRAM
+    // driveOutput("AUX5",  Pinout::AUX5,        dcc.getCV(CV::AUX5),  false, false); 
     
-    driveOutput("AUX6",  Pinout::AUX6,        dcc.getCV(40), false, false);
-    driveOutput("AUX7",  Pinout::INPUT1_AUX7, dcc.getCV(41), false, false);
-    driveOutput("AUX8",  Pinout::INPUT2_AUX8, dcc.getCV(42), false, false);
+    driveOutput("AUX6",  Pinout::AUX6,        dcc.getCV(CV::AUX6),  false, false);
+    driveOutput("AUX7",  Pinout::INPUT1_AUX7, dcc.getCV(CV::AUX7),  false, false);
+    driveOutput("AUX8",  Pinout::INPUT2_AUX8, dcc.getCV(CV::AUX8),  false, false);
 }

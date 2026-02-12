@@ -78,7 +78,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 <div class="card">
                     <h3>CV Configuration <button class="btn small" onclick="loadAllCVs()">Refresh</button></h3>
                     <table id="cv-table">
-                        <thead><tr><th>CV</th><th>Description</th><th>Value</th><th>Action</th></tr></thead>
+                        <thead><tr><th>CV</th><th>Name</th><th>Description</th><th>Value</th><th>Action</th></tr></thead>
                         <tbody></tbody>
                     </table>
                     <br>
@@ -341,32 +341,14 @@ let currentTab = 'dashboard';
 let logInterval = null;
 let statusInterval = null;
 let cvListRendered = false;
-
-let trackableCVS = [
-    {cv: 1, desc: "Primary Address"},
-    {cv: 2, desc: "Vstart (Min Speed)"},
-    {cv: 3, desc: "Acceleration Rate"},
-    {cv: 4, desc: "Deceleration Rate"},
-    {cv: 5, desc: "Vhigh (Max Speed)"},
-    {cv: 6, desc: "Vmid (Mid Speed)"},
-    {cv: 29, desc: "Configuration Register"},
-    {cv: 33, desc: "Front Light Function (0-28)"},
-    {cv: 34, desc: "Rear Light Function (0-28)"},
-    {cv: 35, desc: "AUX 1 Function (0-28)"},
-    {cv: 36, desc: "AUX 2 Function (0-28)"},
-    {cv: 37, desc: "AUX 3 Function (0-28)"},
-    {cv: 38, desc: "AUX 4 Function (0-28)"},
-    {cv: 39, desc: "AUX 5 Function (0-28)"},
-    {cv: 40, desc: "AUX 6 Function (0-28)"},
-    {cv: 41, desc: "AUX 7 Function (0-28)"},
-    {cv: 42, desc: "AUX 8 Function (0-28)"}
-];
+let trackableCVS = []; // Fetched from backend
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
     // Determine initial tab (maybe from hash)
     showTab('dashboard');
     renderFunctions();
+    fetchCVDefs(); // Populate trackableCVS from Registry
 
     // Start polling status
     pollStatus();
@@ -375,6 +357,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup File Upload
     document.getElementById('upload-form').addEventListener('submit', handleUpload);
 });
+
+async function fetchCVDefs() {
+    try {
+        const r = await fetch('/api/cv/defs');
+        trackableCVS = await r.json();
+        if (currentTab === 'cvs') renderCVTable();
+    } catch (e) { console.error("Failed to fetch CV defs", e); }
+}
 
 function renderFunctions() {
     const grid = document.getElementById('func-grid');
@@ -417,11 +407,13 @@ function updateFuncBtn(i, active) {
 function showTab(tabId) {
     // Update Nav
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector(`.nav-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
+    const navBtn = document.querySelector(`.nav-btn[onclick="showTab('${tabId}')"]`);
+    if (navBtn) navBtn.classList.add('active');
 
     // Update Content
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
+    const tabEl = document.getElementById(tabId);
+    if (tabEl) tabEl.classList.add('active');
 
     currentTab = tabId;
 
@@ -438,13 +430,8 @@ function showTab(tabId) {
         }
     }
 
-    if (tabId === 'files') {
-        loadFiles();
-    }
-    
-    if (tabId === 'cvs') {
-        renderCVTable();
-    }
+    if (tabId === 'files') loadFiles();
+    if (tabId === 'cvs') renderCVTable();
 }
 
 // --- API Interactions ---
@@ -453,8 +440,9 @@ function pollStatus() {
     fetch('/api/status')
         .then(r => r.json())
         .then(data => {
-            document.getElementById('connection-status').classList.remove('disconnected');
-            document.getElementById('connection-status').classList.add('connected');
+            const indicator = document.getElementById('connection-status');
+            indicator.classList.remove('disconnected');
+            indicator.classList.add('connected');
             
             document.getElementById('dcc-address').innerText = data.address || '--';
             document.getElementById('dcc-speed').innerText = data.speed || '0';
@@ -472,8 +460,10 @@ function pollStatus() {
             
             const isFwd = (dirStr === "forward");
             const btn = document.getElementById('dir-btn');
-            btn.innerText = isFwd ? "FWD" : "REV";
-            btn.dataset.dir = isFwd; 
+            if (btn) {
+                btn.innerText = isFwd ? "FWD" : "REV";
+                btn.dataset.dir = isFwd; 
+            }
             
             // Sync Functions
             if (data.functions) {
@@ -488,8 +478,9 @@ function pollStatus() {
             if(document.getElementById('sys-hash')) document.getElementById('sys-hash').innerText = data.hash || 'Unknown';
         })
         .catch(e => {
-            document.getElementById('connection-status').classList.remove('connected');
-            document.getElementById('connection-status').classList.add('disconnected');
+            const indicator = document.getElementById('connection-status');
+            indicator.classList.remove('connected');
+            indicator.classList.add('disconnected');
         });
 }
 
@@ -514,7 +505,6 @@ function setSpeed(val) {
 }
 
 function toggleDir() {
-    // Current dir is stored in dataset or inferred from text
     const btn = document.getElementById('dir-btn');
     const currentFwd = (btn.innerText === "FWD");
     sendAction('set_direction', !currentFwd);
@@ -524,7 +514,9 @@ function toggleDir() {
 
 function renderCVTable() {
     const tbody = document.querySelector('#cv-table tbody');
-    // Capture existing values to avoid losing them on re-render
+    if (!tbody) return;
+
+    // Capture existing values
     const existingValues = {};
     document.querySelectorAll('[id^="cv-val-"]').forEach(input => {
         existingValues[input.id.replace('cv-val-', '')] = input.value;
@@ -540,7 +532,8 @@ function renderCVTable() {
         const val = existingValues[item.cv] || '';
         tr.innerHTML = `
             <td>${item.cv}</td>
-            <td>${item.desc}</td>
+            <td><b>${item.name || 'Custom'}</b></td>
+            <td><small>${item.desc || '-'}</small></td>
             <td><input type="number" id="cv-val-${item.cv}" style="width:60px" value="${val}" placeholder="?"></td>
             <td>
                 <button class="btn small" onclick="writeCV(${item.cv})">Save</button>
@@ -565,13 +558,12 @@ function readCV(cv) {
     .then(data => {
         // If this CV isn't in our list, add it
         if (!trackableCVS.find(c => c.cv === cv)) {
-            trackableCVS.push({cv: cv, desc: "Custom CV"});
+            trackableCVS.push({cv: cv, name: "Custom", desc: "User added CV"});
             renderCVTable();
         }
         const input = document.getElementById(`cv-val-${cv}`);
         if (input) input.value = data.value;
         
-        // Also update custom fields if they match
         if (cv === parseInt(document.getElementById('custom-cv').value)) {
              document.getElementById('custom-val').value = data.value;
         }
@@ -581,7 +573,6 @@ function readCV(cv) {
 function writeCV(cv) {
     const input = document.getElementById(`cv-val-${cv}`);
     if (!input || input.value === '') return;
-    
     doWriteCV(cv, parseInt(input.value));
 }
 
@@ -593,25 +584,20 @@ function doWriteCV(cv, val) {
     })
     .then(r => {
         if (r.ok) {
-            // If this CV was new, make sure it's in the table
             if (!trackableCVS.find(c => c.cv === cv)) {
-                trackableCVS.push({cv: cv, desc: "Custom CV"});
+                trackableCVS.push({cv: cv, name: "Custom", desc: "User added CV"});
                 renderCVTable();
             }
             alert(`CV${cv} Saved`); 
-        } else {
-            alert("Write Failed");
-        }
+        } else alert("Write Failed");
     });
 }
 
 function rwCustomCV(mode) {
     const cv = parseInt(document.getElementById('custom-cv').value);
     if (!cv) return;
-    
-    if (mode === 'read') {
-        readCV(cv);
-    } else {
+    if (mode === 'read') readCV(cv);
+    else {
         const val = parseInt(document.getElementById('custom-val').value);
         if (isNaN(val)) return;
         doWriteCV(cv, val);
@@ -658,10 +644,8 @@ async function handleUpload(e) {
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         statusDiv.innerText = `Uploading ${i+1}/${files.length}: ${file.name}...`;
-        
         const formData = new FormData();
         formData.append("file", file);
-
         try {
             const r = await fetch('/api/files/upload', {
                 method: 'POST',
@@ -673,7 +657,6 @@ async function handleUpload(e) {
             return;
         }
     }
-
     statusDiv.innerText = "All uploads complete!";
     input.value = ''; 
     loadFiles();
@@ -688,10 +671,7 @@ async function deleteSelected() {
     const checked = document.querySelectorAll('.file-check:checked');
     if (!checked.length) return alert("No files selected");
     if (!confirm(`Delete ${checked.length} files?`)) return;
-
-    for (const c of checked) {
-        await performDelete(c.value);
-    }
+    for (const c of checked) await performDelete(c.value);
     loadFiles();
 }
 
@@ -711,18 +691,12 @@ function pollLogs() {
         .then(r => r.json())
         .then(lines => {
             const viewer = document.getElementById('log-viewer');
-            
-            // Filter logs based on cleared timestamp
             const newLines = lines.filter(line => {
-                const match = line.match(/^\[(\d+)\]/);
-                if (match) {
-                    return parseInt(match[1]) > clearedTimestamp;
-                }
+                const match = line.match(/^\\[(\d+)\\]/);
+                if (match) return parseInt(match[1]) > clearedTimestamp;
                 return true; 
             });
-
             viewer.innerHTML = newLines.join('\n');
-
             if (document.getElementById('auto-scroll').checked) {
                 viewer.scrollTop = viewer.scrollHeight;
             }
@@ -735,17 +709,14 @@ function clearLogs() {
         .then(lines => {
             if (lines.length > 0) {
                 const lastLine = lines[lines.length - 1];
-                const match = lastLine.match(/^\[(\d+)\]/);
-                if (match) {
-                    clearedTimestamp = parseInt(match[1]);
-                }
+                const match = lastLine.match(/^\\[(\d+)\\]/);
+                if (match) clearedTimestamp = parseInt(match[1]);
             }
             document.getElementById('log-viewer').innerHTML = '';
         });
 }
 
 function toggleDebugLogs(el) {
-    // 0 = DEBUG, 1 = INFO
     sendAction('set_log_level', el.checked ? 0 : 1);
 }
 
@@ -774,7 +745,6 @@ function scanWifi() {
     const res = document.getElementById('scan-results');
     res.style.display = 'block';
     res.innerText = 'Scanning...';
-    
     fetch('/api/wifi/scan')
         .then(r => r.json())
         .then(nets => {
@@ -804,9 +774,7 @@ function saveWifi(e) {
     e.preventDefault();
     const ssid = document.getElementById('wifi-ssid').value;
     const pass = document.getElementById('wifi-pass').value;
-
     if (!confirm("Device will restart and try to connect. Continue?")) return;
-
     fetch('/api/wifi/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -818,7 +786,6 @@ function saveWifi(e) {
 
 function resetWifi() {
     if (!confirm("Forget saved WiFi and restart into AP mode?")) return;
-
     fetch('/api/wifi/reset', { method: 'POST' })
     .then(() => alert("Resetting... Connect to 'NIMRS-Decoder' AP."))
     .catch(e => alert("Error: " + e));

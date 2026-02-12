@@ -1,6 +1,7 @@
 #include "ConnectivityManager.h"
 #include "WebAssets.h"
 #include "DccController.h"
+#include "CvRegistry.h"
 #include <ArduinoJson.h>
 
 #ifndef BUILD_VERSION
@@ -110,6 +111,21 @@ void ConnectivityManager::setup() {
     // API: Control
     _server.on("/api/control", HTTP_POST, [this]() { handleControl(); });
     _server.on("/api/cv", HTTP_POST, [this]() { handleCV(); });
+    
+    // API: CV Definitions
+    _server.on("/api/cv/defs", HTTP_GET, [this]() {
+        JsonDocument doc;
+        JsonArray arr = doc.to<JsonArray>();
+        for(size_t i=0; i<CV_DEFS_COUNT; i++) {
+            JsonObject obj = arr.add<JsonObject>();
+            obj["cv"] = CV_DEFS[i].id;
+            obj["name"] = CV_DEFS[i].name;
+            obj["desc"] = CV_DEFS[i].desc;
+        }
+        String output;
+        serializeJson(doc, output);
+        _server.send(200, "application/json", output);
+    });
 
     // OTA Updater
     _httpUpdater.setup(&_server, "/update");

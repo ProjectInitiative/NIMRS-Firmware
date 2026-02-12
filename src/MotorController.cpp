@@ -1,5 +1,6 @@
 #include "MotorController.h"
 #include "Logger.h"
+#include "CvRegistry.h"
 
 MotorController::MotorController() {}
 
@@ -50,17 +51,17 @@ void MotorController::loop() {
     // Momentum Calculations
     unsigned long now = millis();
     
-    // Read CVs (3=Accel, 4=Decel)
-    uint8_t cv3 = DccController::getInstance().getDcc().getCV(3);
-    uint8_t cv4 = DccController::getInstance().getDcc().getCV(4);
-    uint8_t cv2 = DccController::getInstance().getDcc().getCV(2); // Vstart
+    // Read CVs using descriptive names
+    uint8_t accelRate = DccController::getInstance().getDcc().getCV(CV::ACCEL);
+    uint8_t decelRate = DccController::getInstance().getDcc().getCV(CV::DECEL);
+    uint8_t vStart    = DccController::getInstance().getDcc().getCV(CV::V_START);
     
-    if (cv3 == 0) cv3 = 1;
-    if (cv4 == 0) cv4 = 1;
+    if (accelRate == 0) accelRate = 1;
+    if (decelRate == 0) decelRate = 1;
 
     // Calculate Step Delay
-    float accelDelay = cv3 * 3.5f;
-    float decelDelay = cv4 * 3.5f;
+    float accelDelay = accelRate * 3.5f;
+    float decelDelay = decelRate * 3.5f;
 
     unsigned long dt = now - _lastMomentumUpdate;
     if (dt < 2) return; 
@@ -90,7 +91,7 @@ void MotorController::loop() {
         // The momentum logic will naturally ramp up from 0 in the next loops
     }
 
-    // CV2 (Vstart) Application
+    // Vstart Application
     // If we are supposed to be moving (currentSpeed > 0), ensure we output at least Vstart
     uint8_t pwmOutput = (uint8_t)_currentSpeed;
     
@@ -98,8 +99,8 @@ void MotorController::loop() {
         // Map the remaining range? Or just add offset?
         // Standard behavior: 1 = Vstart, 255 = Vhigh.
         // Simple map:
-        if (cv2 > 0) {
-            pwmOutput = map(pwmOutput, 1, 255, cv2, 255);
+        if (vStart > 0) {
+            pwmOutput = map(pwmOutput, 1, 255, vStart, 255);
         }
     }
 
