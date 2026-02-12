@@ -11,7 +11,6 @@ DccController::DccController() {}
 void notifyCVResetFactoryDefault();
 
 void DccController::setup() {
-    #ifdef DCC_PIN
     // 1. Setup Pin first so init() knows which interrupt to attach
     _dcc.pin(Pinout::TRACK_LEFT_3V3, 1);
     
@@ -33,9 +32,6 @@ void DccController::setup() {
     }
     
     Log.printf("DccController: Listening on Pin %d\n", Pinout::TRACK_LEFT_3V3);
-    #else
-    Log.println("DccController: Error - DCC_PIN not defined!");
-    #endif
 }
 
 void DccController::loop() {
