@@ -118,23 +118,28 @@ void MotorController::loop() {
 
         
 
-        // 2. Control (PI)
-
-        float error = targetOmega - _modelOmega;
-
-        float pOut = error * (_cvPidP * 4.0f);
-
-        _pidErrorSum += (error * (_cvPidI / 100.0f));
-
-        if (_pidErrorSum > 1023.0f) _pidErrorSum = 1023.0f;
-
-        if (_pidErrorSum < -500.0f) _pidErrorSum = -500.0f;
-
-        
-
-        float ff = targetOmega * Ke * 1023.0f;
-
-        _modelPwm = ff + pOut + _pidErrorSum;
+      // 2. Control (PI Loop)
+      float error = targetOmega - _modelOmega;
+      
+      // P Term
+      float pOut = error * (_cvPidP * 4.0f); // Scale gain
+      
+      // I Term
+      // Increase scaling: CV=10 -> 0.1 per tick. With error=0.01, adds 0.001. 
+      // Need faster integration. Try / 20.0f.
+      _pidErrorSum += (error * (_cvPidI / 20.0f));
+      
+      // Anti-windup
+      if (_pidErrorSum > 1023.0f) _pidErrorSum = 1023.0f;
+      if (_pidErrorSum < -500.0f) _pidErrorSum = -500.0f;
+      
+      // Feedforward (Target Voltage) + PI
+      // Simple FF: V = Speed * Ke
+      // PLUS: Add Vstart (CV 2) to overcome static friction immediately
+      float vStartOffset = (_cvVstart > 0) ? (_cvVstart * 4.0f) : 0.0f;
+      float ff = (targetOmega * Ke * 1023.0f) + vStartOffset;
+      
+      _modelPwm = ff + pOut + _pidErrorSum;
 
         if (_modelPwm > 1023.0f) _modelPwm = 1023.0f;
 

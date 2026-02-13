@@ -155,6 +155,8 @@ void ConnectivityManager::setup() {
   // API: Control
   _server.on("/api/control", HTTP_POST, [this]() { handleControl(); });
   _server.on("/api/cv", HTTP_POST, [this]() { handleCV(); });
+  _server.on("/api/cv/all", HTTP_GET, [this]() { handleCvAll(); });
+  _server.on("/api/cv/all", HTTP_POST, [this]() { handleCvAll(); });
   _server.on("/api/audio/play", HTTP_POST, [this]() { handleAudioPlay(); });
 
   // API: CV Definitions
@@ -422,6 +424,44 @@ void ConnectivityManager::handleCV() {
     _server.send(200, "application/json", "{\"status\":\"ok\"}");
   } else {
     _server.send(200, "text/plain", "Unknown cmd");
+  }
+}
+
+void ConnectivityManager::handleCvAll() {
+  if (_server.method() == HTTP_GET) {
+    JsonDocument doc;
+    JsonObject obj = doc.to<JsonObject>();
+    NmraDcc &dcc = DccController::getInstance().getDcc();
+
+    // Loop through ALL defined CVs in our Registry
+    for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
+      uint16_t id = CV_DEFS[i].id;
+      obj[String(id)] = dcc.getCV(id);
+    }
+
+    String output;
+    serializeJson(doc, output);
+    _server.send(200, "application/json", output);
+  } else if (_server.method() == HTTP_POST) {
+    if (!_server.hasArg("plain")) {
+      _server.send(400, "text/plain", "Body missing");
+      return;
+    }
+
+    JsonDocument doc;
+    deserializeJson(doc, _server.arg("plain"));
+    JsonObject obj = doc.as<JsonObject>();
+    NmraDcc &dcc = DccController::getInstance().getDcc();
+
+    for (JsonPair p : obj) {
+      uint16_t cv = String(p.key().c_str()).toInt();
+      uint8_t val = p.value().as<uint8_t>();
+      if (cv > 0) {
+        dcc.setCV(cv, val);
+        Log.printf("Web Bulk: Write CV%d = %d\n", cv, val);
+      }
+    }
+    _server.send(200, "application/json", "{\"status\":\"ok\"}");
   }
 }
 
