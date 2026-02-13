@@ -21,7 +21,7 @@ private:
   // PWM Configuration
   // Low frequency (100Hz) improves low-speed torque.
   // DRV8213 handles current regulation to prevent buzzing issues.
-  const uint32_t _pwmFreq = 200; // Increased to 200Hz to avoid Audio Clock conflict
+  const uint32_t _pwmFreq = 100; // Increased to 200Hz to avoid Audio Clock conflict
   const uint8_t _pwmResolution = 8;
   const uint8_t _pwmChannel1 = 0;
   const uint8_t _pwmChannel2 = 1;
