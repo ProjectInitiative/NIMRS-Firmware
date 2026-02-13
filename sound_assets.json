@@ -1,0 +1,30 @@
+{
+  "assets": [
+    {
+      "id": 1,
+      "name": "Steam Whistle",
+      "type": "complex_loop",
+      "files": {
+        "intro": "whistle_start.mp3",
+        "loop": "whistle_hold.mp3",
+        "outro": "whistle_end.mp3"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Bell",
+      "type": "toggle",
+      "files": {
+        "loop": "bell.mp3"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Brake Squeal",
+      "type": "simple",
+      "files": {
+        "loop": "brakes.mp3"
+      }
+    }
+  ]
+}

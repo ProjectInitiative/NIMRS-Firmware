@@ -365,6 +365,7 @@ void ConnectivityManager::handleControl() {
 
   if (action == "stop") {
     state.speed = 0;
+    state.speedSource = SOURCE_WEB;
     Log.println("Web: STOP");
   } else if (action == "toggle_lights") {
     state.functions[0] = !state.functions[0];
@@ -380,9 +381,11 @@ void ConnectivityManager::handleControl() {
     int val = doc["value"];
     // Map 0-126 (DCC steps) to 0-255 (PWM)
     state.speed = map(val, 0, 126, 0, 255);
+    state.speedSource = SOURCE_WEB;
     Log.printf("Web: Speed Step %d -> PWM %d\n", val, state.speed);
   } else if (action == "set_direction") {
     state.direction = doc["value"];
+    state.speedSource = SOURCE_WEB;
     Log.printf("Web: Dir %s\n", state.direction ? "FWD" : "REV");
   } else if (action == "set_log_level") {
     int level = doc["value"]; // 0=Debug, 1=Info

@@ -5,11 +5,21 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+enum ControlSource {
+    SOURCE_DCC,
+    SOURCE_WEB
+};
+
 struct SystemState {
   uint16_t dccAddress = 3;
   uint8_t speed = 0;
   bool direction = true; // true = forward
   bool functions[29] = {false};
+
+  // Control Logic
+  ControlSource speedSource = SOURCE_DCC;
+  uint8_t lastDccSpeed = 0;
+  bool lastDccDirection = true;
 
   // Status flags
   bool wifiConnected = false;
