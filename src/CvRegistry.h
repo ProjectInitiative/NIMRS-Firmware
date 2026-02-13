@@ -21,6 +21,10 @@ static constexpr uint16_t CONFIG = 29;
 static constexpr uint16_t MASTER_VOL = 50;
 static constexpr uint16_t AUDIO_MAP_BASE = 100; // CV = 100 + SoundID. Value = Function (0-28)
 
+// Load Compensation (ESU-style)
+static constexpr uint16_t LOAD_K = 54; // Proportional Gain
+static constexpr uint16_t LOAD_I = 55; // Integral Gain
+
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
 static constexpr uint16_t REAR = 34;
@@ -55,6 +59,9 @@ static const CvDef CV_DEFS[] = {
     {CV::ADDR_LONG_MSB, 192, "Long Addr MSB", "Upper byte of Long Address"},
     {CV::ADDR_LONG_LSB, 3, "Long Addr LSB", "Lower byte of Long Address"},
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
+
+    {CV::LOAD_K, 0, "Load Comp K", "Prop. Gain (IR Comp) 0-255"},
+    {CV::LOAD_I, 0, "Load Comp I", "Integral Gain 0-255"},
 
     {CV::MASTER_VOL, 128, "Master Volume", "Audio Volume (0-255)"},
 
