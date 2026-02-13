@@ -19,9 +19,9 @@ private:
   const uint8_t _gainPin = 34;
 
   // PWM Configuration (LEDC)
-  // 100Hz + Slow Decay = High Torque Crawl
-  const uint32_t _pwmFreq = 100; 
-  const uint8_t _pwmResolution = 8;
+  // 25Hz + Slow Decay = Maximum Low-Speed Torque
+  const uint32_t _pwmFreq = 25; 
+  const uint8_t _pwmResolution = 10; // 10-bit (0-1023) for fine control
   const uint8_t _pwmChannel1 = 2; // Avoid 0/1 to minimize Audio conflict risk
   const uint8_t _pwmChannel2 = 3;
 
@@ -42,7 +42,7 @@ private:
   static const uint8_t KICK_STRENGTH = 180; 
   static const uint16_t KICK_DURATION = 80; 
 
-  void _drive(uint8_t speed, bool direction);
+  void _drive(uint16_t speed, bool direction);
   void _updateCvCache();
 };
 
