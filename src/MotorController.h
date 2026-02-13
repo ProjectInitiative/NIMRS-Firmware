@@ -34,7 +34,13 @@ private:
   uint8_t _cvAccel = 0;
   uint8_t _cvDecel = 0;
   uint8_t _cvVstart = 0;
+  uint8_t _cvLoadK = 0;
+  uint8_t _cvLoadI = 0;
   unsigned long _lastCvUpdate = 0;
+
+  // Load Compensation State
+  float _loadIntegral = 0.0f;
+  float _avgCurrent = 0.0f;
 
   // Kick Start State
   bool _kickActive = false;
