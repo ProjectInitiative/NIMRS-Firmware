@@ -20,6 +20,8 @@ static constexpr uint16_t CONFIG = 29;
 // Audio
 static constexpr uint16_t MASTER_VOL = 50;
 static constexpr uint16_t AUDIO_MAP_BASE = 100; // CV = 100 + SoundID. Value = Function (0-28)
+static constexpr uint16_t CHUFF_RATE = 133;
+static constexpr uint16_t CHUFF_DRAG = 134;
 
 // Load Compensation (ESU-style)
 static constexpr uint16_t LOAD_K = 54; // Proportional Gain
@@ -64,6 +66,10 @@ static const CvDef CV_DEFS[] = {
     {CV::LOAD_I, 0, "Load Comp I", "Integral Gain 0-255"},
 
     {CV::MASTER_VOL, 128, "Master Volume", "Audio Volume (0-255)"},
+    
+    // Virtual Cam Settings
+    {133, 10, "Chuff Rate", "Sync Multiplier (PWM -> RPM)"},
+    {134, 5, "Chuff Load Drag", "Current -> RPM Drag Factor"},
 
     // Audio Mapping (Examples for common IDs)
     {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1", "Function to trigger Sound 1 (0-28)"},
