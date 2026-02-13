@@ -36,13 +36,27 @@ private:
   uint8_t _cvVstart = 0;
   uint8_t _cvLoadK = 0;
   uint8_t _cvLoadI = 0;
+  uint8_t _cvChuffRate = 0;
+  uint8_t _cvChuffDrag = 0;
+  
+  // Model CVs
+  uint8_t _cvMotorR = 0;
+  uint8_t _cvMotorKe = 0;
+  uint8_t _cvPidP = 0;
+  uint8_t _cvPidI = 0;
+  
   unsigned long _lastCvUpdate = 0;
 
   // Load Compensation State
   float _loadIntegral = 0.0f;
   float _avgCurrent = 0.0f;
+  
+  // Model-Based State
+  float _modelOmega = 0.0f; // Estimated Speed (0.0-1.0)
+  float _pidErrorSum = 0.0f;
+  float _modelPwm = 0.0f;
 
-  // Kick Start State
+  // Virtual Crank State
   bool _kickActive = false;
   unsigned long _kickStartTime = 0;
   static const uint8_t KICK_STRENGTH = 180; 
