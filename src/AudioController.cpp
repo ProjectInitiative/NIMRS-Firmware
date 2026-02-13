@@ -18,6 +18,7 @@ void AudioController::setup() {
   // I2S Setup
   _out = new AudioOutputI2S();
   _out->SetPinout(Pinout::AMP_BCLK, Pinout::AMP_LRCLK, Pinout::AMP_DIN);
+  _out->SetOutputModeMono(true); // Mono DAC
   
   // Initial Volume from CV
   uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
@@ -28,9 +29,9 @@ void AudioController::setup() {
 
   // Note: Generator is allocated on playFile()
 
-  // Enable Amp
+  // Enable Amp (Initially LOW/Muted until playback)
   pinMode(Pinout::AMP_SD_MODE, OUTPUT);
-  digitalWrite(Pinout::AMP_SD_MODE, HIGH);
+  digitalWrite(Pinout::AMP_SD_MODE, LOW);
 
   Log.println("AudioController: Ready.");
 }
@@ -98,6 +99,8 @@ void AudioController::loop() {
   if (_generator && _generator->isRunning()) {
     if (!_generator->loop()) {
       _generator->stop();
+      // Auto-mute on finish
+      digitalWrite(Pinout::AMP_SD_MODE, LOW);
       Log.println("Audio: Playback Finished");
     }
   }
@@ -166,6 +169,10 @@ void AudioController::playFile(const char *filename) {
     return;
   }
 
+  // Wake up Amp
+  digitalWrite(Pinout::AMP_SD_MODE, HIGH);
+  delay(10); // Small warmup
+
   _file = new AudioFileSourceLittleFS(filename);
   
   String fn = String(filename);
@@ -187,4 +194,7 @@ void AudioController::stop() {
     
   if (_generator) { delete _generator; _generator = nullptr; }
   if (_file) { delete _file; _file = nullptr; }
+
+  // Mute Amp
+  digitalWrite(Pinout::AMP_SD_MODE, LOW);
 }
