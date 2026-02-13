@@ -45,7 +45,7 @@ struct CvDef {
 // The Registry
 static const CvDef CV_DEFS[] = {
     {CV::ADDR_SHORT, 3, "Primary Address", "Short Address (1-127)"},
-    {CV::V_START, 60, "Vstart", "Starting Voltage/Speed (0-255)"},
+    {CV::V_START, 100, "Vstart", "Starting Voltage/Speed (0-255)"},
     {CV::ACCEL, 2, "Acceleration", "Momentum Delay (Rate)"},
     {CV::DECEL, 2, "Deceleration", "Momentum Delay (Rate)"},
     {CV::V_HIGH, 255, "Vhigh", "Max Voltage/Speed"},
