@@ -22,7 +22,10 @@ void AudioController::setup() {
   
   // Initial Volume from CV
   uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
-  _out->SetGain(vol / 255.0f);
+  // Clamp max gain to 3.0 to prevent clipping/distortion
+  // (ESP8266Audio uses >1.0 for amplification, but >1.0 often clips if source is loud)
+  float gain = (vol / 255.0f) * 3.0f; // Scale 0-255 to 0.0-3.0
+  _out->SetGain(gain);
 
   // Load Assets
   loadAssets();
@@ -40,7 +43,8 @@ void AudioController::loop() {
   // Update Volume dynamically
   if (_out) {
       uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
-      _out->SetGain(vol / 255.0f);
+      // Map 0-255 to 0.0-1.5 (Allow slight boost, but be careful)
+      _out->SetGain((vol / 255.0f) * 1.5f);
   }
 
   // Check for Function Changes
