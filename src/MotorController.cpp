@@ -79,7 +79,8 @@ void MotorController::loop() {
   }
 
   // Output Logic
-  uint8_t pwmOutput = (uint8_t)_currentSpeed;
+  // Scale internal 0-255 speed to 10-bit PWM (0-1023)
+  uint16_t pwmOutput = (uint16_t)_currentSpeed * 4; // Crude scale up
 
   if (pwmOutput > 0) {
       // Kick Start
@@ -90,15 +91,17 @@ void MotorController::loop() {
 
       if (_kickActive) {
           if (millis() - _kickStartTime < KICK_DURATION) {
-              pwmOutput = KICK_STRENGTH;
+              pwmOutput = KICK_STRENGTH * 4; // Scale 8-bit const to 10-bit
           } else {
               _kickActive = false;
           }
       }
 
-      // Vstart Mapping
-      if (!_kickActive && _cvVstart > 0 && pwmOutput < 255) {
-          pwmOutput = map(pwmOutput, 1, 255, _cvVstart, 255);
+      // Vstart Mapping (Normal Running)
+      if (!_kickActive && _cvVstart > 0 && pwmOutput < 1023) {
+          // Map input (4-1023) to output (Vstart*4 - 1023)
+          uint16_t vStart10 = _cvVstart * 4;
+          pwmOutput = map(pwmOutput, 4, 1023, vStart10, 1023);
       }
   } else {
       _kickActive = false;
@@ -111,26 +114,26 @@ void MotorController::setGain(bool high) {
   digitalWrite(Pinout::MOTOR_GAIN_SEL, high ? HIGH : LOW);
 }
 
-// SLOW DECAY Implementation
-// To Drive: One side HIGH (255), Other side PWM (inverted).
+// SLOW DECAY Implementation (10-bit)
+// To Drive: One side HIGH (1023), Other side PWM (inverted).
 // To Brake: Both HIGH.
-void MotorController::_drive(uint8_t speed, bool direction) {
+void MotorController::_drive(uint16_t speed, bool direction) {
   if (speed == 0) {
     // Hard Brake (Slow Decay at 0 speed)
-    ledcWrite(_pwmChannel1, 255);
-    ledcWrite(_pwmChannel2, 255);
+    ledcWrite(_pwmChannel1, 1023);
+    ledcWrite(_pwmChannel2, 1023);
   } else {
     // Invert speed for Low-Side PWM
-    // Speed 255 -> Duty 0 (Full Drive)
-    // Speed 1   -> Duty 254 (Tiny Drive)
-    uint8_t invSpeed = 255 - speed;
+    // Speed 1023 -> Duty 0 (Full Drive)
+    // Speed 1    -> Duty 1022 (Tiny Drive)
+    uint16_t invSpeed = 1023 - speed;
 
     if (direction) { // Forward
-      ledcWrite(_pwmChannel1, 255); // High
+      ledcWrite(_pwmChannel1, 1023); // High
       ledcWrite(_pwmChannel2, invSpeed); // Pulsing Low
     } else { // Reverse
       ledcWrite(_pwmChannel1, invSpeed); // Pulsing Low
-      ledcWrite(_pwmChannel2, 255); // High
+      ledcWrite(_pwmChannel2, 1023); // High
     }
   }
 }
