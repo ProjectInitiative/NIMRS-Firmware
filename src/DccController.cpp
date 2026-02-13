@@ -101,13 +101,32 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
   {
     ScopedLock lock(ctx);
     SystemState &state = ctx.getState();
-    state.dccAddress = Addr;
-    state.speed = targetSpeed;
-    state.direction = direction;
-    state.lastDccPacketTime = millis();
-  }
 
-  Log.debug("DCC Packet: Addr %d Spd %d\n", Addr, Speed);
+    // Check if this is a change from the last DCC command
+    bool isChange = (state.lastDccSpeed != targetSpeed) || (state.lastDccDirection != direction);
+    
+    // Update last known DCC state
+    state.lastDccSpeed = targetSpeed;
+    state.lastDccDirection = direction;
+    state.lastDccPacketTime = millis();
+    state.dccAddress = Addr;
+
+    // Logic:
+    // 1. If it's a NEW command from DCC, we switch source to DCC and apply it.
+    // 2. If it's the SAME command as before:
+    //    a. If we are already in DCC mode, we apply it (refresh).
+    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet, let Web rule).
+    
+    if (isChange || state.speedSource == SOURCE_DCC) {
+        state.speed = targetSpeed;
+        state.direction = direction;
+        state.speedSource = SOURCE_DCC;
+        Log.debug("DCC Packet: Addr %d Spd %d (Applied)\n", Addr, Speed);
+    } else {
+        // Ignored (Web Override active)
+        // Log.debug("DCC Packet: Addr %d Spd %d (Ignored - Web Active)\n", Addr, Speed);
+    }
+  }
 }
 
 void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp,
