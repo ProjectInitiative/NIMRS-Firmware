@@ -88,82 +88,157 @@ void MotorController::loop() {
     _currentDirection = reqDirection;
   }
 
-  // 4. Output Logic (10-bit)
-  // Scale internal 0-255 speed to 10-bit PWM (0-1023)
-  int32_t pwmOutput = (int32_t)_currentSpeed * 4; 
+    // Output Logic (10-bit)
 
-  if (pwmOutput > 0) {
-      // A. Kick Start
-      if (!_kickActive && _currentSpeed < 5.0f && effectiveTarget > 0) {
-          _kickActive = true;
-          _kickStartTime = millis();
-      }
+    int32_t pwmOutput = 0;
 
-      if (_kickActive) {
-          if (millis() - _kickStartTime < KICK_DURATION) {
-              pwmOutput = KICK_STRENGTH * 4;
-          } else {
-              _kickActive = false;
-          }
-      }
-
-      // B. Load Compensation (PI Loop)
-      // Only apply if we are running normally (not kicking)
-      if (!_kickActive && (_cvLoadK > 0 || _cvLoadI > 0)) {
-          // Error = Current (Load) - Baseline? 
-          // Actually simpler: Just boost proportional to Current.
-          // More current = More load = More Voltage needed.
-          
-          float pTerm = _avgCurrent * (_cvLoadK / 10.0f); // Scale K down
-          
-          // Integral Term: Accumulate load over time (Anti-Stall)
-          // Limit integral windup
-          _loadIntegral += (_avgCurrent * (_cvLoadI / 100.0f));
-          if (_loadIntegral > 200.0f) _loadIntegral = 200.0f;
-          if (_loadIntegral < 0.0f) _loadIntegral = 0.0f;
-          
-          // Reset Integral if current drops (stiction broken)
-          // or if we stop.
-          if (_avgCurrent < 50) _loadIntegral = 0; // Tune threshold?
-
-          pwmOutput += (int32_t)(pTerm + _loadIntegral);
-      }
-
-      // C. Vstart Mapping
-      // Apply Vstart AFTER compensation so boost is added on top?
-      // Or before? Standard is: Output = Map(Speed) + PID.
-      
-      if (!_kickActive && _cvVstart > 0 && pwmOutput < 1023) {
-          uint16_t vStart10 = _cvVstart * 4;
-          // Ensure we don't double-count pwmOutput.
-          // Standard map: range [0..1023] -> [Vstart..1023]
-          // We map the *Base Speed* then add Boost.
-          int32_t basePwm = (int32_t)_currentSpeed * 4;
-          basePwm = map(basePwm, 4, 1023, vStart10, 1023);
-          
-          // Re-add Boost
-          pwmOutput = basePwm + (pwmOutput - ((int32_t)_currentSpeed*4));
-      }
-      
-      // Clamp
-      if (pwmOutput > 1023) pwmOutput = 1023;
-      if (pwmOutput < 0) pwmOutput = 0;
-
-  } else {
-      _kickActive = false;
-      _loadIntegral = 0;
-  }
-
-  _drive((uint16_t)pwmOutput, _currentDirection);
   
-  // Debug Log (Periodic)
-  static unsigned long lastLog = 0;
-  if (millis() - lastLog > 500 && pwmOutput > 0) {
-      lastLog = millis();
-      Log.printf("Motor: Spd %d | PWM %d | I: %.1f | Boost: %d\n", 
-        (int)_currentSpeed, pwmOutput, _avgCurrent, (int)(pwmOutput - ((int)_currentSpeed*4)));
+
+    // --- MODE SELECTION ---
+
+    if (_cvPidP > 0) {
+
+        // 1. Observe
+
+        float targetOmega = (float)effectiveTarget / 128.0f;
+
+        float vApplied = _modelPwm / 1023.0f;
+
+        float iMeasured = _avgCurrent / 4095.0f; 
+
+        float R = _cvMotorR / 25.0f; 
+
+        float Ke = (_cvMotorKe > 0) ? (_cvMotorKe / 100.0f) : 1.0f;
+
+  
+
+        float backEmf = vApplied - (iMeasured * R);
+
+        _modelOmega = (backEmf < 0) ? 0 : (backEmf / Ke);
+
+        
+
+        // 2. Control (PI)
+
+        float error = targetOmega - _modelOmega;
+
+        float pOut = error * (_cvPidP * 4.0f);
+
+        _pidErrorSum += (error * (_cvPidI / 100.0f));
+
+        if (_pidErrorSum > 1023.0f) _pidErrorSum = 1023.0f;
+
+        if (_pidErrorSum < -500.0f) _pidErrorSum = -500.0f;
+
+        
+
+        float ff = targetOmega * Ke * 1023.0f;
+
+        _modelPwm = ff + pOut + _pidErrorSum;
+
+        if (_modelPwm > 1023.0f) _modelPwm = 1023.0f;
+
+        if (_modelPwm < 0.0f) _modelPwm = 0.0f;
+
+        pwmOutput = (int32_t)_modelPwm;
+
+        
+
+        if (effectiveTarget == 0) {
+
+            _pidErrorSum = 0; _modelPwm = 0; pwmOutput = 0;
+
+        }
+
+        
+
+        static unsigned long lastModelLog = 0;
+
+        if (millis() - lastModelLog > 200 && effectiveTarget > 0) {
+
+            lastModelLog = millis();
+
+            Log.printf("Model: Tgt %.2f | Est %.2f | PWM %d | I %.3f\n", targetOmega, _modelOmega, pwmOutput, iMeasured);
+
+        }
+
+    } else {
+
+        // --- OPEN LOOP (Fallback) ---
+
+        pwmOutput = (int32_t)_currentSpeed * 4; 
+
+        if (pwmOutput > 0) {
+
+            if (!_kickActive && _currentSpeed < 5.0f && effectiveTarget > 0) {
+
+                _kickActive = true; _kickStartTime = millis();
+
+            }
+
+                      if (_kickActive) {
+
+                          if (millis() - _kickStartTime < KICK_DURATION) {
+
+                              pwmOutput = KICK_STRENGTH * 4;
+
+                          } else {
+
+                              _kickActive = false;
+
+                          }
+
+                      }
+
+            
+
+                      // B. Load Compensation (Removed in favor of Model-Based)
+
+                      
+
+                      // C. Vstart Mapping
+
+                      if (!_kickActive && _cvVstart > 0 && pwmOutput < 1023) {
+
+                          uint16_t vStart10 = _cvVstart * 4;
+
+                int32_t basePwm = (int32_t)_currentSpeed * 4;
+
+                basePwm = map(basePwm, 4, 1023, vStart10, 1023);
+
+                pwmOutput = basePwm + (pwmOutput - ((int32_t)_currentSpeed * 4));
+
+            }
+
+            if (pwmOutput > 1023) pwmOutput = 1023;
+
+            if (pwmOutput < 0) pwmOutput = 0;
+
+        } else {
+
+            _kickActive = false; _loadIntegral = 0;
+
+        }
+
+    }
+
+  
+
+    _drive((uint16_t)pwmOutput, _currentDirection);
+
+    
+
+    static unsigned long lastLog = 0;
+
+    if (_cvPidP == 0 && millis() - lastLog > 500 && pwmOutput > 0) {
+
+        lastLog = millis();
+
+        Log.printf("Motor: Spd %d | PWM %d | I: %.1f | Boost: %d\n", (int)_currentSpeed, pwmOutput, _avgCurrent, (int)(pwmOutput - ((int)_currentSpeed*4)));
+
+    }
+
   }
-}
 
 void MotorController::setGain(bool high) {
   digitalWrite(Pinout::MOTOR_GAIN_SEL, high ? HIGH : LOW);
@@ -193,7 +268,8 @@ void MotorController::_updateCvCache() {
         _cvAccel = dcc.getCV(CV::ACCEL);
         _cvDecel = dcc.getCV(CV::DECEL);
         _cvVstart = dcc.getCV(CV::V_START);
-        _cvLoadK = dcc.getCV(CV::LOAD_K);
-        _cvLoadI = dcc.getCV(CV::LOAD_I);
+        _cvChuffRate = dcc.getCV(CV::CHUFF_RATE);
+        _cvChuffDrag = dcc.getCV(CV::CHUFF_DRAG);
+        _cvMotorR = dcc.getCV(CV::MOTOR_R);
     }
 }

@@ -23,9 +23,11 @@ static constexpr uint16_t AUDIO_MAP_BASE = 100; // CV = 100 + SoundID. Value = F
 static constexpr uint16_t CHUFF_RATE = 133;
 static constexpr uint16_t CHUFF_DRAG = 134;
 
-// Load Compensation (ESU-style)
-static constexpr uint16_t LOAD_K = 54; // Proportional Gain
-static constexpr uint16_t LOAD_I = 55; // Integral Gain
+// Model-Based Control (Stage 1)
+static constexpr uint16_t MOTOR_R = 140; // Resistance
+static constexpr uint16_t MOTOR_KE = 141; // Back-EMF Constant
+static constexpr uint16_t PID_P = 142; // Speed Loop P Gain
+static constexpr uint16_t PID_I = 143; // Speed Loop I Gain
 
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
@@ -62,14 +64,17 @@ static const CvDef CV_DEFS[] = {
     {CV::ADDR_LONG_LSB, 3, "Long Addr LSB", "Lower byte of Long Address"},
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
 
-    {CV::LOAD_K, 0, "Load Comp K", "Prop. Gain (IR Comp) 0-255"},
-    {CV::LOAD_I, 0, "Load Comp I", "Integral Gain 0-255"},
-
     {CV::MASTER_VOL, 128, "Master Volume", "Audio Volume (0-255)"},
     
     // Virtual Cam Settings
-    {133, 10, "Chuff Rate", "Sync Multiplier (PWM -> RPM)"},
-    {134, 5, "Chuff Load Drag", "Current -> RPM Drag Factor"},
+    {CV::CHUFF_RATE, 10, "Chuff Rate", "Sync Multiplier (PWM -> RPM)"},
+    {CV::CHUFF_DRAG, 5, "Chuff Load Drag", "Current -> RPM Drag Factor"},
+
+    // Model-Based Control
+    {CV::MOTOR_R, 0, "Motor R", "Resistance (0-255)"},
+    {CV::MOTOR_KE, 0, "Motor Ke", "EMF Constant (0-255)"},
+    {CV::PID_P, 0, "Speed P", "Proportional Gain (0-255)"},
+    {CV::PID_I, 0, "Speed I", "Integral Gain (0-255)"},
 
     // Audio Mapping (Examples for common IDs)
     {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1", "Function to trigger Sound 1 (0-28)"},
