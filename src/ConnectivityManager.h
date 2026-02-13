@@ -34,6 +34,7 @@ private:
   // Control Handler
   void handleControl();
   void handleCV();
+  void handleCvAll();
   void handleAudioPlay();
 
   bool _shouldRestart = false;
