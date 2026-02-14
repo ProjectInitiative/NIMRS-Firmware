@@ -9,9 +9,10 @@ MotorController::MotorController() :
     _lastMomentumUpdate(0),
     _lastCvUpdate(0),
     _avgCurrent(0.0f),
+    _currentOffset(0.0f),
     _pwmResolution(10),
     _maxPwm(1023),
-    _pwmFreq(25000),
+    _pwmFreq(4000), 
     _cvBaselineAlpha(5),
     _cvStictionKick(50),
     _cvDeltaCap(180),
@@ -33,7 +34,7 @@ MotorController::MotorController() :
 }
 
 void MotorController::setup() {
-  Log.println("MotorController: Initializing (Slow Decay / Delta-IR Strategy)...");
+  Log.println("MotorController: Initializing (10-bit / 16kHz / Slow Decay / 4A OCP)...");
 
   pinMode(Pinout::MOTOR_IN1, OUTPUT);
   pinMode(Pinout::MOTOR_IN2, OUTPUT);
@@ -41,36 +42,38 @@ void MotorController::setup() {
   pinMode(Pinout::MOTOR_CURRENT, INPUT);
   pinMode(Pinout::VMOTOR_PG, INPUT_PULLUP); 
 
-  analogReadResolution(12); // Ensure 12-bit resolution (0-4095)
-  analogSetAttenuation(ADC_11db); // Back to 3.3V range for stability during initial tuning
+  // 1. Hardware Wake-up & Configuration
+  digitalWrite(Pinout::MOTOR_GAIN_SEL, LOW); // LOW = 4A Current Limit (Safe for Inrush)
+  digitalWrite(Pinout::MOTOR_IN1, HIGH);     // Idle in Brake (High) to keep charge pump active
+  digitalWrite(Pinout::MOTOR_IN2, HIGH);
+  delay(10); // Stability delay
 
-  // Initialize DRV8213 to a "Brake" state (Both High)
-  ledcWrite(_pwmChannel1, _maxPwm);
-  ledcWrite(_pwmChannel2, _maxPwm);
-  digitalWrite(Pinout::MOTOR_GAIN_SEL, LOW); // Start with Low Gain for cleaner signal
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
 
-  // Using 13-bit for Paragon-level precision
-  _pwmResolution = 13; 
-  _maxPwm = (1 << _pwmResolution) - 1; // 8191
+  _pwmResolution = 10; 
+  _maxPwm = 1023;
+  _pwmFreq = 16000; 
 
   ledcSetup(_pwmChannel1, _pwmFreq, _pwmResolution);
   ledcAttachPin(Pinout::MOTOR_IN1, _pwmChannel1);
-
   ledcSetup(_pwmChannel2, _pwmFreq, _pwmResolution);
   ledcAttachPin(Pinout::MOTOR_IN2, _pwmChannel2);
 
-  // Initialize to Brake (Both High)
+  _loadBaselineTable();
+
+  // Initialize to Brake (Both HIGH)
   ledcWrite(_pwmChannel1, _maxPwm);
   ledcWrite(_pwmChannel2, _maxPwm);
 
   // --- Startup Self-Test ---
-  // Spin the motor briefly to verify H-Bridge and Slow Decay logic
-  Log.println("Motor: Starting Self-Test...");
-  _drive(1000, true);  // ~12% power FWD
+  Log.printf("Motor: Starting Self-Test (PG State: %s)...\n", digitalRead(Pinout::VMOTOR_PG) == HIGH ? "OK" : "LOW");
+  
+  _drive(500, true);  // ~50% power FWD
   delay(500);
   _drive(0, true);
   delay(200);
-  _drive(1000, false); // ~12% power REV
+  _drive(500, false); // ~50% power REV
   delay(500);
   _drive(0, true);
   Log.println("Motor: Self-Test Complete.");
@@ -93,37 +96,35 @@ void MotorController::loop() {
   _updateCvCache();
 
   // 1. Oversampled Current Sensing
-  // Read 4 times to smooth out the skewed armature commutation noise
+  // Read 8 times to smooth out the skewed armature commutation noise
   long sum = 0;
-  for(int i=0; i<4; i++) sum += analogRead(Pinout::MOTOR_CURRENT);
-  float rawAdc = sum / 4.0f;
+  for(int i=0; i<8; i++) sum += analogRead(Pinout::MOTOR_CURRENT);
+  float rawAdc = sum / 8.0f;
   
+  // Auto-Calibration: If motor is stopped, track the noise floor
+  if (targetSpeed == 0 && _currentSpeed < 0.1f) {
+      // Slowly follow the idle ADC value to establish a "zero" reference
+      _currentOffset = (_currentOffset * 0.99f) + (rawAdc * 0.01f);
+  }
+
+  // Subtract offset and clamp to 0
+  float netAdc = rawAdc - _currentOffset;
+  if (netAdc < 0.5f) netAdc = 0.0f; // Relaxed cutoff to catch tiny signals
+
   // Convert ADC to Amps (DRV8213 IPROPI Scalar)
-  // V = (I_out / 2000) * R_sense
-  // I_out = (V * 2000) / R_sense
-  // With 12-bit ADC @ 3.3V (3.3/4095) and R_sense=2000:
-  // I_out = ADC * (3.3/4095) * (2000/2000) = ADC * 0.000805
-  float currentAmps = rawAdc * 0.0008058f;
+  // With 12-bit ADC @ 3.3V (3.3/4095) and R_sense=2400:
+  // I_out = ADC * (3.3/4095) * (2000/2400) = ADC * 0.0006715
+  float currentAmps = netAdc * 0.0006715f;
 
   // EMA Filter: Slowed down slightly (0.02) for better stability
   _avgCurrent = (_avgCurrent * 0.98f) + (currentAmps * 0.02f);
-
-  // Auto-Zero Baseline when stopped
-  if (targetSpeed == 0 && _currentSpeed < 0.1f) {
-      _baselineTable[0] = (_baselineTable[0] * 0.95f) + (_avgCurrent * 0.05f);
-  }
 
   // 2. Momentum Logic (dt tracking)
   unsigned long now = millis();
 
   // --- SAFETY: Hardware Fault Monitoring ---
   if (digitalRead(Pinout::MOTOR_FAULT) == LOW) {
-      // Latched Fault State: Kill Drive immediately
-      _drive(0, true);
-      _currentSpeed = 0;
-      Log.println("SAFETY: MOTOR FAULT DETECTED! (Pin Low)");
-      delay(100); // Debounce/Limit log spam
-      return; 
+      Log.println("SAFETY: MOTOR FAULT DETECTED! (Check for Short/Overheat)");
   }
 
   // --- SAFETY: Stall Watchdog ---
@@ -134,8 +135,7 @@ void MotorController::loop() {
           // Sustained Stall > 2s
           _drive(0, true);
           _currentSpeed = 0;
-          Log.printf("SAFETY: MOTOR STALL DETECTED! (%.2f A > %.2f A)\n", _avgCurrent, _stallThreshold);
-          delay(1000); // Cool down
+          Log.printf("SAFETY: MOTOR STALL DETECTED! (%.2f A)\n", _avgCurrent);
           return;
       }
   } else {
@@ -167,31 +167,26 @@ void MotorController::loop() {
   int speedIndex = constrain((int)_currentSpeed, 0, 127);
 
   if (_currentSpeed > 0.1f) {
-      // Scale CVs (Vstart/Mid/High are 0-255, we are 13-bit 0-8191)
-      // 255 * 32 = 8160 (close enough to 8191)
-      uint32_t pwmStart = max((uint32_t)_cvVstart, (uint32_t)100) * 32;
-      uint32_t pwmMid = _cvVmid * 32;
-      uint32_t pwmHigh = _cvVhigh * 32;
+      // 10-bit Scaling (0-1023)
+      // Increased floor to 100 (~40% duty) to overcome Paragon armature stiction
+      uint32_t pwmStart = max((uint32_t)_cvVstart, (uint32_t)100) * 4;
+      uint32_t pwmMid = _cvVmid * 4;
+      uint32_t pwmHigh = _cvVhigh * 4;
       
       float basePwm = 0;
       
       if (_cvConfig & 0x10) { // Bit 4: Use Speed Table
-          // Map 0-255 speed to 28 table entries
           float tableIndex = (_currentSpeed / 255.0f) * 27.0f;
           int idxA = (int)tableIndex;
           int idxB = min(idxA + 1, 27);
           float fraction = tableIndex - (float)idxA;
 
-          // Map table values (0-255) to the range [pwmStart, _maxPwm]
-          // This ensures the table sits on top of the voltage pedestal
-          // Note: map() works with integers, so we cast carefully
           uint32_t valA = map(_speedTable[idxA], 0, 255, pwmStart, _maxPwm);
           uint32_t valB = map(_speedTable[idxB], 0, 255, pwmStart, _maxPwm);
           
           basePwm = (float)valA + (fraction * (float)(valB - valA));
       } else {
-          // Standard 3-point curve
-          // Input range 0-255. Midpoint is ~128.
+          // Standard 3-point curve with Hard Pedestal
           if (_currentSpeed <= 128.0f) {
               basePwm = map((long)(_currentSpeed * 10), 0, 1280, pwmStart, pwmMid);
           } else {
@@ -199,33 +194,34 @@ void MotorController::loop() {
           }
       }
 
+      // Ensure basePwm never drops below our minimum turn pedestal while target > 0
+      if (basePwm < pwmStart) basePwm = pwmStart;
+
       // DELTA-BASED COMPENSATION
-      // Calculate how much extra current we are drawing compared to "empty track"
       float deltaI = _avgCurrent - _baselineTable[speedIndex];
       if (deltaI < 0) deltaI = 0;
 
       // Apply Load Gain (IR Compensation)
-      float comp = deltaI * ((float)_cvLoadGain / 8.0f); // Tuned for 13-bit
+      float comp = deltaI * ((float)_cvLoadGain / 2.0f); // Recalibrated for 10-bit
       
-      // Cap boost (Delta Cap) - Scale 0-255 CV to PWM range (approx 1500 max)
-      float maxComp = ((float)_cvDeltaCap / 255.0f) * 1500.0f;
+      // Cap boost (Delta Cap)
+      float maxComp = ((float)_cvDeltaCap / 255.0f) * 300.0f;
       if (comp > maxComp) comp = maxComp;
 
       pwmOutput = (int32_t)(basePwm + comp);
 
       // Zone A Startup Floor & Baseline Learning
       if (_currentSpeed < 20.0f) {
-          // Stiction Kick: Add pulse for very low speeds
           if (_currentSpeed < 5.0f && _currentSpeed > 0.1f) {
-              pwmOutput += (_cvStictionKick * 4); // Boost start
+              pwmOutput += _cvStictionKick; 
           }
           
-          // Absolute minimum to prevent stall-hum (approx 10% duty)
-          if (pwmOutput < 800) pwmOutput = 800; 
+          // Absolute minimum to prevent stall-hum (approx 15% duty)
+          if (pwmOutput < 150) pwmOutput = 150; 
           
           // Learn baseline (Adaptive Alpha)
-          float alpha = ((float)_cvBaselineAlpha / 1000.0f); // Map 5 -> 0.005
-          if (_avgCurrent > 10) { 
+          float alpha = ((float)_cvBaselineAlpha / 1000.0f);
+          if (_avgCurrent > 0.01f) { 
               _baselineTable[speedIndex] = (_baselineTable[speedIndex] * (1.0f - alpha)) + (_avgCurrent * alpha);
           }
       }
@@ -235,74 +231,66 @@ void MotorController::loop() {
   pwmOutput = constrain(pwmOutput, 0, (int32_t)_maxPwm);
   _drive((uint16_t)pwmOutput, _currentDirection);
 
-  // Telemetry Stream (Replaces old Heartbeat)
+  // Telemetry Stream
   streamTelemetry();
 
   // Load Factor reporting for Audio
   static unsigned long lastUpdate = 0;
   if (now - lastUpdate > 100) {
       lastUpdate = now;
-      // Increased sensitivity: 0.1A delta now represents 100% load for audio chuffing
       SystemContext::getInstance().getState().loadFactor = constrain((_avgCurrent - _baselineTable[speedIndex]) / 0.1f, 0.0f, 1.0f);
   }
 }
 
 /**
- * _drive implements SLOW DECAY + SINE DITHER.
- * This version uses a sine function to oscillate the magnetic field
- * for the smoothest possible 'stiction' break.
+ * _drive implements SLOW DECAY (Inverted PWM).
+ * Uses a wake-up pulse to prevent auto-sleep lock.
  */
 void MotorController::_drive(uint16_t speed, bool direction) {
   _lastPwmValue = (int16_t)speed;
 
   if (speed == 0) {
-      // True Brake: both pins HIGH
+      // Brake: Both High
       ledcWrite(_pwmChannel1, _maxPwm);
       ledcWrite(_pwmChannel2, _maxPwm);
       return;
   }
 
-  // --- SINE DITHER CALCULATION ---
-  // CV64 (0-255) defines the amplitude. 
-  // We'll target a ~60Hz dither frequency.
-  float ditherAmplitude = (float)_cvPwmDither / 4.0f; // Scale to ~64 units
-  
-  // Use a phase accumulator to avoid floating point precision loss over time
+  // WAKE-UP PULSE: Ensure charge pump is alive
+  static uint16_t lastSpeed = 0;
+  if (lastSpeed == 0 && speed > 0) {
+      ledcWrite(_pwmChannel1, _maxPwm);
+      ledcWrite(_pwmChannel2, _maxPwm);
+      delayMicroseconds(300);
+  }
+  lastSpeed = speed;
+
+  // --- SINE DITHER ---
+  float ditherAmplitude = (float)_cvPwmDither / 8.0f; 
   static float phase = 0.0f;
   static unsigned long lastMicros = 0;
-  
   unsigned long now = micros();
-  // Handle wrap-around carefully (though subtraction usually handles it for uint32)
   float dt = (float)(now - lastMicros) / 1000000.0f;
   lastMicros = now;
-  
-  // Prevent huge jumps if thread stalls
   if (dt > 0.1f) dt = 0.0f; 
-
-  float frequency = 60.0f; // 60Hz dither
-  phase += 6.28318f * frequency * dt;
+  phase += 6.28318f * 60.0f * dt;
   if (phase > 6.28318f) phase -= 6.28318f;
-  
-  // Calculate sine offset: sin(phase)
   float sineOffset = sin(phase) * ditherAmplitude;
   
-  // Apply dither to the target speed
   int32_t ditheredSpeed = (int32_t)((float)speed + sineOffset);
-  
-  // Constrain and invert for Slow Decay
-  // CRITICAL: Ensure we never exceed _maxPwm or drop below 0
-  if (ditheredSpeed > (int32_t)_maxPwm) ditheredSpeed = _maxPwm;
-  if (ditheredSpeed < 0) ditheredSpeed = 0;
+  ditheredSpeed = constrain(ditheredSpeed, 0, (int32_t)_maxPwm);
 
-  uint16_t finalSpeed = (uint16_t)ditheredSpeed;
-  uint16_t invertedPwm = _maxPwm - finalSpeed;
+  // Slow Decay Inversion: Drive = LOW, Brake = HIGH
+  uint32_t invertedPwm = _maxPwm - (uint32_t)ditheredSpeed;
 
   if (direction) {
-    ledcWrite(_pwmChannel2, _maxPwm); // Hold IN2 High
-    ledcWrite(_pwmChannel1, invertedPwm);
+    // FWD: PWM on Ch 2 (IN2), Ch 1 (IN1) is hard HIGH
+    ledcWrite(_pwmChannel1, _maxPwm);
+    ledcWrite(_pwmChannel2, invertedPwm); 
   } else {
-    ledcWrite(_pwmChannel1, _maxPwm); // Hold IN1 High
-    ledcWrite(_pwmChannel2, invertedPwm);
+    // REV: Ch 2 (IN2) is hard HIGH, PWM on Ch 1 (IN1)
+    ledcWrite(_pwmChannel1, invertedPwm);
+    ledcWrite(_pwmChannel2, _maxPwm);
   }
 }
 
@@ -346,7 +334,7 @@ void MotorController::_updateCvCache() {
              }
         }
 
-        // Handle Baseline Reset (CV 65)
+        // Handle Baseline Commands (CV 65)
         if (_cvBaselineReset == 1) {
             Log.println("Motor: Resetting Baseline Table...");
             for (int i = 0; i < SPEED_STEPS; i++) {
@@ -354,32 +342,31 @@ void MotorController::_updateCvCache() {
             }
             dcc.setCV(CV::BASELINE_RESET, 0); // Reset the flag
             _cvBaselineReset = 0;
+        } else if (_cvBaselineReset == 2) {
+            Log.println("Motor: Saving Calibration Snapshot...");
+            _saveBaselineTable();
+            dcc.setCV(CV::BASELINE_RESET, 0);
+            _cvBaselineReset = 0;
         }
         
-        // 2. Frequency Handling Logic
-        // Combine High and Low CVs for a 16-bit frequency value
+        // Handle Frequency (Fix overflow and scaling)
         _cvPwmFreq = dcc.getCV(CV::PWM_FREQ);
         _cvPwmFreqH = dcc.getCV(CV::PWM_FREQ_H);
         uint32_t targetFreq = (_cvPwmFreqH << 8) | _cvPwmFreq;
         
-        // Default to 25kHz for the Paragon motor if CV is empty/invalid
-        if (targetFreq < 50) targetFreq = 25000; 
+        // HARDWARE SAFETY CLAMP (ESP32-S3 10-bit limit is ~19.5kHz)
+        if (targetFreq < 50 || targetFreq > 19000) {
+            targetFreq = 16000; 
+        }
         
-        // Only re-init hardware if the frequency has changed to avoid PWM glitches
         if (targetFreq != _pwmFreq) {
             _pwmFreq = targetFreq;
             Log.printf("Motor: Updating PWM Freq to %u Hz\n", _pwmFreq);
-            
-            // Re-configure the LEDC Timer
             ledcSetup(_pwmChannel1, _pwmFreq, _pwmResolution);
             ledcSetup(_pwmChannel2, _pwmFreq, _pwmResolution);
-            
-            // Re-attach pins to ensure the timer link is refreshed
             ledcAttachPin(Pinout::MOTOR_IN1, _pwmChannel1);
             ledcAttachPin(Pinout::MOTOR_IN2, _pwmChannel2);
-            
-            // Re-apply current drive state to the new timer configuration
-            _drive((uint16_t)constrain(_currentSpeed * 64, 0, _maxPwm), _currentDirection);
+            _drive(0, true); 
         }
     }
 }
@@ -421,18 +408,41 @@ void MotorController::streamTelemetry() {
         lastStream = millis();
         
         SystemState &state = SystemContext::getInstance().getState();
-        int speedIndex = constrain((int)_currentSpeed, 0, 127);
         int rawAdc = analogRead(Pinout::MOTOR_CURRENT);
         
-        // Output format: [NIMRS_DATA],Target,CurrentSpeed,PWM,Amps,Load,Fault,RawADC
-        Log.printf("[NIMRS_DATA],%d,%.2f,%d,%.2f,%.2f,%d,%d\n",
+        // Output format: [NIMRS_DATA],Target,CurrentSpeed,PWM,Amps,Load,Fault,RawADC,Offset,Gain
+        Log.printf("[NIMRS_DATA],%d,%.2f,%d,%.2f,%.2f,%d,%d,%d,%d\n",
             state.speed,
             _currentSpeed,
             _lastPwmValue, 
             _avgCurrent,
             state.loadFactor,
             digitalRead(Pinout::MOTOR_FAULT) == LOW ? 1 : 0,
-            rawAdc
+            rawAdc,
+            (int)_currentOffset,
+            digitalRead(Pinout::MOTOR_GAIN_SEL)
         );
+    }
+}
+
+void MotorController::_saveBaselineTable() {
+    Preferences prefs;
+    prefs.begin("motor", false);
+    prefs.putBytes("baseline", _baselineTable, sizeof(_baselineTable));
+    prefs.end();
+    Log.printf("Motor: Baseline (%d bytes) saved to NVS\n", sizeof(_baselineTable));
+}
+
+void MotorController::_loadBaselineTable() {
+    Preferences prefs;
+    prefs.begin("motor", true);
+    size_t len = prefs.getBytes("baseline", _baselineTable, sizeof(_baselineTable));
+    prefs.end();
+
+    if (len == sizeof(_baselineTable)) {
+        Log.println("Motor: Calibration Snapshot loaded from NVS");
+    } else {
+        Log.println("Motor: No valid Calibration Snapshot found, starting fresh");
+        for (int i = 0; i < SPEED_STEPS; i++) _baselineTable[i] = 0.0f;
     }
 }

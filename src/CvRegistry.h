@@ -58,15 +58,15 @@ struct CvDef {
 // The Registry
 static const CvDef CV_DEFS[] = {
     {CV::ADDR_SHORT, 3, "Primary Address", "Short Address (1-127)"},
-    {CV::V_START, 60, "Vstart", "Starting Voltage (0-255). Set high enough to move."},
+    {CV::V_START, 60, "Vstart", "Starting Voltage (0-255). Min floor is 40."},
     {CV::ACCEL, 2, "Acceleration", "Momentum Delay (Rate)"},
     {CV::DECEL, 2, "Deceleration", "Momentum Delay (Rate)"},
     {CV::V_HIGH, 255, "Vhigh", "Max Voltage/Speed"},
     {CV::V_MID, 128, "Vmid", "Mid-range Speed Curve"},
-    {CV::DECODER_VERSION, 11, "Version ID", "Read-only Version"},
+    {CV::DECODER_VERSION, 12, "Version ID", "Read-only Version"},
     {CV::DECODER_MAN_ID, 13, "Manufacturer", "Read-only Man ID (DIY=13)"},
-    {CV::PWM_FREQ, 208, "PWM Freq Low", "Freq Low Byte (Default 2kHz)"},
-    {CV::PWM_FREQ_H, 7, "PWM Freq High", "Freq High Byte (Default 2kHz)"},
+    {CV::PWM_FREQ, 128, "PWM Freq Low", "Freq Low Byte (Default 16kHz)"},
+    {CV::PWM_FREQ_H, 62, "PWM Freq High", "Freq High Byte (Default 16kHz)"},
     {CV::ADDR_LONG_MSB, 192, "Long Addr MSB", "Upper byte of Long Address"},
     {CV::ADDR_LONG_LSB, 3, "Long Addr LSB", "Lower byte of Long Address"},
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
@@ -83,7 +83,7 @@ static const CvDef CV_DEFS[] = {
     {CV::STICTION_KICK, 50, "Stiction Kick", "Start Pulse Strength (0-255)."},
     {CV::DELTA_CAP, 180, "Delta Cap", "Max Boost Limit (0-255)."},
     {CV::PWM_DITHER, 0, "PWM Dither", "Vibration for Brushes (0-255)."},
-    {CV::BASELINE_RESET, 0, "Reset Baseline", "Set to 1 to wipe learned table."},
+    {CV::BASELINE_RESET, 0, "Baseline Cmd", "1=Wipe, 2=Save Snapshot to Flash."},
     {CV::CURVE_INTENSITY, 0, "Curve Intensity", "Auto-generate S-Curve (0=Off, 1-255=Strength)."},
 
     // Audio Mapping (Examples for common IDs)

@@ -5,6 +5,7 @@
 #include "SystemContext.h"
 #include "nimrs-pinout.h"
 #include <Arduino.h>
+#include <Preferences.h>
 
 class MotorController {
 public:
@@ -54,6 +55,7 @@ private:
 
   // Grade Compensation State
   float _avgCurrent = 0.0f;       // Smoothed instantaneous current
+  float _currentOffset = 0.0f;    // ADC noise floor (calculated at idle)
   static const int SPEED_STEPS = 129;
   float _baselineTable[SPEED_STEPS] = {0}; // Speed-indexed baseline table
   
@@ -61,6 +63,8 @@ private:
   void _drive(uint16_t speed, bool direction);
   void _generateScurve(uint8_t intensity);
   void _updateCvCache();
+  void _saveBaselineTable();
+  void _loadBaselineTable();
 
   // Debug & Safety
   void streamTelemetry();
