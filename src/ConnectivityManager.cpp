@@ -80,8 +80,8 @@ void ConnectivityManager::setup() {
     // Use the configured address from NmraDcc, not just the last packet address
     doc["address"] = DccController::getInstance().getDcc().getAddr();
 
-    // Map internal 0-255 speed to DCC 0-128 steps for UI display
-    uint8_t dccSpeed = map(state.speed, 0, 255, 0, 128);
+    // Map internal 0-255 speed to DCC 0-126 steps for UI display
+    uint8_t dccSpeed = map(state.speed, 0, 255, 0, 126);
     doc["speed"] = dccSpeed;
 
     doc["direction"] = state.direction ? "forward" : "reverse";
@@ -130,7 +130,13 @@ void ConnectivityManager::setup() {
 
   // API: Logs
   _server.on("/api/logs", HTTP_GET, [this]() {
-    _server.send(200, "application/json", Log.getLogsJSON());
+    String filter = "";
+    if (_server.hasArg("type")) {
+        String type = _server.arg("type");
+        if (type == "data") filter = "[NIMRS_DATA]";
+        else if (type == "debug") filter = "DCC:"; // Example: filter for DCC debug
+    }
+    _server.send(200, "application/json", Log.getLogsJSON(filter));
   });
 
   // API: File List
@@ -381,8 +387,8 @@ void ConnectivityManager::handleControl() {
     }
   } else if (action == "set_speed") {
     int val = doc["value"];
-    // Map 0-128 (DCC steps) to 0-255 (PWM)
-    state.speed = map(val, 0, 128, 0, 255);
+    // Map 0-126 (DCC steps) to 0-255 (PWM)
+    state.speed = map(val, 0, 126, 0, 255);
     state.speedSource = SOURCE_WEB;
     Log.printf("Web: Speed Step %d -> PWM %d\n", val, state.speed);
   } else if (action == "set_direction") {

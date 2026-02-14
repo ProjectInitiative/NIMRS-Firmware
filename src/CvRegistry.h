@@ -13,6 +13,8 @@ static constexpr uint16_t V_HIGH = 5;
 static constexpr uint16_t V_MID = 6;
 static constexpr uint16_t DECODER_VERSION = 7;
 static constexpr uint16_t DECODER_MAN_ID = 8;
+static constexpr uint16_t PWM_FREQ = 9; // Frequency Low Byte
+static constexpr uint16_t PWM_FREQ_H = 10; // Frequency High Byte
 static constexpr uint16_t ADDR_LONG_MSB = 17;
 static constexpr uint16_t ADDR_LONG_LSB = 18;
 static constexpr uint16_t CONFIG = 29;
@@ -23,11 +25,14 @@ static constexpr uint16_t AUDIO_MAP_BASE = 100; // CV = 100 + SoundID. Value = F
 static constexpr uint16_t CHUFF_RATE = 133;
 static constexpr uint16_t CHUFF_DRAG = 134;
 
-// Model-Based Control (Stage 1)
-static constexpr uint16_t MOTOR_R = 140; // Resistance
-static constexpr uint16_t MOTOR_KE = 141; // Back-EMF Constant
-static constexpr uint16_t PID_P = 142; // Speed Loop P Gain
-static constexpr uint16_t PID_I = 143; // Speed Loop I Gain
+// Motor Control (Hybrid Torque Strategy)
+static constexpr uint16_t LOAD_GAIN = 60; // Grade Compensation Strength (Ki)
+static constexpr uint16_t BASELINE_ALPHA = 61; // Learning Speed
+static constexpr uint16_t STICTION_KICK = 62; // Initial Pulse
+static constexpr uint16_t DELTA_CAP = 63; // Max Boost
+static constexpr uint16_t PWM_DITHER = 64; // Micro-vibration
+static constexpr uint16_t BASELINE_RESET = 65; // Command: Wipe Baseline
+static constexpr uint16_t CURVE_INTENSITY = 66; // Parametric S-Curve Strength
 
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
@@ -53,13 +58,15 @@ struct CvDef {
 // The Registry
 static const CvDef CV_DEFS[] = {
     {CV::ADDR_SHORT, 3, "Primary Address", "Short Address (1-127)"},
-    {CV::V_START, 100, "Vstart", "Starting Voltage/Speed (0-255)"},
+    {CV::V_START, 60, "Vstart", "Starting Voltage (0-255). Set high enough to move."},
     {CV::ACCEL, 2, "Acceleration", "Momentum Delay (Rate)"},
     {CV::DECEL, 2, "Deceleration", "Momentum Delay (Rate)"},
     {CV::V_HIGH, 255, "Vhigh", "Max Voltage/Speed"},
     {CV::V_MID, 128, "Vmid", "Mid-range Speed Curve"},
-    {CV::DECODER_VERSION, 10, "Version ID", "Read-only Version"},
+    {CV::DECODER_VERSION, 11, "Version ID", "Read-only Version"},
     {CV::DECODER_MAN_ID, 13, "Manufacturer", "Read-only Man ID (DIY=13)"},
+    {CV::PWM_FREQ, 208, "PWM Freq Low", "Freq Low Byte (Default 2kHz)"},
+    {CV::PWM_FREQ_H, 7, "PWM Freq High", "Freq High Byte (Default 2kHz)"},
     {CV::ADDR_LONG_MSB, 192, "Long Addr MSB", "Upper byte of Long Address"},
     {CV::ADDR_LONG_LSB, 3, "Long Addr LSB", "Lower byte of Long Address"},
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
@@ -70,11 +77,14 @@ static const CvDef CV_DEFS[] = {
     {CV::CHUFF_RATE, 10, "Chuff Rate", "Sync Multiplier (PWM -> RPM)"},
     {CV::CHUFF_DRAG, 5, "Chuff Load Drag", "Current -> RPM Drag Factor"},
 
-    // Model-Based Control
-    {CV::MOTOR_R, 0, "Motor R", "Resistance (0-255)"},
-    {CV::MOTOR_KE, 0, "Motor Ke", "EMF Constant (0-255)"},
-    {CV::PID_P, 0, "Speed P", "Proportional Gain (0-255)"},
-    {CV::PID_I, 0, "Speed I", "Integral Gain (0-255)"},
+    // Motor Control
+    {CV::LOAD_GAIN, 15, "Load Gain", "Grade Comp Strength (0-255)."},
+    {CV::BASELINE_ALPHA, 5, "Baseline Alpha", "Learning Speed (0-255)."},
+    {CV::STICTION_KICK, 50, "Stiction Kick", "Start Pulse Strength (0-255)."},
+    {CV::DELTA_CAP, 180, "Delta Cap", "Max Boost Limit (0-255)."},
+    {CV::PWM_DITHER, 0, "PWM Dither", "Vibration for Brushes (0-255)."},
+    {CV::BASELINE_RESET, 0, "Reset Baseline", "Set to 1 to wipe learned table."},
+    {CV::CURVE_INTENSITY, 0, "Curve Intensity", "Auto-generate S-Curve (0=Off, 1-255=Strength)."},
 
     // Audio Mapping (Examples for common IDs)
     {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1", "Function to trigger Sound 1 (0-28)"},
