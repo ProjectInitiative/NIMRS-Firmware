@@ -138,21 +138,53 @@
             fi
           '';
 
-          # Script to monitor firmware
+          # Script to run logs
+          nimrsLogs = pkgs.writeShellScriptBin "nimrs-logs" ''
+            if [ -z "$1" ]; then
+              echo "Usage: nimrs-logs <IP_ADDRESS>"
+              exit 1
+            fi
+            python3 tools/nimrs-logs.py "$@"
+          '';
+
+          # Script to monitor firmware (Serial or IP)
           monitorFirmware = pkgs.writeShellScriptBin "monitor-firmware" ''
             if [ -z "$1" ]; then
-              echo "Usage: monitor-firmware <port>"
-              echo "Example: monitor-firmware /dev/ttyUSB0"
+              echo "Usage: monitor-firmware <port|IP>"
+              echo "Example Serial: monitor-firmware /dev/ttyUSB0"
+              echo "Example IP:     monitor-firmware 192.168.21.166"
               exit 1
             fi
 
-            echo "Starting Serial Monitor on $1..."
-            echo "Note: DTR/RTS are disabled to prevent resetting the board."
+            TARGET="$1"
 
-            # Fix permissions on the port (requires sudo)
-            sudo chmod 666 "$1"
+            if [[ "$TARGET" == /dev/* ]]; then
+                echo "Starting Serial Monitor on $TARGET..."
+                echo "Note: DTR/RTS are disabled to prevent resetting the board."
+                # Fix permissions on the port (requires sudo)
+                sudo chmod 666 "$TARGET"
+                arduino-cli monitor -p "$TARGET" --config baudrate=115200,dtr=off,rts=off
+            else
+                echo "Starting IP Log Monitor for $TARGET..."
+                # Delegate to our log streamer
+                ${nimrsLogs}/bin/nimrs-logs "$TARGET"
+            fi
+          '';
 
-            arduino-cli monitor -p "$1" --config baudrate=115200,dtr=off,rts=off
+          # Script to run telemetry
+          nimrsTelemetry = pkgs.writeShellScriptBin "nimrs-telemetry" ''
+            if [ -z "$1" ]; then
+              echo "Usage: nimrs-telemetry <IP_ADDRESS>"
+              exit 1
+            fi
+            
+            if [ ! -f "tools/nimrs-telemetry.py" ]; then
+               echo "Error: tools/nimrs-telemetry.py not found. Are you in the project root?"
+               exit 1
+            fi
+
+            # Uses the python environment provided by the dev shell
+            python3 tools/nimrs-telemetry.py "$@"
           '';
 
         in
@@ -162,7 +194,7 @@
               # Core Arduino tools (Wrapped)
               arduino-cli-wrapped
               # Tools for ESP32 often needed
-              python3
+              (python3.withPackages (ps: [ ps.pyserial ]))
               esptool
               # Ensure git is available for build script
               git
@@ -179,6 +211,8 @@
               buildFirmware
               uploadFirmware
               monitorFirmware
+              nimrsTelemetry
+              nimrsLogs
             ];
 
             shellHook = ''
@@ -192,11 +226,13 @@
               # The wrapper typically handles the read-only parts.
 
               echo "Commands available:"
-              echo "  build-firmware         : Build the firmware from current directory"
+              echo "  build-firmware            : Build the firmware from current directory"
               echo "  upload-firmware <port|IP> : Upload the firmware (e.g. /dev/ttyACM0 or IP)"
-              echo "  monitor-firmware <port>: Monitor serial output (prevents reset loop)"
-              echo "  treefmt                : Format all code (C++, JSON, MD)"
-              echo "  nix build              : Clean build of the firmware"
+              echo "  monitor-firmware <port|IP>: Monitor logs (Serial or WiFi)"
+              echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
+              echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
+              echo "  treefmt                   : Format all code (C++, JSON, MD)"
+              echo "  nix build                 : Clean build of the firmware"
             '';
           };
         }

@@ -139,9 +139,9 @@ void AudioController::loadAssets() {
         asset.type = obj["type"].as<String>();
         
         JsonObject files = obj["files"];
-        if (files.containsKey("intro")) asset.fileIntro = files["intro"].as<String>();
-        if (files.containsKey("loop")) asset.fileLoop = files["loop"].as<String>();
-        if (files.containsKey("outro")) asset.fileOutro = files["outro"].as<String>();
+        if (files["intro"].is<String>()) asset.fileIntro = files["intro"].as<String>();
+        if (files["loop"].is<String>()) asset.fileLoop = files["loop"].as<String>();
+        if (files["outro"].is<String>()) asset.fileOutro = files["outro"].as<String>();
 
         _assets[asset.id] = asset;
         Log.printf("Audio: Loaded Asset %d (%s)\n", asset.id, asset.name.c_str());

@@ -117,15 +117,26 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
     //    a. If we are already in DCC mode, we apply it (refresh).
     //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet, let Web rule).
     
-    if (isChange || state.speedSource == SOURCE_DCC) {
+    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC packet
+    int dccDelta = abs((int)targetSpeed - (int)state.lastDccSpeed);
+    bool isDccInternalChange = (dccDelta > 4) || (state.lastDccDirection != direction);
+    
+    // Only take control if we are already in DCC mode, OR if the DCC change is significant (not noise)
+    if (state.speedSource == SOURCE_DCC || isDccInternalChange) {
         state.speed = targetSpeed;
         state.direction = direction;
         state.speedSource = SOURCE_DCC;
-        Log.debug("DCC Packet: Addr %d Spd %d (Applied)\n", Addr, Speed);
-    } else {
-        // Ignored (Web Override active)
-        // Log.debug("DCC Packet: Addr %d Spd %d (Ignored - Web Active)\n", Addr, Speed);
+        
+        if (isDccInternalChange) {
+            Log.printf("DCC: Control Taken (Spd %d)\n", Speed);
+        }
     }
+
+    // Always update last known DCC state so our delta remains relative to the line, not our current speed
+    state.lastDccSpeed = targetSpeed;
+    state.lastDccDirection = direction;
+    state.lastDccPacketTime = millis();
+    state.dccAddress = Addr;
   }
 }
 

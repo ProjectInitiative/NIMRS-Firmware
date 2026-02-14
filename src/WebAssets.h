@@ -57,8 +57,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     <br>
                     <div class="card" style="margin-top: 10px;">
                         <h3>Motor Control</h3>
-                        <label>Speed Step: <span id="speed-display">0</span>/128</label>
-                        <input type="range" id="speed-slider" min="0" max="128" value="0" style="width:100%" onchange="setSpeed(this.value)" oninput="document.getElementById('speed-display').innerText=this.value">
+                        <label>Speed Step: <span id="speed-display">0</span>/126</label>
+                        <input type="range" id="speed-slider" min="0" max="126" value="0" style="width:100%" onchange="setSpeed(this.value)" oninput="document.getElementById('speed-display').innerText=this.value">
                         <br><br>
                         <label>Direction: 
                             <button id="dir-btn" class="btn" onclick="toggleDir()">FWD</button>
@@ -140,9 +140,18 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <!-- Logs Tab -->
             <section id="logs" class="tab-content">
                 <div class="log-controls">
-                    <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
-                    <label><input type="checkbox" id="debug-logs" onchange="toggleDebugLogs(this)"> Debug Mode</label>
-                    <button class="btn small" onclick="clearLogs()">Clear View</button>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+                        <select id="log-type-filter" onchange="pollLogs()" style="background:#333; color:#fff; border:1px solid #555; padding:2px 5px; border-radius:4px;">
+                            <option value="">System Logs</option>
+                            <option value="data">Telemetry Data</option>
+                            <option value="debug">DCC Debug</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <label><input type="checkbox" id="debug-logs" onchange="toggleDebugLogs(this)"> Logger Debug</label>
+                        <button class="btn small" onclick="clearLogs()">Clear View</button>
+                    </div>
                 </div>
                 <div id="log-viewer" class="terminal"></div>
             </section>
@@ -368,6 +377,11 @@ let logInterval = null;
 let statusInterval = null;
 let cvListRendered = false;
 let trackableCVS = []; // Fetched from backend
+
+// Session-long log history to allow back-scrolling
+let sessionLogs = { "": [], "data": [], "debug": [] };
+let lastSeenTimestamp = { "": 0, "data": 0, "debug": 0 };
+let clearedMarkers = { "": 0, "data": 0, "debug": 0 };
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -827,36 +841,83 @@ function performDelete(filename) {
 }
 
 // --- Logs ---
-let clearedTimestamp = 0;
 
 function pollLogs() {
-    fetch('/api/logs')
+    const type = document.getElementById('log-type-filter').value;
+    const markerKey = type || "";
+    const url = type ? `/api/logs?type=${type}` : '/api/logs';
+    
+    fetch(url)
         .then(r => r.json())
         .then(lines => {
             const viewer = document.getElementById('log-viewer');
+            if (!viewer) return;
+
+            // 1. Reboot Detection
+            if (lines.length > 0) {
+                const lastMatch = lines[lines.length - 1].match(/^\[(\d+)\]/);
+                if (lastMatch) {
+                    const ts = parseInt(lastMatch[1]);
+                    // If time went backwards significantly, device rebooted
+                    if (ts < lastSeenTimestamp[markerKey] - 5000) {
+                        sessionLogs[markerKey] = [];
+                        lastSeenTimestamp[markerKey] = 0;
+                        clearedMarkers[markerKey] = 0;
+                        viewer.innerHTML = '';
+                    }
+                }
+            }
+
+            // 2. Identify TRULY new lines (higher than lastSeenTimestamp)
             const newLines = lines.filter(line => {
-                const match = line.match(/^\\[(\d+)\\]/);
-                if (match) return parseInt(match[1]) > clearedTimestamp;
-                return true; 
+                const match = line.match(/^\[(\d+)\]/);
+                if (match) {
+                    const ts = parseInt(match[1]);
+                    return ts > lastSeenTimestamp[markerKey];
+                }
+                return true; // Fallback for un-timestamped lines
             });
-            viewer.innerHTML = newLines.join('\n');
-            if (document.getElementById('auto-scroll').checked) {
+
+            if (newLines.length > 0) {
+                // Update lastSeenTimestamp from the end of the new batch
+                const lastMatch = newLines[newLines.length - 1].match(/^\[(\d+)\]/);
+                if (lastMatch) lastSeenTimestamp[markerKey] = parseInt(lastMatch[1]);
+
+                // Append to session buffer
+                sessionLogs[markerKey] = sessionLogs[markerKey].concat(newLines);
+                
+                // Prune session buffer if it gets huge (e.g. 2000 lines)
+                if (sessionLogs[markerKey].length > 2000) {
+                    sessionLogs[markerKey] = sessionLogs[markerKey].slice(-2000);
+                }
+            }
+
+            // 3. Render the view (Filter by the current 'Clear View' marker)
+            // Move this outside the 'newLines.length' check so tab/filter switches refresh the UI
+            const visibleLines = sessionLogs[markerKey].filter(line => {
+                const match = line.match(/^\[(\d+)\]/);
+                if (match) return parseInt(match[1]) > (clearedMarkers[markerKey] || 0);
+                return true;
+            });
+
+            viewer.innerHTML = visibleLines.join('\n');
+
+            if (document.getElementById('auto-scroll').checked && newLines.length > 0) {
                 viewer.scrollTop = viewer.scrollHeight;
             }
         });
 }
 
 function clearLogs() {
-    fetch('/api/logs')
-        .then(r => r.json())
-        .then(lines => {
-            if (lines.length > 0) {
-                const lastLine = lines[lines.length - 1];
-                const match = lastLine.match(/^\\[(\d+)\\]/);
-                if (match) clearedTimestamp = parseInt(match[1]);
-            }
-            document.getElementById('log-viewer').innerHTML = '';
-        });
+    const type = document.getElementById('log-type-filter').value;
+    const markerKey = type || "";
+    
+    // Set the clear marker to the last seen timestamp
+    clearedMarkers[markerKey] = lastSeenTimestamp[markerKey];
+    
+    // Clear the DOM immediately
+    const viewer = document.getElementById('log-viewer');
+    if (viewer) viewer.innerHTML = '';
 }
 
 function toggleDebugLogs(el) {

@@ -12,7 +12,8 @@ static constexpr uint8_t TRACK_LEFT_3V3 = 1;  // GPIO1 (DCC_PIN)
 static constexpr uint8_t MOTOR_IN1 = 41; // GPIO 41 (MTDI)
 static constexpr uint8_t MOTOR_IN2 = 40; // GPIO 40 (MTDO)
 static constexpr uint8_t MOTOR_GAIN_SEL = 34;
-static constexpr uint8_t VMOTOR_PG = 39; // GPIO 49 (MTCK)
+static constexpr uint8_t VMOTOR_PG = 39; // GPIO 39 (MTCK)
+static constexpr uint8_t MOTOR_FAULT = 39; // Alias for Safety Monitoring
 
 // Lighting and AUX Outputs (User Verified)
 static constexpr uint8_t LIGHT_FRONT = 13;
@@ -30,8 +31,8 @@ static constexpr uint8_t INPUT1_AUX7 = 7;
 static constexpr uint8_t INPUT2_AUX8 = 8;
 
 // Sensors (ADC)
-static constexpr uint8_t MOTOR_CURRENT = 5;
-static constexpr uint8_t V_SENSE_3V3 = 6;
+static constexpr uint8_t MOTOR_CURRENT = 4;
+static constexpr uint8_t V_SENSE_3V3 = 5;
 
 // I2S Audio (MAX98357A)
 static constexpr uint8_t AMP_BCLK = 38;
