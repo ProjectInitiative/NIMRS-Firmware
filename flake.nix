@@ -177,7 +177,7 @@
               echo "Usage: nimrs-telemetry <IP_ADDRESS>"
               exit 1
             fi
-            
+
             if [ ! -f "tools/nimrs-telemetry.py" ]; then
                echo "Error: tools/nimrs-telemetry.py not found. Are you in the project root?"
                exit 1

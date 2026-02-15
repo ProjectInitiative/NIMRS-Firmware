@@ -5,10 +5,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-enum ControlSource {
-    SOURCE_DCC,
-    SOURCE_WEB
-};
+enum ControlSource { SOURCE_DCC, SOURCE_WEB };
 
 struct SystemState {
   uint16_t dccAddress = 3;
@@ -24,7 +21,7 @@ struct SystemState {
   // Status flags
   bool wifiConnected = false;
   uint32_t lastDccPacketTime = 0;
-  
+
   // Motor Load Factor (0.0 = No Load, 1.0 = Heavy Load)
   // Used for Audio Chuff modification
   float loadFactor = 0.0f;

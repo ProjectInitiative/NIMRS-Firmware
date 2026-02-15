@@ -89,7 +89,7 @@ void ConnectivityManager::setup() {
     doc["uptime"] = millis() / 1000;
     doc["version"] = BUILD_VERSION;
     doc["hash"] = GIT_HASH;
-    
+
     // Retrieve hostname dynamically (in case it changed)
     Preferences prefs;
     prefs.begin("config", true);
@@ -111,20 +111,20 @@ void ConnectivityManager::setup() {
   // API: Hostname Config
   _server.on("/api/config/hostname", HTTP_POST, [this]() {
     if (!_server.hasArg("name")) {
-        _server.send(400, "text/plain", "Missing name");
-        return;
+      _server.send(400, "text/plain", "Missing name");
+      return;
     }
     String newName = _server.arg("name");
-    if(newName.length() > 0 && newName.length() < 32) {
-        Preferences prefs;
-        prefs.begin("config", false); // Read-write
-        prefs.putString("hostname", newName);
-        prefs.end();
-        _server.send(200, "text/plain", "Hostname saved. Restart required.");
-        _shouldRestart = true;
-        _restartTimer = millis();
+    if (newName.length() > 0 && newName.length() < 32) {
+      Preferences prefs;
+      prefs.begin("config", false); // Read-write
+      prefs.putString("hostname", newName);
+      prefs.end();
+      _server.send(200, "text/plain", "Hostname saved. Restart required.");
+      _shouldRestart = true;
+      _restartTimer = millis();
     } else {
-        _server.send(400, "text/plain", "Invalid name length");
+      _server.send(400, "text/plain", "Invalid name length");
     }
   });
 
@@ -132,9 +132,11 @@ void ConnectivityManager::setup() {
   _server.on("/api/logs", HTTP_GET, [this]() {
     String filter = "";
     if (_server.hasArg("type")) {
-        String type = _server.arg("type");
-        if (type == "data") filter = "[NIMRS_DATA]";
-        else if (type == "debug") filter = "DCC:"; // Example: filter for DCC debug
+      String type = _server.arg("type");
+      if (type == "data")
+        filter = "[NIMRS_DATA]";
+      else if (type == "debug")
+        filter = "DCC:"; // Example: filter for DCC debug
     }
     _server.send(200, "application/json", Log.getLogsJSON(filter));
   });
@@ -191,11 +193,11 @@ void ConnectivityManager::setup() {
 }
 
 void ConnectivityManager::loop() {
-    _server.handleClient();
-    if (_shouldRestart && millis() - _restartTimer > 1000) {
-        Log.println("Rebooting...");
-        ESP.restart();
-    }
+  _server.handleClient();
+  if (_shouldRestart && millis() - _restartTimer > 1000) {
+    Log.println("Rebooting...");
+    ESP.restart();
+  }
 }
 
 // --- File Management Implementation ---
@@ -265,8 +267,8 @@ void ConnectivityManager::handleFileUpload() {
 
       // Hot-reload sound assets if the config file was just uploaded
       if (upload.filename.endsWith("sound_assets.json")) {
-           Log.println("Audio: Hot-reloading assets...");
-           AudioController::getInstance().loadAssets();
+        Log.println("Audio: Hot-reloading assets...");
+        AudioController::getInstance().loadAssets();
       }
     }
   }
