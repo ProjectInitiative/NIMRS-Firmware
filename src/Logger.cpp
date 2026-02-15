@@ -102,17 +102,17 @@ void Logger::_addToBuffer(const String &line) {
     String entry = "[" + String(millis()) + "] " + line;
 
     if (line.indexOf("[NIMRS_DATA]") != -1) {
-        // High-frequency telemetry goes to the data buffer
-        _dataLines.push_back(entry);
-        if (_dataLines.size() > MAX_DATA_LINES) {
-          _dataLines.pop_front();
-        }
+      // High-frequency telemetry goes to the data buffer
+      _dataLines.push_back(entry);
+      if (_dataLines.size() > MAX_DATA_LINES) {
+        _dataLines.pop_front();
+      }
     } else {
-        // System logs go to the main buffer
-        _lines.push_back(entry);
-        if (_lines.size() > MAX_LOG_LINES) {
-          _lines.pop_front();
-        }
+      // System logs go to the main buffer
+      _lines.push_back(entry);
+      if (_lines.size() > MAX_LOG_LINES) {
+        _lines.pop_front();
+      }
     }
     xSemaphoreGive(_mutex);
   }
@@ -135,22 +135,22 @@ String Logger::getLogsJSON(const String &filter) {
 
   if (xSemaphoreTake(_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     if (filter == "[NIMRS_DATA]") {
-        // Specifically requested telemetry
-        for (const auto &line : _dataLines) {
-            arr.add(line);
-        }
+      // Specifically requested telemetry
+      for (const auto &line : _dataLines) {
+        arr.add(line);
+      }
     } else if (filter.length() > 0) {
-        // Generic search filter in the system logs
-        for (const auto &line : _lines) {
-            if (line.indexOf(filter) != -1) {
-                arr.add(line);
-            }
+      // Generic search filter in the system logs
+      for (const auto &line : _lines) {
+        if (line.indexOf(filter) != -1) {
+          arr.add(line);
         }
+      }
     } else {
-        // No filter: return all system logs
-        for (const auto &line : _lines) {
-            arr.add(line);
-        }
+      // No filter: return all system logs
+      for (const auto &line : _lines) {
+        arr.add(line);
+      }
     }
     xSemaphoreGive(_mutex);
   }

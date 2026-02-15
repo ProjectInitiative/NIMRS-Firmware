@@ -30,6 +30,9 @@ public:
   // Access to raw DCC object for CV reading
   NmraDcc &getDcc() { return _dcc; }
 
+  // Check if we have received a valid packet recently
+  bool isPacketValid();
+
 private:
   NmraDcc _dcc;
 };

@@ -4,8 +4,8 @@
 #include "SystemContext.h"
 #include "nimrs-pinout.h"
 #include <Arduino.h>
-#include <vector>
 #include <map>
+#include <vector>
 
 // Forward declarations
 class AudioOutputI2S;
@@ -35,7 +35,7 @@ public:
   void stop();
 
   void loadAssets();
-  const SoundAsset* getAsset(uint8_t id);
+  const SoundAsset *getAsset(uint8_t id);
 
 private:
   AudioController();

@@ -24,10 +24,23 @@ void DccController::setup() {
   // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
   _dcc.init(MAN_ID_DIY, 10, 0x02, 0);
 
-  // Check registry for uninitialized mapping
-  // If CV::AUX1 (35) is 255, we assume reset is needed.
-  if (_dcc.getCV(CV::AUX1) == 255) {
-    Log.println("DCC: Forcing Default Mapping...");
+  // Check version for automatic factory reset
+  // This ensures new CVs are initialized when we bump the firmware version
+  uint8_t currentVersion = _dcc.getCV(CV::DECODER_VERSION);
+  uint8_t targetVersion = 0;
+
+  // Find the target version from our registry
+  for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
+    if (CV_DEFS[i].id == CV::DECODER_VERSION) {
+      targetVersion = CV_DEFS[i].defaultValue;
+      break;
+    }
+  }
+
+  if (currentVersion != targetVersion) {
+    Log.printf(
+        "DCC: Version mismatch (Saved: %d, Target: %d). Resetting CVs...\n",
+        currentVersion, targetVersion);
     notifyCVResetFactoryDefault();
   }
 
@@ -35,6 +48,13 @@ void DccController::setup() {
 }
 
 void DccController::loop() { _dcc.process(); }
+
+bool DccController::isPacketValid() {
+  SystemContext &ctx = SystemContext::getInstance();
+  ScopedLock lock(ctx);
+  uint32_t lastPacket = ctx.getState().lastDccPacketTime;
+  return (lastPacket > 0 && (millis() - lastPacket) < 2000);
+}
 
 void DccController::updateSpeed(uint8_t speed, bool direction) {
   SystemContext &ctx = SystemContext::getInstance();
@@ -103,8 +123,9 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
     SystemState &state = ctx.getState();
 
     // Check if this is a change from the last DCC command
-    bool isChange = (state.lastDccSpeed != targetSpeed) || (state.lastDccDirection != direction);
-    
+    bool isChange = (state.lastDccSpeed != targetSpeed) ||
+                    (state.lastDccDirection != direction);
+
     // Update last known DCC state
     state.lastDccSpeed = targetSpeed;
     state.lastDccDirection = direction;
@@ -115,24 +136,29 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
     // 1. If it's a NEW command from DCC, we switch source to DCC and apply it.
     // 2. If it's the SAME command as before:
     //    a. If we are already in DCC mode, we apply it (refresh).
-    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet, let Web rule).
-    
-    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC packet
+    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet,
+    //    let Web rule).
+
+    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC
+    // packet
     int dccDelta = abs((int)targetSpeed - (int)state.lastDccSpeed);
-    bool isDccInternalChange = (dccDelta > 4) || (state.lastDccDirection != direction);
-    
-    // Only take control if we are already in DCC mode, OR if the DCC change is significant (not noise)
+    bool isDccInternalChange =
+        (dccDelta > 4) || (state.lastDccDirection != direction);
+
+    // Only take control if we are already in DCC mode, OR if the DCC change is
+    // significant (not noise)
     if (state.speedSource == SOURCE_DCC || isDccInternalChange) {
-        state.speed = targetSpeed;
-        state.direction = direction;
-        state.speedSource = SOURCE_DCC;
-        
-        if (isDccInternalChange) {
-            Log.printf("DCC: Control Taken (Spd %d)\n", Speed);
-        }
+      state.speed = targetSpeed;
+      state.direction = direction;
+      state.speedSource = SOURCE_DCC;
+
+      if (isDccInternalChange) {
+        Log.printf("DCC: Control Taken (Spd %d)\n", Speed);
+      }
     }
 
-    // Always update last known DCC state so our delta remains relative to the line, not our current speed
+    // Always update last known DCC state so our delta remains relative to the
+    // line, not our current speed
     state.lastDccSpeed = targetSpeed;
     state.lastDccDirection = direction;
     state.lastDccPacketTime = millis();

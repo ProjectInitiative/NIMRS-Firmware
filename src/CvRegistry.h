@@ -13,7 +13,7 @@ static constexpr uint16_t V_HIGH = 5;
 static constexpr uint16_t V_MID = 6;
 static constexpr uint16_t DECODER_VERSION = 7;
 static constexpr uint16_t DECODER_MAN_ID = 8;
-static constexpr uint16_t PWM_FREQ = 9; // Frequency Low Byte
+static constexpr uint16_t PWM_FREQ = 9;    // Frequency Low Byte
 static constexpr uint16_t PWM_FREQ_H = 10; // Frequency High Byte
 static constexpr uint16_t ADDR_LONG_MSB = 17;
 static constexpr uint16_t ADDR_LONG_LSB = 18;
@@ -21,18 +21,26 @@ static constexpr uint16_t CONFIG = 29;
 
 // Audio
 static constexpr uint16_t MASTER_VOL = 50;
-static constexpr uint16_t AUDIO_MAP_BASE = 100; // CV = 100 + SoundID. Value = Function (0-28)
+static constexpr uint16_t AUDIO_MAP_BASE =
+    100; // CV = 100 + SoundID. Value = Function (0-28)
 static constexpr uint16_t CHUFF_RATE = 133;
 static constexpr uint16_t CHUFF_DRAG = 134;
 
 // Motor Control (Hybrid Torque Strategy)
 static constexpr uint16_t LOAD_GAIN = 60; // Grade Compensation Strength (Ki)
-static constexpr uint16_t BASELINE_ALPHA = 61; // Learning Speed
-static constexpr uint16_t STICTION_KICK = 62; // Initial Pulse
-static constexpr uint16_t DELTA_CAP = 63; // Max Boost
-static constexpr uint16_t PWM_DITHER = 64; // Micro-vibration
-static constexpr uint16_t BASELINE_RESET = 65; // Command: Wipe Baseline
+static constexpr uint16_t BASELINE_ALPHA = 61;  // Learning Speed
+static constexpr uint16_t STICTION_KICK = 62;   // Initial Pulse
+static constexpr uint16_t DELTA_CAP = 63;       // Max Boost
+static constexpr uint16_t PWM_DITHER = 64;      // Micro-vibration
+static constexpr uint16_t BASELINE_RESET = 65;  // Command: Wipe Baseline
 static constexpr uint16_t CURVE_INTENSITY = 66; // Parametric S-Curve Strength
+
+// Advanced Tuning
+static constexpr uint16_t DRIVE_MODE = 144;       // 0=Fast, 1=Slow Decay
+static constexpr uint16_t PEDESTAL_FLOOR = 145;   // Min PWM Floor (0-255)
+static constexpr uint16_t LOAD_GAIN_SCALAR = 146; // Multiplier for CV 60
+static constexpr uint16_t LEARN_THRESHOLD = 147;  // Min speed to learn baseline
+static constexpr uint16_t HARDWARE_GAIN = 148;    // 0=Low, 1=High
 
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
@@ -72,7 +80,7 @@ static const CvDef CV_DEFS[] = {
     {CV::CONFIG, 38, "Configuration", "Bit 5=LongAddr, Bit 2=Analog"},
 
     {CV::MASTER_VOL, 128, "Master Volume", "Audio Volume (0-255)"},
-    
+
     // Virtual Cam Settings
     {CV::CHUFF_RATE, 10, "Chuff Rate", "Sync Multiplier (PWM -> RPM)"},
     {CV::CHUFF_DRAG, 5, "Chuff Load Drag", "Current -> RPM Drag Factor"},
@@ -83,16 +91,34 @@ static const CvDef CV_DEFS[] = {
     {CV::STICTION_KICK, 50, "Stiction Kick", "Start Pulse Strength (0-255)."},
     {CV::DELTA_CAP, 180, "Delta Cap", "Max Boost Limit (0-255)."},
     {CV::PWM_DITHER, 0, "PWM Dither", "Vibration for Brushes (0-255)."},
-    {CV::BASELINE_RESET, 0, "Baseline Cmd", "1=Wipe, 2=Save Snapshot to Flash."},
-    {CV::CURVE_INTENSITY, 0, "Curve Intensity", "Auto-generate S-Curve (0=Off, 1-255=Strength)."},
+    {CV::BASELINE_RESET, 0, "Baseline Cmd",
+     "1=Wipe, 2=Save Snapshot to Flash."},
+    {CV::CURVE_INTENSITY, 0, "Curve Intensity",
+     "Auto-generate S-Curve (0=Off, 1-255=Strength)."},
+
+    // Advanced Motor Tuning
+    {CV::DRIVE_MODE, 1, "Drive Mode", "0=Fast, 1=Slow Decay (Default 1)."},
+    {CV::PEDESTAL_FLOOR, 80, "Pedestal Floor",
+     "Absolute min PWM floor (0-255)."},
+    {CV::LOAD_GAIN_SCALAR, 20, "Load Scalar", "Multiplier for CV60 (*10)."},
+    {CV::LEARN_THRESHOLD, 20, "Learn Thresh",
+     "Min speed to learn baseline (0-255)."},
+    {CV::HARDWARE_GAIN, 0, "Hardware Gain",
+     "0=Low, 1=High (DRV8213 GAIN_SEL)."},
 
     // Audio Mapping (Examples for common IDs)
-    {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1", "Function to trigger Sound 1 (0-28)"},
-    {CV::AUDIO_MAP_BASE + 2, 0, "Map: Sound ID 2", "Function to trigger Sound 2 (0-28)"},
-    {CV::AUDIO_MAP_BASE + 3, 0, "Map: Sound ID 3", "Function to trigger Sound 3 (0-28)"},
-    {CV::AUDIO_MAP_BASE + 4, 0, "Map: Sound ID 4", "Function to trigger Sound 4 (0-28)"},
-    {CV::AUDIO_MAP_BASE + 10, 0, "Map: Sound ID 10", "Function to trigger Sound 10 (0-28)"},
-    {CV::AUDIO_MAP_BASE + 11, 0, "Map: Sound ID 11", "Function to trigger Sound 11 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1",
+     "Function to trigger Sound 1 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 2, 0, "Map: Sound ID 2",
+     "Function to trigger Sound 2 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 3, 0, "Map: Sound ID 3",
+     "Function to trigger Sound 3 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 4, 0, "Map: Sound ID 4",
+     "Function to trigger Sound 4 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 10, 0, "Map: Sound ID 10",
+     "Function to trigger Sound 10 (0-28)"},
+    {CV::AUDIO_MAP_BASE + 11, 0, "Map: Sound ID 11",
+     "Function to trigger Sound 11 (0-28)"},
 
     {CV::FRONT, 0, "Map: Front Light", "Function to map to Front Light (0-28)"},
     {CV::REAR, 0, "Map: Rear Light", "Function to map to Rear Light (0-28)"},

@@ -10,7 +10,13 @@
 #define MAX_LOG_LINES 128
 #define MAX_DATA_LINES 32
 
-enum LogLevel { LOG_DEBUG = 0, LOG_INFO = 1, LOG_WARN = 2, LOG_ERROR = 3, LOG_DATA = 4 };
+enum LogLevel {
+  LOG_DEBUG = 0,
+  LOG_INFO = 1,
+  LOG_WARN = 2,
+  LOG_ERROR = 3,
+  LOG_DATA = 4
+};
 
 class Logger : public Print {
 public:
@@ -45,8 +51,8 @@ public:
 
 private:
   Logger() { _mutex = xSemaphoreCreateMutex(); }
-  std::deque<String> _lines;      // System logs (INFO, WARN, ERROR)
-  std::deque<String> _dataLines;  // Telemetry logs ([NIMRS_DATA])
+  std::deque<String> _lines;     // System logs (INFO, WARN, ERROR)
+  std::deque<String> _dataLines; // Telemetry logs ([NIMRS_DATA])
   String _currentLine;           // Buffer for partial writes (print vs println)
   LogLevel _minLevel = LOG_INFO; // Default to INFO to suppress debug noise
   bool _serialEnabled = false;

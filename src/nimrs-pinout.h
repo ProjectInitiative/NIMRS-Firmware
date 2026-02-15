@@ -12,7 +12,7 @@ static constexpr uint8_t TRACK_LEFT_3V3 = 1;  // GPIO1 (DCC_PIN)
 static constexpr uint8_t MOTOR_IN1 = 41; // GPIO 41 (MTDI)
 static constexpr uint8_t MOTOR_IN2 = 40; // GPIO 40 (MTDO)
 static constexpr uint8_t MOTOR_GAIN_SEL = 34;
-static constexpr uint8_t VMOTOR_PG = 39; // GPIO 39 (MTCK)
+static constexpr uint8_t VMOTOR_PG = 39;   // GPIO 39 (MTCK)
 static constexpr uint8_t MOTOR_FAULT = 39; // Alias for Safety Monitoring
 
 // Lighting and AUX Outputs (User Verified)
