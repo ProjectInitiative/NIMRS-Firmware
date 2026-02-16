@@ -103,8 +103,7 @@ static const CvDef CV_DEFS[] = {
     {CV::LOAD_GAIN_SCALAR, 20, "Load Scalar", "Multiplier for CV60 (*10)."},
     {CV::LEARN_THRESHOLD, 20, "Learn Thresh",
      "Min speed to learn baseline (0-255)."},
-    {CV::HARDWARE_GAIN, 1, "Hardware Gain",
-     "0=Low, 1=High-Z (Med), 2=High."},
+    {CV::HARDWARE_GAIN, 1, "Hardware Gain", "0=Low, 1=High-Z (Med), 2=High."},
 
     // Audio Mapping (Examples for common IDs)
     {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1",
