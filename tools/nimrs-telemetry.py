@@ -118,7 +118,11 @@ def main():
                     print(f"{draw_bar('TARGET', target, 127, 30, BLUE)}")
                     print(f"{draw_bar('SPEED ', speed, 127, 30, GREEN)}")
                     print(f"{draw_bar('POWER ', pwm, 4095, 30, YELLOW)}")
-                    gain_str = "HI" if gain else "LO"
+                    # Map the numeric codes from the ESP32 to human-readable strings
+                    # 0 = Low, 1 = High-Z (Medium), 2 = High
+                    gain_map = {0: "LO ", 1: "Z-HI", 2: "HI  "}
+                    gain_str = gain_map.get(gain, "UNK ")
+
                     print(f"{draw_bar('AMPS  ', amps, 2.0, 30, RED)} | LOAD {load:.2f} | ADC {raw_adc:4d} (OFF {offset:5.1f}) | NET {net_adc:5.1f} | GAIN {gain_str} | {status}      ")
                     
                     sys.stdout.flush()

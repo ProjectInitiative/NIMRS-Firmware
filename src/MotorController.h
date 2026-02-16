@@ -30,6 +30,7 @@ private:
   uint16_t _lastSmoothingPwm = 0;
 
   // Current Sensing (GPIO 4)
+  uint8_t _activeGainMode; // 0=LO, 1=HI-Z (MED), 2=HI
   float _adcHistory[16];
   uint8_t _adcIdx = 0;
   float _currentOffset = 0.0f;
