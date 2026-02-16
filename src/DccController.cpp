@@ -38,9 +38,9 @@ void DccController::setup() {
   }
 
   if (currentVersion != targetVersion) {
-    Log.printf(
-        "DCC: Version mismatch (Saved: %d, Target: %d). Skipping auto-reset to avoid loop.\n",
-        currentVersion, targetVersion);
+    Log.printf("DCC: Version mismatch (Saved: %d, Target: %d). Skipping "
+               "auto-reset to avoid loop.\n",
+               currentVersion, targetVersion);
     // notifyCVResetFactoryDefault(); // Disabled to prevent infinite loop
   }
 
@@ -123,20 +123,24 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
     SystemState &state = ctx.getState();
 
     // Check if this is a change from the last DCC command
-    // Note: We do NOT update state.lastDcc* yet, because we need them for the delta check below
+    // Note: We do NOT update state.lastDcc* yet, because we need them for the
+    // delta check below
 
     // Logic:
     // 1. If it's a NEW command from DCC, we switch source to DCC and apply it.
     // 2. If it's the SAME command as before:
     //    a. If we are already in DCC mode, we apply it (refresh).
-    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet, let Web rule).
+    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet,
+    //    let Web rule).
 
-    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC packet
+    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC
+    // packet
     int dccDelta = abs((int)targetSpeed - (int)state.lastDccSpeed);
     bool isDccInternalChange =
         (dccDelta > 2) || (state.lastDccDirection != direction);
 
-    // Only take control if we are already in DCC mode, OR if the DCC change is significant
+    // Only take control if we are already in DCC mode, OR if the DCC change is
+    // significant
     if (state.speedSource == SOURCE_DCC || isDccInternalChange) {
       state.speed = targetSpeed;
       state.direction = direction;
@@ -148,7 +152,8 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
       }
     }
 
-    // Always update last known DCC state so our delta remains relative to the line
+    // Always update last known DCC state so our delta remains relative to the
+    // line
     state.lastDccSpeed = targetSpeed;
     state.lastDccDirection = direction;
     state.lastDccPacketTime = millis();
