@@ -39,9 +39,9 @@ void DccController::setup() {
 
   if (currentVersion != targetVersion) {
     Log.printf(
-        "DCC: Version mismatch (Saved: %d, Target: %d). Resetting CVs...\n",
+        "DCC: Version mismatch (Saved: %d, Target: %d). Skipping auto-reset to avoid loop.\n",
         currentVersion, targetVersion);
-    notifyCVResetFactoryDefault();
+    // notifyCVResetFactoryDefault(); // Disabled to prevent infinite loop
   }
 
   Log.printf("DccController: Listening on Pin %d\n", Pinout::TRACK_LEFT_3V3);
@@ -65,7 +65,7 @@ void DccController::updateSpeed(uint8_t speed, bool direction) {
     if (speed == 0 || speed == 1) {
       state.speed = 0;
     } else {
-      state.speed = map(speed, 2, 127, 5, 255);
+      state.speed = speed;
     }
 
     state.direction = direction;
@@ -115,7 +115,7 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
   uint8_t targetSpeed = 0;
 
   if (Speed > 1) {
-    targetSpeed = map(Speed, 2, 127, 5, 255);
+    targetSpeed = Speed;
   }
 
   {
@@ -123,46 +123,35 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
     SystemState &state = ctx.getState();
 
     // Check if this is a change from the last DCC command
-    bool isChange = (state.lastDccSpeed != targetSpeed) ||
-                    (state.lastDccDirection != direction);
-
-    // Update last known DCC state
-    state.lastDccSpeed = targetSpeed;
-    state.lastDccDirection = direction;
-    state.lastDccPacketTime = millis();
-    state.dccAddress = Addr;
+    // Note: We do NOT update state.lastDcc* yet, because we need them for the delta check below
 
     // Logic:
     // 1. If it's a NEW command from DCC, we switch source to DCC and apply it.
     // 2. If it's the SAME command as before:
     //    a. If we are already in DCC mode, we apply it (refresh).
-    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet,
-    //    let Web rule).
+    //    b. If we are in WEB mode, we IGNORE it (it's just a refresh packet, let Web rule).
 
-    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC
-    // packet
+    // Calculate if the DCC packet itself has changed from the PREVIOUS DCC packet
     int dccDelta = abs((int)targetSpeed - (int)state.lastDccSpeed);
     bool isDccInternalChange =
-        (dccDelta > 4) || (state.lastDccDirection != direction);
+        (dccDelta > 2) || (state.lastDccDirection != direction);
 
-    // Only take control if we are already in DCC mode, OR if the DCC change is
-    // significant (not noise)
+    // Only take control if we are already in DCC mode, OR if the DCC change is significant
     if (state.speedSource == SOURCE_DCC || isDccInternalChange) {
       state.speed = targetSpeed;
       state.direction = direction;
       state.speedSource = SOURCE_DCC;
+      state.dccAddress = Addr;
 
       if (isDccInternalChange) {
-        Log.printf("DCC: Control Taken (Spd %d)\n", Speed);
+        Log.printf("DCC: Control Taken (Spd %d)\n", targetSpeed);
       }
     }
 
-    // Always update last known DCC state so our delta remains relative to the
-    // line, not our current speed
+    // Always update last known DCC state so our delta remains relative to the line
     state.lastDccSpeed = targetSpeed;
     state.lastDccDirection = direction;
     state.lastDccPacketTime = millis();
-    state.dccAddress = Addr;
   }
 }
 

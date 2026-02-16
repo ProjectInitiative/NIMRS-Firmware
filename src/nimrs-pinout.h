@@ -31,8 +31,8 @@ static constexpr uint8_t INPUT1_AUX7 = 7;
 static constexpr uint8_t INPUT2_AUX8 = 8;
 
 // Sensors (ADC)
-static constexpr uint8_t MOTOR_CURRENT = 4;
-static constexpr uint8_t V_SENSE_3V3 = 5;
+static constexpr uint8_t MOTOR_CURRENT = 5;
+static constexpr uint8_t V_SENSE_3V3 = 6;
 
 // I2S Audio (MAX98357A)
 static constexpr uint8_t AMP_BCLK = 38;
