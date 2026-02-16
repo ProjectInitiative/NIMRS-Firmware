@@ -37,7 +37,7 @@ static constexpr uint16_t CURVE_INTENSITY = 66; // Parametric S-Curve Strength
 
 // Advanced Tuning
 static constexpr uint16_t DRIVE_MODE = 144;       // 0=Fast, 1=Slow Decay
-static constexpr uint16_t PEDESTAL_FLOOR = 145;   // Min PWM Floor (0-255)
+static constexpr uint16_t PEDESTAL_FLOOR = 57;    // Min PWM Floor (0-255)
 static constexpr uint16_t LOAD_GAIN_SCALAR = 146; // Multiplier for CV 60
 static constexpr uint16_t LEARN_THRESHOLD = 147;  // Min speed to learn baseline
 static constexpr uint16_t HARDWARE_GAIN = 148;    // 0=Low, 1=High
@@ -71,7 +71,7 @@ static const CvDef CV_DEFS[] = {
     {CV::DECEL, 2, "Deceleration", "Momentum Delay (Rate)"},
     {CV::V_HIGH, 255, "Vhigh", "Max Voltage/Speed"},
     {CV::V_MID, 128, "Vmid", "Mid-range Speed Curve"},
-    {CV::DECODER_VERSION, 12, "Version ID", "Read-only Version"},
+    {CV::DECODER_VERSION, 14, "Version ID", "Read-only Version"},
     {CV::DECODER_MAN_ID, 13, "Manufacturer", "Read-only Man ID (DIY=13)"},
     {CV::PWM_FREQ, 128, "PWM Freq Low", "Freq Low Byte (Default 16kHz)"},
     {CV::PWM_FREQ_H, 62, "PWM Freq High", "Freq High Byte (Default 16kHz)"},
@@ -103,8 +103,8 @@ static const CvDef CV_DEFS[] = {
     {CV::LOAD_GAIN_SCALAR, 20, "Load Scalar", "Multiplier for CV60 (*10)."},
     {CV::LEARN_THRESHOLD, 20, "Learn Thresh",
      "Min speed to learn baseline (0-255)."},
-    {CV::HARDWARE_GAIN, 0, "Hardware Gain",
-     "0=Low, 1=High (DRV8213 GAIN_SEL)."},
+    {CV::HARDWARE_GAIN, 1, "Hardware Gain",
+     "0=Low, 1=High-Z (Med), 2=High."},
 
     // Audio Mapping (Examples for common IDs)
     {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1",

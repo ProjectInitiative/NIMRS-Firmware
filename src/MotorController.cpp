@@ -1,11 +1,12 @@
 #include "MotorController.h"
 #include "CvRegistry.h"
 #include "Logger.h"
+#include "driver/gpio.h"
 #include <algorithm> // For std::sort
 #include <cmath>
 
 MotorController::MotorController()
-    : _currentDirection(true), _currentSpeed(0.0f), _lastMomentumUpdate(0),
+    : _currentDirection(true), _currentSpeed(0.0f), _lastMomentumUpdate(0), 
       _lastCvUpdate(0), _avgCurrent(0.0f), _currentOffset(0.0f),
       _pwmResolution(12), _maxPwm(4095), _pwmFreq(16000), _cvBaselineAlpha(5),
       _cvStictionKick(50), _cvDeltaCap(180), _cvPwmDither(0),
@@ -33,6 +34,11 @@ MotorController::MotorController()
 }
 
 void MotorController::setup() {
+  // Unlock JTAG pins (GPIO 39-41) for IO use
+  gpio_reset_pin((gpio_num_t)39);
+  gpio_reset_pin((gpio_num_t)40);
+  gpio_reset_pin((gpio_num_t)41);
+
   Log.println("\n╔════════════════════════════════════╗");
   Log.println("║  MOTOR CONTROLLER BOOT SEQUENCE    ║");
   Log.println("╚════════════════════════════════════╝\n");
@@ -45,12 +51,13 @@ void MotorController::setup() {
   delay(200);
 
   // Step 2: Initialize I/O
-  pinMode(Pinout::MOTOR_GAIN_SEL, OUTPUT);
+  // To wake the DRV8213, we must NOT drive Pin 6 LOW. 
+  // We set it to INPUT (High-Z) to enable High-Accuracy Gain Mode.
+  pinMode(Pinout::MOTOR_GAIN_SEL, INPUT); 
   pinMode(Pinout::MOTOR_CURRENT, INPUT);
   pinMode(Pinout::VMOTOR_PG, INPUT_PULLUP);
 
-  digitalWrite(Pinout::MOTOR_GAIN_SEL, LOW);
-  delay(20);
+  delay(20); // Give the driver time to wake up (~1ms required)
 
   // Step 3: Configure ADC
   analogReadResolution(12);
@@ -83,8 +90,8 @@ void MotorController::setup() {
   NmraDcc &dcc = DccController::getInstance().getDcc();
   if (dcc.getCV(CV::V_START) == 0) {
     Log.println("Step 7: Writing default CVs...");
-    dcc.setCV(CV::V_START, 40);
-    dcc.setCV(CV::PEDESTAL_FLOOR, 35);
+    dcc.setCV(CV::V_START, 60);
+    dcc.setCV(CV::PEDESTAL_FLOOR, 80);
     dcc.setCV(CV::ACCEL, 25);
     dcc.setCV(CV::DECEL, 20);
     dcc.setCV(CV::LOAD_GAIN, 120);
@@ -119,7 +126,7 @@ void MotorController::loop() {
     }
   }
 
-  targetSpeed = constrain(targetSpeed, 0, 127);
+  targetSpeed = constrain(targetSpeed, 0, 255);
   _updateCvCache();
 
   // --- ROBUST ADC FILTERING (Median of 5 + Moving Average) ---
@@ -144,7 +151,7 @@ void MotorController::loop() {
 
   // --- NOISE FLOOR DEADBAND ---
   float netAdc = rawAdc - _currentOffset;
-  if (abs(netAdc) < 55.0f)
+  if (abs(netAdc) < 10.0f)
     netAdc = 0.0f;
 
   float currentAmps = netAdc * 0.001638f;
@@ -194,10 +201,10 @@ void MotorController::loop() {
   }
 
   int32_t pwmOutput = 0;
-  int speedIndex = constrain((int)_currentSpeed, 0, 127);
+  int speedIndex = constrain((int)_currentSpeed, 0, 255);
 
   if (_currentSpeed > 0.1f) {
-    float speedNorm = _currentSpeed / 127.0f;
+    float speedNorm = _currentSpeed / 255.0f;
     uint32_t pwmStart =
         max((uint32_t)_cvVstart, (uint32_t)_cvPedestalFloor) * 16;
     if (pwmStart < 205)
@@ -280,14 +287,29 @@ void MotorController::_drive(uint16_t speed, bool direction) {
     return;
   }
 
-  if (direction) {
-    // Symmetric IN/IN: IN1 = PWM, IN2 = LOW
-    ledcWrite(_pwmChannel2, 0);
-    ledcWrite(_pwmChannel1, (uint32_t)speed);
+  // Drive Mode: 0=Fast Decay (Coast), 1=Slow Decay (Brake)
+  if (_cvDriveMode == 1) {
+    uint32_t duty = _maxPwm - speed;
+    if (direction) {
+      // Forward: IN1=HIGH, IN2=PWM(Inv)
+      ledcWrite(_pwmChannel1, _maxPwm);
+      ledcWrite(_pwmChannel2, duty);
+    } else {
+      // Reverse: IN1=PWM(Inv), IN2=HIGH
+      ledcWrite(_pwmChannel1, duty);
+      ledcWrite(_pwmChannel2, _maxPwm);
+    }
   } else {
-    // Symmetric IN/IN: IN1 = LOW, IN2 = PWM
-    ledcWrite(_pwmChannel1, 0);
-    ledcWrite(_pwmChannel2, (uint32_t)speed);
+    // Standard Fast Decay
+    if (direction) {
+      // Symmetric IN/IN: IN1 = PWM, IN2 = LOW
+      ledcWrite(_pwmChannel2, 0);
+      ledcWrite(_pwmChannel1, (uint32_t)speed);
+    } else {
+      // Symmetric IN/IN: IN1 = LOW, IN2 = PWM
+      ledcWrite(_pwmChannel1, 0);
+      ledcWrite(_pwmChannel2, (uint32_t)speed);
+    }
   }
 }
 
@@ -324,9 +346,16 @@ void MotorController::_updateCvCache() {
 
     if (newHardwareGain != _cvHardwareGain) {
       _cvHardwareGain = newHardwareGain;
-      digitalWrite(Pinout::MOTOR_GAIN_SEL, _cvHardwareGain ? HIGH : LOW);
-      Log.printf("Motor: Hardware Gain switched to %s\n",
-                 _cvHardwareGain ? "HIGH" : "LOW");
+      // GAIN_SEL: 0=Low (Output Low), 1=High-Z (Input), 2=High (Output High)
+      if (_cvHardwareGain == 1) {
+        pinMode(Pinout::MOTOR_GAIN_SEL, INPUT);
+        Log.println("Motor: Hardware Gain switched to HIGH-Z (Med)");
+      } else {
+        pinMode(Pinout::MOTOR_GAIN_SEL, OUTPUT);
+        digitalWrite(Pinout::MOTOR_GAIN_SEL, _cvHardwareGain == 2 ? HIGH : LOW);
+        Log.printf("Motor: Hardware Gain switched to %s\n",
+                   _cvHardwareGain == 2 ? "HIGH" : "LOW");
+      }
     }
 
     uint8_t newIntensity = dcc.getCV(CV::CURVE_INTENSITY);

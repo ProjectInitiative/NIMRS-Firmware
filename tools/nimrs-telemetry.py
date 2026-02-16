@@ -99,8 +99,9 @@ def main():
                     load = float(parts[4])
                     fault = int(parts[5])
                     raw_adc = int(parts[6]) if len(parts) > 6 else 0
-                    offset = int(parts[7]) if len(parts) > 7 else 0
+                    offset = float(parts[7]) if len(parts) > 7 else 0.0
                     gain = int(parts[8]) if len(parts) > 8 else 0
+                    net_adc = float(parts[9]) if len(parts) > 9 else 0.0
 
                     # Status Indicator
                     if fault:
@@ -114,11 +115,11 @@ def main():
                     sys.stdout.write("\033[4;1H")
                     
                     # Construct and print the dashboard
-                    print(f"{draw_bar('TARGET', target, 255, 30, BLUE)}")
+                    print(f"{draw_bar('TARGET', target, 127, 30, BLUE)}")
                     print(f"{draw_bar('SPEED ', speed, 127, 30, GREEN)}")
-                    print(f"{draw_bar('POWER ', pwm, 1023, 30, YELLOW)}")
+                    print(f"{draw_bar('POWER ', pwm, 4095, 30, YELLOW)}")
                     gain_str = "HI" if gain else "LO"
-                    print(f"{draw_bar('AMPS  ', amps, 2.0, 30, RED)} | LOAD {load:.2f} | ADC {raw_adc:4d} (OFF {offset:4d}) | GAIN {gain_str} | {status}      ")
+                    print(f"{draw_bar('AMPS  ', amps, 2.0, 30, RED)} | LOAD {load:.2f} | ADC {raw_adc:4d} (OFF {offset:5.1f}) | NET {net_adc:5.1f} | GAIN {gain_str} | {status}      ")
                     
                     sys.stdout.flush()
 
