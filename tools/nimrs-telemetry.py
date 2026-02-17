@@ -89,25 +89,25 @@ def main():
             if telemetry_line and telemetry_line != last_processed_line:
                 last_processed_line = telemetry_line
                 try:
-                    # Expected: [timestamp] [NIMRS_DATA],Target,Speed,PWM,Amps,Load,Fault,RawADC
+                    # Expected: [NIMRS_DATA],target,speed,pwm,avg_i,fast_i,integrator,kick,offset,slew,peak
                     parts = telemetry_line.split("[NIMRS_DATA],")[1].split(",")
                     
                     target = int(parts[0])
                     speed = float(parts[1])
                     pwm = int(parts[2])
-                    amps = float(parts[3])
-                    load = float(parts[4])
-                    fault = int(parts[5])
-                    raw_adc = int(parts[6]) if len(parts) > 6 else 0
-                    offset = float(parts[7]) if len(parts) > 7 else 0.0
-                    gain = int(parts[8]) if len(parts) > 8 else 0
-                    net_adc = float(parts[9]) if len(parts) > 9 else 0.0
+                    avg_i = float(parts[3])
+                    fast_i = float(parts[4])
+                    integrator = float(parts[5])
+                    kick = int(parts[6])
+                    offset = float(parts[7])
+                    slew_pwm = float(parts[8])
+                    peak_adc = int(parts[9])
 
                     # Status Indicator
-                    if fault:
-                        status = f"{RED}[FAULT]{RESET}"
-                    elif amps > 1.2:
-                        status = f"{YELLOW}[WARN] {RESET}" 
+                    if kick:
+                        status = f"{YELLOW}[KICK] {RESET}"
+                    elif avg_i > 1.2:
+                        status = f"{RED}[WARN] {RESET}" 
                     else:
                         status = f"{GREEN}[OK]   {RESET}"
 
@@ -115,15 +115,12 @@ def main():
                     sys.stdout.write("\033[4;1H")
                     
                     # Construct and print the dashboard
-                    print(f"{draw_bar('TARGET', target, 127, 30, BLUE)}")
-                    print(f"{draw_bar('SPEED ', speed, 127, 30, GREEN)}")
-                    print(f"{draw_bar('POWER ', pwm, 4095, 30, YELLOW)}")
-                    # Map the numeric codes from the ESP32 to human-readable strings
-                    # 0 = Low, 1 = High-Z (Medium), 2 = High
-                    gain_map = {0: "LO ", 1: "Z-HI", 2: "HI  "}
-                    gain_str = gain_map.get(gain, "UNK ")
-
-                    print(f"{draw_bar('AMPS  ', amps, 2.0, 30, RED)} | LOAD {load:.2f} | ADC {raw_adc:4d} (OFF {offset:5.1f}) | NET {net_adc:5.1f} | GAIN {gain_str} | {status}      ")
+                    print(f"{draw_bar('TARGET', target, 255, 30, BLUE)}")
+                    print(f"{draw_bar('SPEED ', speed, 255, 30, GREEN)}")
+                    print(f"{draw_bar('POWER ', pwm, 4095, 30, YELLOW)} | SLEW: {slew_pwm:6.1f}")
+                    
+                    print(f"{draw_bar('AMPS  ', avg_i, 2.0, 30, RED)} | FAST: {fast_i:.3f} | PEAK: {peak_adc:4d}")
+                    print(f"INTGR: {integrator:7.2f} | OFFSET: {offset:5.1f} | {status}      ")
                     
                     sys.stdout.flush()
 
