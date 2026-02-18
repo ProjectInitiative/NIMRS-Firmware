@@ -35,20 +35,12 @@ private:
   uint8_t _adcIdx = 0;
   float _currentOffset = 0.0f;
   float _avgCurrent = 0.0f;
-  float _fastCurrent = 0.0f;
 
   // Load Compensation
   float _torqueIntegrator = 0.0f;
-  float _slewedPwm = 0.0f;
   static const int SPEED_STEPS = 256; // Increased to match 0-255 range
   float _baselineTable[SPEED_STEPS];
   unsigned long _lastBaselineUpdate = 0;
-
-  // Protection
-  unsigned long _stallStartTime = 0;
-  float _stallThreshold = 0.7f;
-  bool _stallKickActive = false;
-  unsigned long _stallKickTimer = 0;
 
   // CV Cache
   uint8_t _cvAccel, _cvDecel, _cvVstart, _cvVmid, _cvVhigh, _cvConfig;
