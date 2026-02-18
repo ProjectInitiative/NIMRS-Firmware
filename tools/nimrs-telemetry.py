@@ -89,7 +89,7 @@ def main():
             if telemetry_line and telemetry_line != last_processed_line:
                 last_processed_line = telemetry_line
                 try:
-                    # Expected: [NIMRS_DATA],target,speed,pwm,avg_i,fast_i,integrator,kick,offset,slew,peak
+                    # Expected: [NIMRS_DATA],target,speed,pwm,avg_i,fast_i,peak
                     parts = telemetry_line.split("[NIMRS_DATA],")[1].split(",")
                     
                     target = int(parts[0])
@@ -97,16 +97,10 @@ def main():
                     pwm = int(parts[2])
                     avg_i = float(parts[3])
                     fast_i = float(parts[4])
-                    integrator = float(parts[5])
-                    kick = int(parts[6])
-                    offset = float(parts[7])
-                    slew_pwm = float(parts[8])
-                    peak_adc = int(parts[9])
+                    peak_adc = int(parts[5])
 
                     # Status Indicator
-                    if kick:
-                        status = f"{YELLOW}[KICK] {RESET}"
-                    elif avg_i > 1.2:
+                    if avg_i > 1.2:
                         status = f"{RED}[WARN] {RESET}" 
                     else:
                         status = f"{GREEN}[OK]   {RESET}"
@@ -115,12 +109,12 @@ def main():
                     sys.stdout.write("\033[4;1H")
                     
                     # Construct and print the dashboard
-                    print(f"{draw_bar('TARGET', target, 255, 30, BLUE)}")
-                    print(f"{draw_bar('SPEED ', speed, 255, 30, GREEN)}")
-                    print(f"{draw_bar('POWER ', pwm, 4095, 30, YELLOW)} | SLEW: {slew_pwm:6.1f}")
+                    print(f"{draw_bar('TARGET', target, 28, 30, BLUE)}")
+                    print(f"{draw_bar('SPEED ', speed, 28, 30, GREEN)}")
+                    print(f"{draw_bar('POWER ', pwm, 1023, 30, YELLOW)}")
                     
                     print(f"{draw_bar('AMPS  ', avg_i, 2.0, 30, RED)} | FAST: {fast_i:.3f} | PEAK: {peak_adc:4d}")
-                    print(f"INTGR: {integrator:7.2f} | OFFSET: {offset:5.1f} | {status}      ")
+                    print(f"                                      | {status}      ")
                     
                     sys.stdout.flush()
 
