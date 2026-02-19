@@ -151,9 +151,20 @@ void MotorController::loop() {
 
         finalPwm = (int32_t)(basePwm + torquePunch + kickBonus);
         
-        // SPEED STEP 1 SAFETY: Never allow full power at the lowest steps
-        uint32_t absoluteMax = (_currentSpeed < 5.0f) ? 500 : 1023;
-        finalPwm = constrain(finalPwm, 0, (int)absoluteMax);
+        // DITHER INJECTION (CV64): Continuous micro-pulses for low-speed torque
+        // Breaks static friction without sustaining high speed
+        if (_currentSpeed > 0.1f && _currentSpeed < 15.0f && _cvPwmDither > 0) {
+            // 20ms period (50Hz) to vibrate the armature
+            // CV64 sets the pulse width (0-255 -> 0-8ms)
+            unsigned long phase = millis() % 20;
+            unsigned long width = map(_cvPwmDither, 0, 255, 0, 8);
+            if (phase < width) {
+                finalPwm += 350; // "Hammer" the motor
+            }
+        }
+        
+        // Final Safety Clamp
+        finalPwm = constrain(finalPwm, 0, 1023);
 
     } else {
         _isMoving = false;
@@ -227,6 +238,7 @@ void MotorController::_updateCvCache() {
         _cvKi = dcc.getCV(114);             // Integral Gain
         _cvKpSlow = dcc.getCV(118);         // Slow Speed Gain
         _cvLoadFilter = dcc.getCV(189);     // Load Filter
+        _cvPwmDither = dcc.getCV(CV::PWM_DITHER);
         if (_cvLoadFilter == 255) _cvLoadFilter = 120;
         
         _cvPedestalFloor = dcc.getCV(CV::PEDESTAL_FLOOR);
