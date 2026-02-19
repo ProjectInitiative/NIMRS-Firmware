@@ -40,6 +40,7 @@ private:
   uint8_t _cvKpSlow = 128;     // CV118: Slow Speed Gain multiplier
   uint8_t _cvLoadFilter = 150; // CV189: Smoothing factor (0-255)
   uint8_t _cvAccel = 4;        // CV3
+  uint8_t _cvPwmDither = 0;    // CV64
   uint8_t _cvPedestalFloor = 160;   // CV57: VStart Floor
   uint8_t _cvLoadGainScalar = 20;   // CV146: Punch Scalar
   uint8_t _cvLearnThreshold = 60;   // CV147: Load Threshold Base (x0.01)
