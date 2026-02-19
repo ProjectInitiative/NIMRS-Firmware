@@ -18,43 +18,37 @@ private:
   // PWM Config
   const uint8_t _pwmChannel1 = 2;
   const uint8_t _pwmChannel2 = 3;
-  uint8_t _pwmResolution = 12;
-  uint32_t _maxPwm = 4095;
-  uint32_t _pwmFreq = 16000;
+  uint8_t _pwmResolution = 10;
+  uint32_t _maxPwm = 1023;
+  uint32_t _pwmFreq = 20000;
 
-  // State
+  // CV Mappings (Defaults from Paragon 4 Spec)
+  uint8_t _cvVStart = 10;      // CV2: Starting PWM offset
+  uint8_t _cvKickStart = 45;   // CV65: Instant burst on start
+  uint8_t _cvKp = 25;          // CV112/113: Proportional Gain
+  uint8_t _cvKi = 15;          // CV114/115: Integral Gain
+  uint8_t _cvKpSlow = 180;     // CV118: Slow Speed Gain multiplier
+  uint8_t _cvLoadFilter = 120; // CV189: Smoothing factor (0-255)
+  uint8_t _cvAccel = 2;        // CV3
+
+  // Internal State
+  float _piErrorSum = 0.0f;
+  unsigned long _kickStartTimer = 0;
+  bool _isMoving = false;
+  
   float _currentSpeed = 0.0f;
-  bool _currentDirection = true;
   unsigned long _lastMomentumUpdate = 0;
-  uint16_t _lastPwmValue = 0;
-  uint16_t _lastSmoothingPwm = 0;
+  uint16_t _lastPwmValue = 0; // For telemetry
 
-  // Current Sensing (GPIO 4)
-  uint8_t _activeGainMode; // 0=LO, 1=HI-Z (MED), 2=HI
-  float _adcHistory[16];
-  uint8_t _adcIdx = 0;
-  float _currentOffset = 0.0f;
+  // Current Sensing
   float _avgCurrent = 0.0f;
-
-  // Load Compensation
-  float _torqueIntegrator = 0.0f;
-  static const int SPEED_STEPS = 256; // Increased to match 0-255 range
-  float _baselineTable[SPEED_STEPS];
-  unsigned long _lastBaselineUpdate = 0;
+  float _currentOffset = 0.0f; // Kept for offset calibration
 
   // CV Cache
-  uint8_t _cvAccel, _cvDecel, _cvVstart, _cvVmid, _cvVhigh, _cvConfig;
-  uint8_t _cvPedestalFloor, _cvLoadGain, _cvLoadGainScalar, _cvDeltaCap;
-  uint8_t _cvStictionKick, _cvBaselineAlpha, _cvBaselineReset, _cvPwmDither;
-  uint8_t _cvLearnThreshold, _cvCurveIntensity, _cvHardwareGain, _cvDriveMode;
   unsigned long _lastCvUpdate = 0;
-  uint8_t _speedTable[28];
 
   void _drive(uint16_t speed, bool direction);
   void _updateCvCache();
-  void _generateScurve(uint8_t intensity);
-  void _saveBaselineTable();
-  void _loadBaselineTable();
   uint32_t _getPeakADC();
 };
 #endif
