@@ -29,7 +29,7 @@ void MotorController::setup() {
     pinMode(Pinout::MOTOR_GAIN_SEL, INPUT); 
     pinMode(Pinout::MOTOR_CURRENT, INPUT);
     analogReadResolution(12);
-    analogSetPinAttenuation(Pinout::MOTOR_CURRENT, ADC_0db);
+    analogSetPinAttenuation(Pinout::MOTOR_CURRENT, ADC_11db);
     
     // Paragon 4 uses high-freq PWM for silent motor operation
     // 20kHz ensures no audible buzzing during the crawl
@@ -111,7 +111,8 @@ void MotorController::loop() {
     // 2. FILTERED CURRENT SENSING (Mimicking CV189)
     // Using a coefficient-based low pass filter instead of raw peak search
     float rawCurrent = (float)_getPeakADC() * 0.00054f; // approx scaling for current
-    float alpha = _cvLoadFilter / 255.0f;
+    // Clamp alpha to 0.95 to prevent lockup if CV is 255
+    float alpha = std::min(0.95f, _cvLoadFilter / 255.0f);
     _avgCurrent = (alpha * _avgCurrent) + ((1.0f - alpha) * rawCurrent);
 
     int32_t finalPwm = 0;
@@ -125,12 +126,13 @@ void MotorController::loop() {
 
         // 4. BASELINE CALCULATION (CV2 - VStart)
         float speedNorm = _currentSpeed / 255.0f;
-        float vStartPwm = map(_cvVStart, 0, 255, 0, 1023);
+        float vStartPwm = map(_cvVStart, 0, 255, 100, 1023); // Min floor 100
         float basePwm = vStartPwm + (speedNorm * (1023.0f - vStartPwm));
 
         // 5. PI LOAD COMPENSATION
-        // Threshold shifts based on speed steps, similar to Paragon 4 'Load Factor'
-        float loadThreshold = (_currentSpeed < 15.0f) ? 0.30f : 0.50f;
+        // Threshold shifts based on speed steps.
+        // Adjusted for observed 0.2A free-run current
+        float loadThreshold = 0.20f + (_currentSpeed * 0.002f);
         float error = _avgCurrent - loadThreshold;
 
         // Apply CV118 (Slow Speed Gain) if we are in the crawl range
@@ -144,6 +146,17 @@ void MotorController::loop() {
         _piErrorSum = constrain(_piErrorSum, -200.0f, 200.0f);
 
         float compensation = (error * currentKp) + _piErrorSum;
+        
+        // FAILSAFE: If current sense is dead (ESU Tester), disable PI
+        // to prevent integrator wind-up killing the throttle
+        if (_avgCurrent < 0.01f) {
+            compensation = 0.0f;
+            _piErrorSum = 0.0f;
+        }
+        
+        // Safety: Don't let PI reduce power by more than 80% of baseline
+        float maxCut = -0.8f * basePwm;
+        if (compensation < maxCut) compensation = maxCut;
 
         // Apply Kick Start burst if within the first 80ms of movement
         if (now - _kickStartTimer < 80) {
@@ -170,7 +183,7 @@ void MotorController::loop() {
 uint32_t MotorController::_getPeakADC() {
     // High-speed sampling to capture the PWM-on current pulse
     uint32_t maxVal = 0;
-    for(int i = 0; i < 40; i++) {
+    for(int i = 0; i < 100; i++) {
         uint32_t s = analogRead(Pinout::MOTOR_CURRENT);
         if (s > maxVal) maxVal = s;
     }
@@ -230,6 +243,7 @@ void MotorController::_updateCvCache() {
         _cvKi = dcc.getCV(114);             // Integral Gain
         _cvKpSlow = dcc.getCV(118);         // Slow Speed Gain
         _cvLoadFilter = dcc.getCV(189);     // Load Filter
+        if (_cvLoadFilter == 255) _cvLoadFilter = 120;
     }
 }
 
