@@ -23,6 +23,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <button class="nav-btn" onclick="showTab('cvs')">CVs</button>
             <button class="nav-btn" onclick="showTab('files')">Files</button>
             <button class="nav-btn" onclick="showTab('logs')">Logs</button>
+            <button class="nav-btn" onclick="showTab('debug')">Debug</button>
             <button class="nav-btn" onclick="showTab('system')">System</button>
         </nav>
 
@@ -154,6 +155,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     </div>
                 </div>
                 <div id="log-viewer" class="terminal"></div>
+            </section>
+
+            <!-- Debug Tab -->
+            <section id="debug" class="tab-content">
+                <div class="card">
+                    <h3>Motor Self-Test</h3>
+                    <p>Runs a 3-second motor profile (Forward Ramp -> Stop -> Reverse Ramp -> Stop). Ensure the locomotive is on a test track with enough space.</p>
+                    <button class="btn warning" onclick="runMotorTest()">Run Test (3s)</button>
+                    <br><br>
+                    <h4>Test Results (JSON)</h4>
+                    <textarea id="test-results" style="width:100%; height:200px; background:#000; color:#0f0; border:1px solid #333;" readonly></textarea>
+                    <br>
+                    <button class="btn small" onclick="copyTestResults()">Copy to Clipboard</button>
+                </div>
             </section>
 
             <!-- System Tab -->
@@ -1008,6 +1023,42 @@ function resetWifi() {
     fetch('/api/wifi/reset', { method: 'POST' })
     .then(() => alert("Resetting... Connect to 'NIMRS-Decoder' AP."))
     .catch(e => alert("Error: " + e));
+}
+
+// --- Debug Tools ---
+
+function runMotorTest() {
+    const area = document.getElementById('test-results');
+    area.value = "Starting test... Please wait 4 seconds.";
+    
+    fetch('/api/motor/test', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+        if(d.status === "started") {
+            setTimeout(() => fetchTestResults(), 3500);
+        } else {
+            area.value = "Error starting test: " + JSON.stringify(d);
+        }
+    })
+    .catch(e => area.value = "Error: " + e);
+}
+
+function fetchTestResults() {
+    const area = document.getElementById('test-results');
+    area.value = "Fetching results...";
+    fetch('/api/motor/test')
+    .then(r => r.json())
+    .then(data => {
+        area.value = JSON.stringify(data, null, 2);
+    })
+    .catch(e => area.value = "Fetch Error: " + e);
+}
+
+function copyTestResults() {
+    const area = document.getElementById('test-results');
+    area.select();
+    document.execCommand('copy'); 
+    alert("Copied to clipboard!");
 }
 )rawliteral";
 
