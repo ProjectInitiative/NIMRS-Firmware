@@ -52,6 +52,48 @@ void MotorController::setup() {
 void MotorController::loop() {
     SystemState &state = SystemContext::getInstance().getState();
     uint8_t targetSpeed = state.speed;
+    bool direction = state.direction;
+
+    // --- TEST MODE OVERRIDE ---
+    if (_testMode) {
+        unsigned long t = millis() - _testStartTime;
+        if (t > 3000) {
+            _testMode = false;
+            targetSpeed = 0;
+            _drive(0, true);
+        } else {
+            // Profile: 
+            // 0-1000ms: Ramp FWD 0->100
+            // 1000-1500ms: Hold FWD 100
+            // 1500-2500ms: Ramp REV 0->100
+            // 2500-3000ms: Hold REV 100
+            
+            if (t < 1000) {
+                targetSpeed = map(t, 0, 1000, 0, 100);
+                direction = true;
+            } else if (t < 1500) {
+                targetSpeed = 100;
+                direction = true;
+            } else if (t < 2500) {
+                targetSpeed = map(t, 1500, 2500, 0, 100);
+                direction = false;
+            } else {
+                targetSpeed = 100;
+                direction = false;
+            }
+            
+            // Record Data (approx 50ms interval)
+            static unsigned long lastLog = 0;
+            if (millis() - lastLog > 50 && _testDataIdx < MAX_TEST_POINTS) {
+                lastLog = millis();
+                _testData[_testDataIdx++] = {
+                    (uint32_t)t, targetSpeed, _lastPwmValue, 
+                    _avgCurrent, _currentSpeed
+                };
+            }
+        }
+    }
+    // --------------------------
     
     _updateCvCache(); // Ensure CVs are updated from registry
 
@@ -189,4 +231,25 @@ void MotorController::_updateCvCache() {
         _cvKpSlow = dcc.getCV(118);         // Slow Speed Gain
         _cvLoadFilter = dcc.getCV(189);     // Load Filter
     }
+}
+
+void MotorController::startTest() {
+    if (_testMode) return;
+    _testMode = true;
+    _testStartTime = millis();
+    _testDataIdx = 0;
+    Log.println("Motor: Starting Self-Test...");
+}
+
+String MotorController::getTestJSON() {
+    String out = "[";
+    for(int i=0; i<_testDataIdx; i++) {
+        char buf[128];
+        sprintf(buf, "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}", 
+            _testData[i].t, _testData[i].target, _testData[i].pwm, _testData[i].current, _testData[i].speed);
+        out += buf;
+        if(i < _testDataIdx-1) out += ",";
+    }
+    out += "]";
+    return out;
 }

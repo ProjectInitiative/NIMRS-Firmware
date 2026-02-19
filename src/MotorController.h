@@ -9,12 +9,22 @@
 
 class MotorController {
 public:
-  MotorController();
+  static MotorController& getInstance() {
+      static MotorController instance;
+      return instance;
+  }
+  
   void setup();
   void loop();
   void streamTelemetry();
+  void startTest();
+  String getTestJSON();
+
+  MotorController(const MotorController&) = delete;
+  MotorController& operator=(const MotorController&) = delete;
 
 private:
+  MotorController();
   // PWM Config
   const uint8_t _pwmChannel1 = 2;
   const uint8_t _pwmChannel2 = 3;
@@ -50,5 +60,18 @@ private:
   void _drive(uint16_t speed, bool direction);
   void _updateCvCache();
   uint32_t _getPeakADC();
+
+  // Test Mode
+  bool _testMode = false;
+  unsigned long _testStartTime = 0;
+  static const int MAX_TEST_POINTS = 60; // 3 seconds @ 50ms
+  struct TestPoint {
+      uint32_t t;
+      uint8_t target;
+      uint16_t pwm;
+      float current;
+      float speed;
+  } _testData[MAX_TEST_POINTS];
+  int _testDataIdx = 0;
 };
 #endif
