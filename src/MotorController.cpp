@@ -120,18 +120,22 @@ void MotorController::loop() {
         float speedNorm = _currentSpeed / 255.0f;
         
         // BASELINE: Guarantee the motor has enough power to move (CV2)
-        // We set the floor to 200 (approx 20% duty cycle) for HO motors
-        float vStart = map(_cvVStart, 0, 255, 200, 1023); 
+        // We set the floor to CV57 (default 160)
+        float vStart = map(_cvVStart, 0, 255, _cvPedestalFloor, 1023); 
         float basePwm = vStart + (speedNorm * (1023.0f - vStart));
 
         // TORQUE PUNCH (CV118): Only adds power if current is HIGHER than expected
-        // Typical HO motors draw more at start (0.6A) and drop to 0.2A when running
-        float expectedLoad = 0.25f + (speedNorm * 0.4f);
+        // CV147 sets the base load threshold (0.60A default)
+        float thresholdBase = _cvLearnThreshold / 100.0f;
+        float expectedLoad = thresholdBase + (speedNorm * 0.4f);
         float loadError = std::max(0.0f, _avgCurrent - expectedLoad);
         
         // CRAWL CAP: At low speeds, we limit how much "Punch" we can add
-        // This prevents the "violent" lurching at Speed Step 1
-        float punchLimit = (_currentSpeed < 10.0f) ? 150.0f : 400.0f;
+        // Gradual ramp for punch limit. Max punch is CV146 * 20 (default 400)
+        float maxPunch = _cvLoadGainScalar * 20.0f;
+        float punchLimit = map((long)_currentSpeed, 0, 20, 150, (long)maxPunch);
+        punchLimit = constrain(punchLimit, 150.0f, maxPunch);
+        
         float currentKp = (_currentSpeed < 20.0f) ? (_cvKpSlow / 64.0f) : (_cvKp / 128.0f);
         float torquePunch = constrain(loadError * currentKp * 100.0f, 0.0f, punchLimit);
 
@@ -142,7 +146,7 @@ void MotorController::loop() {
             _isMoving = true;
         }
         if (now - _kickStartTimer < 100) {
-            kickBonus = map(_cvKickStart, 0, 255, 0, 250); // Cap the kick to 25% extra
+            kickBonus = map(_cvKickStart, 0, 255, 0, 350); // Cap the kick to 35% extra
         }
 
         finalPwm = (int32_t)(basePwm + torquePunch + kickBonus);
@@ -224,6 +228,10 @@ void MotorController::_updateCvCache() {
         _cvKpSlow = dcc.getCV(118);         // Slow Speed Gain
         _cvLoadFilter = dcc.getCV(189);     // Load Filter
         if (_cvLoadFilter == 255) _cvLoadFilter = 120;
+        
+        _cvPedestalFloor = dcc.getCV(CV::PEDESTAL_FLOOR);
+        _cvLoadGainScalar = dcc.getCV(CV::LOAD_GAIN_SCALAR);
+        _cvLearnThreshold = dcc.getCV(CV::LEARN_THRESHOLD);
     }
 }
 
