@@ -33,13 +33,13 @@ private:
   uint32_t _pwmFreq = 20000;
 
   // CV Mappings (Defaults from Paragon 4 Spec)
-  uint8_t _cvVStart = 10;      // CV2: Starting PWM offset
-  uint8_t _cvKickStart = 45;   // CV65: Instant burst on start
-  uint8_t _cvKp = 25;          // CV112/113: Proportional Gain
-  uint8_t _cvKi = 15;          // CV114/115: Integral Gain
-  uint8_t _cvKpSlow = 180;     // CV118: Slow Speed Gain multiplier
-  uint8_t _cvLoadFilter = 120; // CV189: Smoothing factor (0-255)
-  uint8_t _cvAccel = 2;        // CV3
+  uint8_t _cvVStart = 20;      // CV2: Starting PWM offset
+  uint8_t _cvKickStart = 40;   // CV65: Instant burst on start
+  uint8_t _cvKp = 20;          // CV112/113: Proportional Gain
+  uint8_t _cvKi = 10;          // CV114/115: Integral Gain
+  uint8_t _cvKpSlow = 128;     // CV118: Slow Speed Gain multiplier
+  uint8_t _cvLoadFilter = 150; // CV189: Smoothing factor (0-255)
+  uint8_t _cvAccel = 4;        // CV3
 
   // Internal State
   float _piErrorSum = 0.0f;

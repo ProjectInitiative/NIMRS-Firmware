@@ -29,7 +29,7 @@ void MotorController::setup() {
     pinMode(Pinout::MOTOR_GAIN_SEL, INPUT); 
     pinMode(Pinout::MOTOR_CURRENT, INPUT);
     analogReadResolution(12);
-    analogSetPinAttenuation(Pinout::MOTOR_CURRENT, ADC_11db);
+    analogSetPinAttenuation(Pinout::MOTOR_CURRENT, ADC_0db);
     
     // Paragon 4 uses high-freq PWM for silent motor operation
     // 20kHz ensures no audible buzzing during the crawl
@@ -97,86 +97,66 @@ void MotorController::loop() {
     
     _updateCvCache(); // Ensure CVs are updated from registry
 
-    // 1. MOMENTUM & DIRECTION
+    // 1. MOMENTUM (CV3/CV4)
     unsigned long now = millis();
-    unsigned long dt_ms = now - _lastMomentumUpdate;
-    if (dt_ms >= 10) {
+    unsigned long dt = now - _lastMomentumUpdate;
+    if (dt >= 10) {
         _lastMomentumUpdate = now;
         float accelDelay = std::max(1, (int)_cvAccel) * 5.0f; 
-        float step = (float)dt_ms / accelDelay;
+        float step = (float)dt / accelDelay;
         if (targetSpeed > _currentSpeed) _currentSpeed = std::min((float)targetSpeed, _currentSpeed + step);
         else if (targetSpeed < _currentSpeed) _currentSpeed = std::max((float)targetSpeed, _currentSpeed - step);
     }
 
-    // 2. FILTERED CURRENT SENSING (Mimicking CV189)
-    // Using a coefficient-based low pass filter instead of raw peak search
-    float rawCurrent = (float)_getPeakADC() * 0.00054f; // approx scaling for current
-    // Clamp alpha to 0.95 to prevent lockup if CV is 255
+    // 2. STABILIZED SENSING (CV189 Filter)
+    float rawAmps = (float)_getPeakADC() * 0.00054f;
     float alpha = std::min(0.95f, _cvLoadFilter / 255.0f);
-    _avgCurrent = (alpha * _avgCurrent) + ((1.0f - alpha) * rawCurrent);
+    _avgCurrent = (alpha * _avgCurrent) + ((1.0f - alpha) * rawAmps);
 
     int32_t finalPwm = 0;
 
     if (_currentSpeed > 0.5f) {
-        // 3. KICK START LOGIC (CV65)
+        // 3. THE PARAGON 4 CRAWL ARCHITECTURE
+        float speedNorm = _currentSpeed / 255.0f;
+        
+        // BASELINE: Guarantee the motor has enough power to move (CV2)
+        // We set the floor to 200 (approx 20% duty cycle) for HO motors
+        float vStart = map(_cvVStart, 0, 255, 200, 1023); 
+        float basePwm = vStart + (speedNorm * (1023.0f - vStart));
+
+        // TORQUE PUNCH (CV118): Only adds power if current is HIGHER than expected
+        // Typical HO motors draw more at start (0.6A) and drop to 0.2A when running
+        float expectedLoad = 0.25f + (speedNorm * 0.4f);
+        float loadError = std::max(0.0f, _avgCurrent - expectedLoad);
+        
+        // CRAWL CAP: At low speeds, we limit how much "Punch" we can add
+        // This prevents the "violent" lurching at Speed Step 1
+        float punchLimit = (_currentSpeed < 10.0f) ? 150.0f : 400.0f;
+        float currentKp = (_currentSpeed < 20.0f) ? (_cvKpSlow / 64.0f) : (_cvKp / 128.0f);
+        float torquePunch = constrain(loadError * currentKp * 100.0f, 0.0f, punchLimit);
+
+        // KICKSTART (CV65): A single burst, capped to avoid PWM 1023
+        float kickBonus = 0;
         if (!_isMoving) {
             _kickStartTimer = now;
             _isMoving = true;
         }
-
-        // 4. BASELINE CALCULATION (CV2 - VStart)
-        float speedNorm = _currentSpeed / 255.0f;
-        float vStartPwm = map(_cvVStart, 0, 255, 100, 1023); // Min floor 100
-        float basePwm = vStartPwm + (speedNorm * (1023.0f - vStartPwm));
-
-        // 5. PI LOAD COMPENSATION
-        // Threshold shifts based on speed steps.
-        // Adjusted for observed 0.2A free-run current
-        float loadThreshold = 0.20f + (_currentSpeed * 0.002f);
-        float error = _avgCurrent - loadThreshold;
-
-        // Apply CV118 (Slow Speed Gain) if we are in the crawl range
-        float currentKp = _cvKp;
-        if (_currentSpeed < 20.0f) {
-            currentKp *= (_cvKpSlow / 64.0f); // Scale Kp by CV118 factor
+        if (now - _kickStartTimer < 100) {
+            kickBonus = map(_cvKickStart, 0, 255, 0, 250); // Cap the kick to 25% extra
         }
 
-        // Integration (mimicking CV114/115)
-        _piErrorSum += error * (_cvKi / 100.0f);
-        _piErrorSum = constrain(_piErrorSum, -200.0f, 200.0f);
-
-        float compensation = (error * currentKp) + _piErrorSum;
+        finalPwm = (int32_t)(basePwm + torquePunch + kickBonus);
         
-        // FAILSAFE: If current sense is dead (ESU Tester), disable PI
-        // to prevent integrator wind-up killing the throttle
-        if (_avgCurrent < 0.01f) {
-            compensation = 0.0f;
-            _piErrorSum = 0.0f;
-        }
-        
-        // Safety: Don't let PI reduce power by more than 80% of baseline
-        float maxCut = -0.8f * basePwm;
-        if (compensation < maxCut) compensation = maxCut;
+        // SPEED STEP 1 SAFETY: Never allow full power at the lowest steps
+        uint32_t absoluteMax = (_currentSpeed < 5.0f) ? 500 : 1023;
+        finalPwm = constrain(finalPwm, 0, (int)absoluteMax);
 
-        // Apply Kick Start burst if within the first 80ms of movement
-        if (now - _kickStartTimer < 80) {
-            compensation += map(_cvKickStart, 0, 255, 0, 400);
-        }
-
-        finalPwm = (int32_t)(basePwm + compensation);
     } else {
         _isMoving = false;
-        _piErrorSum = 0;
         finalPwm = 0;
     }
 
-    _drive((uint16_t)constrain(finalPwm, 0, 1023), state.direction);
-    
-    // Update Load Factor for other systems (Audio/Lighting)
-    // Simple heuristic: diff between base PWM and actual PWM
-    // This is just a placeholder logic for now
-    state.loadFactor = 0.5f; 
-    
+    _drive((uint16_t)finalPwm, state.direction);
     streamTelemetry();
 }
 
