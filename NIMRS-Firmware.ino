@@ -13,7 +13,6 @@
 #include "src/SystemContext.h"
 
 ConnectivityManager connectivityManager;
-MotorController motorController;
 LightingController lightingController;
 // AudioController is Singleton
 
@@ -35,7 +34,7 @@ void controlPlaneTask(void *pvParameters) {
 
     // High priority loops
     DccController::getInstance().loop();
-    motorController.loop();
+    MotorController::getInstance().loop();
     lightingController.loop();
 
     // Yield 1ms to prevent watchdog issues and allow background OS tasks
@@ -52,7 +51,7 @@ void setup() {
   connectivityManager.setup();
 
   // 3. Hardware Control - Setup pins
-  motorController.setup();
+  MotorController::getInstance().setup();
   lightingController.setup();
   AudioController::getInstance().setup();
 

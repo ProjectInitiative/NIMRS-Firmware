@@ -4,6 +4,7 @@
 #include "DccController.h"
 #include "LameJs.h"
 #include "WebAssets.h"
+#include "MotorController.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -166,6 +167,19 @@ void ConnectivityManager::setup() {
   _server.on("/api/cv/all", HTTP_GET, [this]() { handleCvAll(); });
   _server.on("/api/cv/all", HTTP_POST, [this]() { handleCvAll(); });
   _server.on("/api/audio/play", HTTP_POST, [this]() { handleAudioPlay(); });
+
+  // API: Motor Test
+  _server.on("/api/motor/test", [this]() {
+      if (_server.method() == HTTP_POST) {
+          MotorController::getInstance().startTest();
+          _server.send(200, "application/json", "{\"status\":\"started\"}");
+      } else if (_server.method() == HTTP_GET) {
+          String json = MotorController::getInstance().getTestJSON();
+          _server.send(200, "application/json", json);
+      } else {
+          _server.send(405, "text/plain", "Method Not Allowed");
+      }
+  });
 
   // API: CV Definitions
   _server.on("/api/cv/defs", HTTP_GET, [this]() {
