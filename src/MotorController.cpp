@@ -62,40 +62,21 @@ void MotorController::loop() {
             targetSpeed = 0;
             _drive(0, true);
         } else {
-            // Profile: 
-            // 0-1000ms: Ramp FWD 0->100
-            // 1000-1500ms: Hold FWD 100
-            // 1500-2500ms: Ramp REV 0->100
-            // 2500-3000ms: Hold REV 100
+            if (t < 1000) { targetSpeed = map(t, 0, 1000, 0, 100); direction = true; } 
+            else if (t < 1500) { targetSpeed = 100; direction = true; } 
+            else if (t < 2500) { targetSpeed = map(t, 1500, 2500, 0, 100); direction = false; } 
+            else { targetSpeed = 100; direction = false; }
             
-            if (t < 1000) {
-                targetSpeed = map(t, 0, 1000, 0, 100);
-                direction = true;
-            } else if (t < 1500) {
-                targetSpeed = 100;
-                direction = true;
-            } else if (t < 2500) {
-                targetSpeed = map(t, 1500, 2500, 0, 100);
-                direction = false;
-            } else {
-                targetSpeed = 100;
-                direction = false;
-            }
-            
-            // Record Data (approx 50ms interval)
             static unsigned long lastLog = 0;
             if (millis() - lastLog > 50 && _testDataIdx < MAX_TEST_POINTS) {
                 lastLog = millis();
-                _testData[_testDataIdx++] = {
-                    (uint32_t)t, targetSpeed, _lastPwmValue, 
-                    _avgCurrent, _currentSpeed
-                };
+                _testData[_testDataIdx++] = { (uint32_t)t, targetSpeed, _lastPwmValue, _avgCurrent, _currentSpeed };
             }
         }
     }
     // --------------------------
     
-    _updateCvCache(); // Ensure CVs are updated from registry
+    _updateCvCache();
 
     // 1. MOMENTUM (CV3/CV4)
     unsigned long now = millis();
@@ -118,72 +99,77 @@ void MotorController::loop() {
     if (_currentSpeed > 0.5f) {
         float speedNorm = _currentSpeed / 255.0f;
         
-        // BASELINE: Guarantee the motor has enough power to move (CV2)
-        // We set the floor to CV57 (default 160)
+        // BASELINE: Guarantee the motor has enough power to move
         float vStart = map(_cvVStart, 0, 255, _cvPedestalFloor, 1023); 
         float basePwm = vStart + (speedNorm * (1023.0f - vStart));
 
-        // TORQUE PUNCH (CV118): Only adds power if current is HIGHER than expected
-        // CV147 sets the base load threshold (0.60A default)
+        // TORQUE PUNCH: Allow negative error so the integral can unwind
         float thresholdBase = _cvLearnThreshold / 100.0f;
         float expectedLoad = thresholdBase + (speedNorm * 0.4f);
-        float loadError = std::max(0.0f, _avgCurrent - expectedLoad);
+        float loadError = _avgCurrent - expectedLoad; 
         
-        // CRAWL CAP: At low speeds, we limit how much "Punch" we can add
-        // Gradual ramp for punch limit. Max punch is CV146 * 20 (default 400)
+        // CRAWL CAP
         float maxPunch = _cvLoadGainScalar * 20.0f;
         float punchLimit = map((long)_currentSpeed, 0, 20, 150, (long)maxPunch);
         punchLimit = constrain(punchLimit, 150.0f, maxPunch);
         
-        // Calculate P and I gains
+        // Calculate PI Gains
         float currentKp = (_currentSpeed < 20.0f) ? (_cvKpSlow / 64.0f) : (_cvKp / 128.0f);
-        float currentKi = _cvKi / 1000.0f; // Scale down KI for stability
+        float currentKi = _cvKi / 1000.0f; 
         
-        // Accumulate Integral Error (with anti-windup clamp to prevent runaway)
-        _piErrorSum += loadError;
-        _piErrorSum = constrain(_piErrorSum, 0.0f, 500.0f); 
+        // Throttled PI Integration (50Hz)
+        static unsigned long lastPiTimer = 0;
+        if (now - lastPiTimer > 20) {
+            _piErrorSum += loadError; 
+            if (loadError < 0) _piErrorSum += loadError; // Unwind faster when running free
+            _piErrorSum = constrain(_piErrorSum, 0.0f, 500.0f); 
+            lastPiTimer = now;
+        }
 
-        // Apply PI Output
-        float pTerm = loadError * currentKp * 100.0f;
+        // Apply PI Output (P-term only hits on positive load/binds)
+        float pTerm = std::max(0.0f, loadError) * currentKp * 100.0f;
         float iTerm = _piErrorSum * currentKi;
         
         float torquePunch = constrain(pTerm + iTerm, 0.0f, punchLimit);
 
-        // KICKSTART (CV65): A single burst, capped to avoid PWM 1023
+        // KICKSTART (CV65)
         float kickBonus = 0;
         if (!_isMoving) {
             _kickStartTimer = now;
             _isMoving = true;
         }
         if (now - _kickStartTimer < 100) {
-            kickBonus = map(_cvKickStart, 0, 255, 0, 350); // Cap the kick to 35% extra
+            kickBonus = map(_cvKickStart, 0, 255, 0, 350); 
         }
 
         finalPwm = (int32_t)(basePwm + torquePunch + kickBonus);
         
-        // DITHER INJECTION (CV64): Symmetric 100Hz square wave for low-speed torque
-        // Vibrates armature without increasing average voltage
+        // DYNAMIC DITHER INJECTION (CV64): 25Hz with smooth fade-out
         if (_currentSpeed > 0.1f && _currentSpeed < 15.0f && _cvPwmDither > 0) {
-            // 10ms period = 100Hz dither frequency
-            unsigned long phase = millis() % 10;
+            // 40ms period = 25Hz dither frequency
+            unsigned long phase = millis() % 40;
             
-            // Map CV64 (0-255) to a dither amplitude (e.g., up to 400 out of 1023 max PWM)
-            int32_t ditherAmplitude = map(_cvPwmDither, 0, 255, 0, 400); 
+            // Map base amplitude
+            float baseAmplitude = map(_cvPwmDither, 0, 255, 0, 400); 
             
-            // Symmetrical dither: + amplitude for 5ms, - amplitude for 5ms
-            if (phase < 5) {
+            // Dynamic fade: 100% strength near speed 0, fading to 0% at speed 15
+            float fadeFactor = 1.0f - (_currentSpeed / 15.0f);
+            int32_t ditherAmplitude = (int32_t)(baseAmplitude * fadeFactor);
+            
+            // Symmetrical 25Hz square wave (20ms high, 20ms low)
+            if (phase < 20) {
                 finalPwm += ditherAmplitude;
             } else {
                 finalPwm -= ditherAmplitude; 
             }
         }
         
-        // Final Safety Clamp
         finalPwm = constrain(finalPwm, 0, 1023);
 
     } else {
         _isMoving = false;
         finalPwm = 0;
+        _piErrorSum = 0.0f; // MUST clear integral windup on stop
     }
 
     _drive((uint16_t)finalPwm, state.direction);
