@@ -135,8 +135,19 @@ void MotorController::loop() {
         float punchLimit = map((long)_currentSpeed, 0, 20, 150, (long)maxPunch);
         punchLimit = constrain(punchLimit, 150.0f, maxPunch);
         
+        // Calculate P and I gains
         float currentKp = (_currentSpeed < 20.0f) ? (_cvKpSlow / 64.0f) : (_cvKp / 128.0f);
-        float torquePunch = constrain(loadError * currentKp * 100.0f, 0.0f, punchLimit);
+        float currentKi = _cvKi / 1000.0f; // Scale down KI for stability
+        
+        // Accumulate Integral Error (with anti-windup clamp to prevent runaway)
+        _piErrorSum += loadError;
+        _piErrorSum = constrain(_piErrorSum, 0.0f, 500.0f); 
+
+        // Apply PI Output
+        float pTerm = loadError * currentKp * 100.0f;
+        float iTerm = _piErrorSum * currentKi;
+        
+        float torquePunch = constrain(pTerm + iTerm, 0.0f, punchLimit);
 
         // KICKSTART (CV65): A single burst, capped to avoid PWM 1023
         float kickBonus = 0;
@@ -180,13 +191,12 @@ void MotorController::loop() {
 }
 
 uint32_t MotorController::_getPeakADC() {
-    // High-speed sampling to capture the PWM-on current pulse
-    uint32_t maxVal = 0;
-    for(int i = 0; i < 100; i++) {
-        uint32_t s = analogRead(Pinout::MOTOR_CURRENT);
-        if (s > maxVal) maxVal = s;
+    // Average out the high-frequency PWM and Dither ripple
+    uint32_t sum = 0;
+    for(int i = 0; i < 50; i++) {
+        sum += analogRead(Pinout::MOTOR_CURRENT);
     }
-    return maxVal;
+    return sum / 50;
 }
 
 void MotorController::_drive(uint16_t speed, bool direction) {
