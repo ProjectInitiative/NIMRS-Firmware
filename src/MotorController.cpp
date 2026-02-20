@@ -31,7 +31,7 @@ void MotorController::setup() {
     analogReadResolution(12);
     analogSetPinAttenuation(Pinout::MOTOR_CURRENT, ADC_0db);
     
-    // Paragon 4 uses high-freq PWM for silent motor operation
+    // high-freq PWM for silent motor operation
     // 20kHz ensures no audible buzzing during the crawl
     ledcSetup(_pwmChannel1, 20000, 10);
     ledcSetup(_pwmChannel2, 20000, 10);
@@ -116,7 +116,6 @@ void MotorController::loop() {
     int32_t finalPwm = 0;
 
     if (_currentSpeed > 0.5f) {
-        // 3. THE PARAGON 4 CRAWL ARCHITECTURE
         float speedNorm = _currentSpeed / 255.0f;
         
         // BASELINE: Guarantee the motor has enough power to move (CV2)
@@ -151,15 +150,20 @@ void MotorController::loop() {
 
         finalPwm = (int32_t)(basePwm + torquePunch + kickBonus);
         
-        // DITHER INJECTION (CV64): Continuous micro-pulses for low-speed torque
-        // Breaks static friction without sustaining high speed
+        // DITHER INJECTION (CV64): Symmetric 100Hz square wave for low-speed torque
+        // Vibrates armature without increasing average voltage
         if (_currentSpeed > 0.1f && _currentSpeed < 15.0f && _cvPwmDither > 0) {
-            // 20ms period (50Hz) to vibrate the armature
-            // CV64 sets the pulse width (0-255 -> 0-8ms)
-            unsigned long phase = millis() % 20;
-            unsigned long width = map(_cvPwmDither, 0, 255, 0, 8);
-            if (phase < width) {
-                finalPwm += 350; // "Hammer" the motor
+            // 10ms period = 100Hz dither frequency
+            unsigned long phase = millis() % 10;
+            
+            // Map CV64 (0-255) to a dither amplitude (e.g., up to 400 out of 1023 max PWM)
+            int32_t ditherAmplitude = map(_cvPwmDither, 0, 255, 0, 400); 
+            
+            // Symmetrical dither: + amplitude for 5ms, - amplitude for 5ms
+            if (phase < 5) {
+                finalPwm += ditherAmplitude;
+            } else {
+                finalPwm -= ditherAmplitude; 
             }
         }
         
