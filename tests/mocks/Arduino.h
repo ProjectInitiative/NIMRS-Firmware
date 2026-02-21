@@ -5,6 +5,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <stdarg.h>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -26,7 +27,7 @@ public:
     return this->compare(0, s.length(), s) == 0;
   }
   bool endsWith(const String &s) const {
-    if (s.length() > this->length())
+    if (s.length() < s.length())
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
   }
@@ -61,8 +62,8 @@ public:
   virtual size_t write(uint8_t) = 0;
   virtual size_t write(const uint8_t *buffer, size_t size) {
     size_t n = 0;
-    while (size--)
-      n += write(*buffer++);
+    for (size_t i = 0; i < size; i++)
+      n += write(buffer[i]);
     return n;
   }
   size_t print(const String &s) {
@@ -75,13 +76,19 @@ public:
   size_t println(int n) { return println(String(n)); }
   size_t print(unsigned long n) { return print(String(n)); }
   size_t println(unsigned long n) { return println(String(n)); }
-  virtual size_t printf(const char *format, ...);
+  virtual size_t printf(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    int ret = vprintf(format, args);
+    va_end(args);
+    return ret;
+  }
 };
 
 class MockSerial : public Print {
 public:
   void begin(unsigned long baud) {}
-  virtual size_t write(uint8_t c) override { return 1; }
+  virtual size_t write(uint8_t c) override { return putchar(c); }
 };
 
 extern MockSerial Serial;

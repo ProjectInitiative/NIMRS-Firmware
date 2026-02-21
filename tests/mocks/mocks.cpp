@@ -13,21 +13,8 @@ WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
 
-size_t Print::printf(const char *format, ...) {
-  va_list arg;
-  va_start(arg, format);
-  char temp[256];
-  size_t len = vsnprintf(temp, sizeof(temp), format, arg);
-  va_end(arg);
-  return write((const uint8_t *)temp, len);
-}
+// Print::printf is already defined in Arduino.h
 
-Logger::Logger() {}
-Logger::~Logger() {}
-Logger &Logger::getInstance() {
-  static Logger instance;
-  return instance;
-}
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
@@ -37,7 +24,10 @@ size_t Logger::printf(const char *format, ...) {
 }
 void Logger::debug(const char *format, ...) {}
 size_t Logger::write(uint8_t c) { return 1; }
+size_t Logger::write(const uint8_t *buffer, size_t size) { return size; }
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
+String Logger::getLogsHTML() { return ""; }
+void Logger::_addToBuffer(const String &line) {}
 
 AudioController &AudioController::getInstance() {
   static AudioController instance;
