@@ -68,8 +68,10 @@
             '';
             installPhase = ''
               mkdir -p $out
-              # Copy all test executables to output
-              find tests -maxdepth 1 -type f -executable -not -name "*.*" -exec cp {} $out/ \;
+              # Copy all test executables to output from tests/bin
+              if [ -d tests/bin ]; then
+                find tests/bin -maxdepth 1 -type f -executable -exec cp {} $out/ \;
+              fi
             '';
           };
         }
@@ -209,7 +211,7 @@
           runTests = pkgs.writeShellScriptBin "run-tests" ''
             echo "Running NIMRS Firmware Unit Tests..."
             # Clean up old tests if any
-            find tests -maxdepth 1 -type f -executable -not -name "*.*" -delete
+            rm -rf tests/bin
             python3 tools/test_runner.py
           '';
 

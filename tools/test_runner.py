@@ -14,6 +14,9 @@ def main():
         "CXXFLAGS", "-std=c++17 -Itests/mocks -Itests/mocks/freertos -Isrc -Wall"
     )
 
+    # Ensure output directory exists
+    os.makedirs("tests/bin", exist_ok=True)
+
     # Locate tests
     test_files = glob.glob("tests/test_*.cpp")
     if not test_files:
@@ -70,7 +73,7 @@ def main():
                 print(f"  Heuristics resolved: {sources}")
 
         # Compile
-        output_bin = f"tests/{test_name}"
+        output_bin = os.path.join("tests/bin", test_name)
         # Split flags safely? Assumes space separation
         cmd = [cxx] + cxxflags.split() + ["-o", output_bin, test_file] + sources
 

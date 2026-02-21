@@ -10,11 +10,7 @@ arduino-cli.yaml
 build/
 out/
 result
-tests/run_tests
-tests/test_ConnectivityManager
-tests/test_logic
-tests/test_Security
-tests/test_main
+tests/bin/
 
 # Local config (keep example tracked)
 config.h
