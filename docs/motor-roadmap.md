@@ -1,6 +1,12 @@
 # NIMRS Motor Control Roadmap: Model-Based Estimator
 
-This document outlines the architecture for a **Sensorless Adaptive Motor Control System** using the DRV8213DSGR with IPROPI current feedback. This replaces the traditional "Open Loop + Kick Start" logic with a physics-based model to achieving smooth slow crawls and synchronized chuffing.
+This document outlines the architecture for a **Sensorless Adaptive Motor Control System** using the DRV8213DSGR with IPROPI current feedback.
+
+## The Hardware Constraint
+
+The current NIMRS hardware revision does not include a voltage divider on the motor outputs. Therefore, **we cannot directly measure Back-EMF (voltage)** during the PWM off-cycle.
+
+Instead of direct measurement, we must implement a **Model-Based Estimator** that calculates the theoretical speed of the motor based on the applied voltage and the measured current.
 
 ## Objective
 
@@ -96,7 +102,3 @@ struct MotorState {
 - **CV 141:** Motor Ke (EMF Constant)
 - **CV 142:** Speed PI - P Gain
 - **CV 143:** Speed PI - I Gain
-
-```
-
-```
