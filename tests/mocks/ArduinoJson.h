@@ -21,9 +21,9 @@ struct JsonVariant {
   template <typename T> T as() const { return (T) * this; }
 
   template <typename T> void operator=(T v) {
-      JsonVariant temp(v);
-      val = temp.val;
-      isString = temp.isString;
+    JsonVariant temp(v);
+    val = temp.val;
+    isString = temp.isString;
   }
 
   template <typename T> T to() { return T(); }
@@ -37,11 +37,12 @@ struct JsonVariant {
 class JsonDocument;
 
 class JsonArray {
-  JsonDocument* _doc;
+  JsonDocument *_doc;
+
 public:
   std::vector<JsonVariant> _localData;
 
-  JsonArray(JsonDocument* doc = nullptr) : _doc(doc) {}
+  JsonArray(JsonDocument *doc = nullptr) : _doc(doc) {}
 
   template <typename T> T add() { return T(); }
   void add(JsonVariant v);
@@ -92,17 +93,17 @@ public:
     return obj;
   }
   void clear() {
-      _data.clear();
-      _arrData.clear();
-      _isArray = false;
+    _data.clear();
+    _arrData.clear();
+    _isArray = false;
   }
 };
 
 inline void JsonArray::add(JsonVariant v) {
   if (_doc) {
-      _doc->_arrData.push_back(v);
+    _doc->_arrData.push_back(v);
   } else {
-      _localData.push_back(v);
+    _localData.push_back(v);
   }
 }
 
@@ -117,29 +118,28 @@ template <typename T> T JsonDocument::to() { return T(); }
 
 inline void serializeJson(const JsonDocument &doc, String &out) {
   if (doc._isArray) {
-      out = "[";
-      for (size_t i = 0; i < doc._arrData.size(); ++i) {
-          if (i > 0) out += ",";
-          if (doc._arrData[i].isString)
-              out += "\"" + doc._arrData[i].val + "\"";
-          else
-              out += doc._arrData[i].val;
-      }
-      out += "]";
+    out = "[";
+    for (size_t i = 0; i < doc._arrData.size(); ++i) {
+      if (i > 0)
+        out += ",";
+      if (doc._arrData[i].isString)
+        out += "\"" + doc._arrData[i].val + "\"";
+      else
+        out += doc._arrData[i].val;
+    }
+    out += "]";
   } else {
-      out = "{\"mock\":true}";
+    out = "{\"mock\":true}";
   }
 }
 
 inline void serializeJson(const JsonDocument &doc, Print &out) {
-    String s;
-    serializeJson(doc, s);
-    out.print(s);
+  String s;
+  serializeJson(doc, s);
+  out.print(s);
 }
 
-inline void serializeJson(const JsonArray &arr, String &out) {
-    out = "[]";
-}
+inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }
 
 struct DeserializationError {
