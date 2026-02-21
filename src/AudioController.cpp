@@ -181,16 +181,21 @@ void AudioController::playFile(const char *filename) {
     _file = nullptr;
   }
 
-  if (!LittleFS.exists(filename)) {
-    Log.printf("Audio: File not found: %s\n", filename);
+  _file = new AudioFileSourceLittleFS(filename);
+
+  // Check if file opened successfully (size > 0)
+  // Note: LittleFS.open() returns an invalid File object if not found,
+  // and size() returns 0 on invalid files.
+  if (_file->getSize() == 0) {
+    Log.printf("Audio: File not found or empty: %s\n", filename);
+    delete _file;
+    _file = nullptr;
     return;
   }
 
   // Wake up Amp
   digitalWrite(Pinout::AMP_SD_MODE, HIGH);
   delay(10); // Small warmup
-
-  _file = new AudioFileSourceLittleFS(filename);
 
   size_t len = strlen(filename);
   bool isMp3 = (len >= 4 && strcasecmp(filename + len - 4, ".mp3") == 0);
