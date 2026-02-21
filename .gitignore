@@ -10,6 +10,7 @@ arduino-cli.yaml
 build/
 out/
 result
+tests/run_tests
 
 # Local config (keep example tracked)
 config.h

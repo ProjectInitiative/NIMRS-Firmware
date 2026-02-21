@@ -187,6 +187,21 @@
             python3 tools/nimrs-telemetry.py "$@"
           '';
 
+          # Script to run unit tests
+          runTests = pkgs.writeShellScriptBin "run-tests" ''
+            if [ ! -d "tests" ]; then
+               echo "Error: tests directory not found. Please run this from the project root."
+               exit 1
+            fi
+
+            # Clean and build tests
+            make -C tests clean
+            make -C tests
+
+            # Run tests
+            ./tests/run_tests
+          '';
+
         in
         {
           default = pkgs.mkShell {
@@ -213,6 +228,7 @@
               monitorFirmware
               nimrsTelemetry
               nimrsLogs
+              runTests
             ];
 
             shellHook = ''
@@ -231,6 +247,7 @@
               echo "  monitor-firmware <port|IP>: Monitor logs (Serial or WiFi)"
               echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
               echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
+              echo "  run-tests                 : Run host-side unit tests"
               echo "  treefmt                   : Format all code (C++, JSON, MD)"
               echo "  nix build                 : Clean build of the firmware"
             '';
