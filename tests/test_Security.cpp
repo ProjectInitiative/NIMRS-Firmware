@@ -48,7 +48,6 @@ TEST_CASE(test_path_traversal) {
   assert(LittleFS.lastOpenedPath != "/../config.json");
 }
 
-
 TEST_CASE(test_valid_upload) {
   ConnectivityManager cm;
   LittleFS.lastOpenedPath = "";

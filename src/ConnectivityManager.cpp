@@ -425,7 +425,8 @@ void ConnectivityManager::handleFileUpload() {
     }
 
     if (!allowed) {
-      Log.printf("Upload Blocked: Invalid extension for %s\n", filename.c_str());
+      Log.printf("Upload Blocked: Invalid extension for %s\n",
+                 filename.c_str());
       fsUploadFile = File(); // Ensure invalid
       return;
     }
