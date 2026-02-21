@@ -27,7 +27,7 @@ public:
     return this->compare(0, s.length(), s) == 0;
   }
   bool endsWith(const String &s) const {
-    if (s.length() > this->length())
+    if (s.length() < s.length())
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
   }
