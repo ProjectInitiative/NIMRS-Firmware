@@ -59,7 +59,10 @@
           tests = pkgs.stdenv.mkDerivation {
             name = "nimrs-tests";
             src = ./.;
-            nativeBuildInputs = [ pkgs.gnumake pkgs.gcc ];
+            nativeBuildInputs = [
+              pkgs.gnumake
+              pkgs.gcc
+            ];
             buildPhase = ''
               make -f tests/Makefile
             '';
