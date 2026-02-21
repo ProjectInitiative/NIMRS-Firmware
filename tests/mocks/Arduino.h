@@ -26,11 +26,13 @@ public:
       return false;
     return this->compare(0, s.length(), s) == 0;
   }
+
   bool endsWith(const String &s) const {
-    if (s.length() < s.length())
+    if (this->length() < s.length())
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
   }
+
   int toInt() const {
     if (this->empty())
       return 0;
@@ -41,7 +43,7 @@ public:
     }
   }
 
-  // Added indexOf to support Logger and other usages
+  // Support for Logger and other usages
   int indexOf(const String &s) const {
     size_t found = this->find(s);
     if (found == std::string::npos)
