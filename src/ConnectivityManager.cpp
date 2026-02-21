@@ -598,7 +598,9 @@ void ConnectivityManager::handleCvAll() {
     // Loop through ALL defined CVs in our Registry
     for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
       uint16_t id = CV_DEFS[i].id;
-      obj[String(id)] = dcc.getCV(id);
+      char buf[12];
+      sprintf(buf, "%d", id);
+      obj[buf] = dcc.getCV(id);
     }
 
     String output;
