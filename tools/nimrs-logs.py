@@ -14,6 +14,7 @@ import urllib.request
 import urllib.error
 import socket
 
+
 def get_logs(ip):
     # Fetch system logs (no filter = system buffer)
     url = f"http://{ip}/api/logs"
@@ -25,6 +26,7 @@ def get_logs(ip):
     except json.JSONDecodeError:
         return []
 
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: ./tools/nimrs-logs.py <IP_ADDRESS>")
@@ -32,17 +34,17 @@ def main():
 
     ip = sys.argv[1]
     print(f"--- Streaming logs from {ip} (Ctrl+C to stop) ---")
-    
+
     last_ts = 0
-    
+
     try:
         while True:
             lines = get_logs(ip)
-            
+
             # Identify new lines based on timestamp [12345]
             new_lines = []
             current_max_ts = last_ts
-            
+
             for line in lines:
                 match = line.split("]", 1)
                 if len(match) > 0 and match[0].startswith("["):
@@ -60,12 +62,13 @@ def main():
 
             for line in new_lines:
                 print(line)
-            
+
             last_ts = current_max_ts
-            time.sleep(0.5) # Poll logs twice a second
+            time.sleep(0.5)  # Poll logs twice a second
 
     except KeyboardInterrupt:
         print("\nExiting...")
+
 
 if __name__ == "__main__":
     main()

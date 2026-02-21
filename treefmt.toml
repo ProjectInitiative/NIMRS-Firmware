@@ -11,3 +11,7 @@ includes = ["*.json", "*.md", "*.yml", "*.yaml"]
 [formatter.nixfmt]
 command = "nixfmt"
 includes = ["*.nix"]
+
+[formatter.python]
+command = "black"
+includes = ["*.py"]
