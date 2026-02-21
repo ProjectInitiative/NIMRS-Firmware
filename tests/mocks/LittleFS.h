@@ -25,17 +25,23 @@ public:
 
   File open(const String &path, const char *mode = "r") {
     openCount++;
+    lastOpenedPath = path; // Track for testing
+
     if (path == "/")
       return File("/", 0, true);
 
     if (files.count(path)) {
       return files[path];
     }
+    // Return a valid file for testing write operations if needed,
+    // or just return invalid to prevent writes.
+    // For our security test, checking lastOpenedPath is enough.
     return File();
   }
 
   // Mock file system
   std::vector<File> mockFiles;
+  String lastOpenedPath; // Added for testing
 };
 
 extern LittleFSClass LittleFS;
