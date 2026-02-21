@@ -5,11 +5,14 @@ import glob
 import re
 import subprocess
 
+
 def main():
     # Setup environment
     cxx = os.environ.get("CXX", "g++")
     # Default flags from Makefile: -std=c++17 -Itests/mocks -Itests/mocks/freertos -Isrc -Wall
-    cxxflags = os.environ.get("CXXFLAGS", "-std=c++17 -Itests/mocks -Itests/mocks/freertos -Isrc -Wall")
+    cxxflags = os.environ.get(
+        "CXXFLAGS", "-std=c++17 -Itests/mocks -Itests/mocks/freertos -Isrc -Wall"
+    )
 
     # Locate tests
     test_files = glob.glob("tests/test_*.cpp")
@@ -29,7 +32,7 @@ def main():
         sources = []
         has_metadata = False
 
-        with open(test_file, 'r') as f:
+        with open(test_file, "r") as f:
             content = f.read()
             # Check for metadata
             match = re.search(r"//\s*TEST_SOURCES:\s*(.*)", content)
@@ -58,11 +61,11 @@ def main():
                     name_no_ext = os.path.splitext(basename)[0]
                     src_candidate = f"src/{name_no_ext}.cpp"
                     if os.path.exists(src_candidate) and src_candidate not in sources:
-                         sources.append(src_candidate)
+                        sources.append(src_candidate)
 
                 # 3. Always include mocks.cpp by default for fallback?
                 if "tests/mocks/mocks.cpp" not in sources:
-                     sources.append("tests/mocks/mocks.cpp")
+                    sources.append("tests/mocks/mocks.cpp")
 
                 print(f"  Heuristics resolved: {sources}")
 
@@ -96,7 +99,7 @@ def main():
         else:
             print(f"  PASSED")
 
-    print("\n" + "="*40)
+    print("\n" + "=" * 40)
     if failed_tests:
         print(f"FAILURES: {len(failed_tests)} tests failed.")
         for t in failed_tests:
@@ -105,6 +108,7 @@ def main():
     else:
         print("All tests passed successfully.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
