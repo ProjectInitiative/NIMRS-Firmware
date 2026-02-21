@@ -48,12 +48,6 @@ public:
   }
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
-  int indexOf(const String &s) const {
-    size_t pos = this->find(s);
-    if (pos == std::string::npos)
-      return -1;
-    return (int)pos;
-  }
   unsigned char concat(const char *cstr, unsigned int length) {
     this->append(cstr, length);
     return 1;
