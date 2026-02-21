@@ -1,10 +1,10 @@
 #include "Arduino.h"
-#include "WiFi.h"
-#include "LittleFS.h"
-#include "Logger.h"
 #include "AudioController.h"
 #include "DccController.h"
+#include "LittleFS.h"
+#include "Logger.h"
 #include "MotorController.h"
+#include "WiFi.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -17,36 +17,51 @@ ESPClass ESP;
 
 Logger::Logger() {}
 Logger::~Logger() {}
-Logger &Logger::getInstance() { static Logger instance; return instance; }
+Logger &Logger::getInstance() {
+  static Logger instance;
+  return instance;
+}
 size_t Logger::printf(const char *format, ...) {
-    va_list arg;
-    va_start(arg, format);
-    // vprintf(format, arg);
-    va_end(arg);
-    return 0;
+  va_list arg;
+  va_start(arg, format);
+  // vprintf(format, arg);
+  va_end(arg);
+  return 0;
 }
 void Logger::debug(const char *format, ...) {}
 size_t Logger::write(uint8_t c) { return 1; }
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
 
-AudioController &AudioController::getInstance() { static AudioController instance; return instance; }
+AudioController &AudioController::getInstance() {
+  static AudioController instance;
+  return instance;
+}
 AudioController::AudioController() {}
 void AudioController::loadAssets() {}
-void AudioController::playFile(const char* file) {}
+void AudioController::playFile(const char *file) {}
 
-DccController &DccController::getInstance() { static DccController instance; return instance; }
+DccController &DccController::getInstance() {
+  static DccController instance;
+  return instance;
+}
 DccController::DccController() {}
-NmraDcc &DccController::getDcc() { static NmraDcc dcc; return dcc; }
+NmraDcc &DccController::getDcc() {
+  static NmraDcc dcc;
+  return dcc;
+}
 bool DccController::isPacketValid() { return true; }
 
-MotorController &MotorController::getInstance() { static MotorController instance; return instance; }
+MotorController &MotorController::getInstance() {
+  static MotorController instance;
+  return instance;
+}
 MotorController::MotorController() {}
 void MotorController::startTest() {}
 String MotorController::getTestJSON() { return "{}"; }
 
 File File::openNextFile() {
-    if (_name == "/" && _nextIdx < LittleFS.mockFiles.size()) {
-        return LittleFS.mockFiles[_nextIdx++];
-    }
-    return File();
+  if (_name == "/" && _nextIdx < LittleFS.mockFiles.size()) {
+    return LittleFS.mockFiles[_nextIdx++];
+  }
+  return File();
 }
