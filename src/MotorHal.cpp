@@ -3,7 +3,9 @@
 #include <Arduino.h>
 #include <driver/mcpwm.h>
 #include <driver/adc.h>
-#include <soc/mcpwm_periph.h>
+#include <hal/adc_types.h>
+#include <esp_err.h>
+#include <esp_log.h>
 #include <cmath>
 
 // ADC Configuration (Legacy IDF 4.4 / Arduino 2.x)
@@ -133,15 +135,34 @@ size_t MotorHal::getAdcSamples(float* buffer, size_t maxLen) {
         if (ret == ESP_OK || ret == ESP_ERR_INVALID_STATE) {
             if (ret_num == 0) break;
 
-            // Parse S3 Type 2 Data
-            size_t count = ret_num / sizeof(adc_digi_output_data_t);
-            for (size_t i = 0; i < count && totalSamples < maxLen; i++) {
-                adc_digi_output_data_t *p = (adc_digi_output_data_t*)&result_data[i * sizeof(adc_digi_output_data_t)];
+            // Parse S3 Type 2 Data (4 bytes per sample)
+            // Note: In IDF 4.4, adc_digi_output_data_t might be 2 bytes by default but S3 uses 4.
+            // We manually cast to uint32_t to be safe if struct definition varies.
 
-                // Check if Type 2 valid
-                if (p->type2.unit == ADC_UNIT-1 && p->type2.channel == ADC_CHAN) {
-                     uint32_t val = p->type2.data;
-                     buffer[totalSamples++] = (float)val;
+            // S3 Type 2 format (32-bit):
+            // [11:0] data, [15:12] channel, [16] unit, [31:17] reserved?
+            // Check TRM:
+            // 31:18 reserved
+            // 17: unit
+            // 16:13 channel
+            // 12:0 data (13 bits? usually 12)
+
+            // Actually, let's rely on standard parsing but be careful about size.
+            // If result_data contains 4-byte samples, we iterate by 4 bytes.
+
+            size_t count = ret_num / 4;
+            uint32_t* dmaBuf = (uint32_t*)result_data;
+
+            for (size_t i = 0; i < count && totalSamples < maxLen; i++) {
+                uint32_t raw = dmaBuf[i];
+
+                // Decode S3 DMA format (Type 2)
+                uint32_t data = raw & 0xFFF; // 12 bits
+                uint32_t channel = (raw >> 13) & 0xF;
+                uint32_t unit = (raw >> 17) & 0x1;
+
+                if (unit == (ADC_UNIT - 1) && channel == ADC_CHAN) {
+                     buffer[totalSamples++] = (float)data;
                 }
             }
             if (ret_num < ADC_READ_LEN) break;
