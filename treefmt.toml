@@ -15,3 +15,8 @@ includes = ["*.nix"]
 [formatter.python]
 command = "black"
 includes = ["*.py"]
+
+[formatter.shfmt]
+command = "shfmt"
+options = ["-i", "2", "-w"]
+includes = ["*.sh"]

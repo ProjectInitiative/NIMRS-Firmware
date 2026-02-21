@@ -1,63 +1,36 @@
-# 1. PRE-CONFIG: Create the Nix config directory and disable sandboxing
+# Agent Working Guide
 
-# This prevents the seccomp error during the installation's self-test.
+As an automated agent, you are operating in a hermetic development environment provided by **Nix** and **direnv**.
 
-sudo mkdir -p /etc/nix
-sudo bash -c 'cat <<EOF > /etc/nix/nix.conf
-filter-syscalls = false
-sandbox = false
-experimental-features = nix-command flakes
-EOF'
+## 🚀 Working in the Environment
 
-# 2. Download and run the installer
+The repository environment is automatically loaded via `direnv`. Ensure you have run `direnv allow` in the project root.
 
-curl -L https://nixos.org/nix/install -o install-nix.sh
-chmod +x install-nix.sh
-./install-nix.sh --no-daemon --yes
+### Available Commands
 
-# 3. Source the profile
+Use these commands via `nix develop --command <cmd>` or directly if your shell is hooked:
 
-. "$HOME/.nix-profile/etc/profile.d/nix.sh"
+- **`build-firmware`**: Compiles the project using `arduino-cli`.
+- **`run-tests`**: Executes host-side unit tests.
+- **`treefmt`**: Automatically formats all code (C++, JSON, MD, Python).
+- **`agent-check`**: **(REQUIRED)** Comprehensive pre-submission validation.
 
-# 4. Install direnv and nix-direnv
+---
 
-nix-env -iA nixpkgs.direnv nixpkgs.nix-direnv
+## 🛡️ Mandatory Pre-Submission Check
 
-# 5. Configure Bash for direnv
-
-echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
-eval "$(direnv hook bash)"
-
-# 6. Configure nix-direnv
-
-mkdir -p ~/.config/direnv
-echo "source $HOME/.nix-profile/share/nix-direnv/direnvrc" >> ~/.config/direnv/direnvrc
-
-# 7. Enter the app directory and allow direnv
-
-cd /app
-direnv allow .
-eval "$(direnv export bash)"
-
-echo "Nix environment successfully forced into existence."
-
-# 5. Utilize the tools and environment setup in flake.nix
-
-# 6. The following can be used to validate we are ready for CI to build this.
-
-# nix develop --command ci-ready
-
-# 7. Pre-Submission Check for Agents
-
-Before requesting a review or submitting a PR, you **MUST** run the following command to verify your work:
+Before you request a review, submit a PR, or consider your task "done", you **MUST** run:
 
 ```bash
 nix develop --command agent-check
 ```
 
-This command performs two critical checks:
+This command enforces:
 
-1.  **CI Readiness**: Verifies formatting, runs tests, and ensures the firmware builds.
-2.  **Merge Conflict Check**: Fetches `origin/main` and performs a dry-run merge to ensure your branch has no conflicts.
+1.  **Clean Tree**: You must commit all your changes first.
+2.  **Formatting**: Verifies that your code matches the project style.
+3.  **Unit Tests**: Ensures no regressions were introduced.
+4.  **Build**: Verifies the firmware still compiles for the ESP32-S3.
+5.  **Merge Conflicts**: Verifies your branch can merge cleanly into `origin/main`.
 
-If `agent-check` fails, you must resolve the issues (fix tests, format code, or resolve merge conflicts) before proceeding.
+**If `agent-check` fails, you are NOT finished. Resolve all errors before proceeding.**

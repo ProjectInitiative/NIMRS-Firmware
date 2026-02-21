@@ -40,6 +40,18 @@
 
       # Get git hash from flake input
       gitHash = self.shortRev or "dirty";
+
+      # Shared formatting tools for CI and devShell
+      mkFormattingTools =
+        pkgs: with pkgs; [
+          treefmt
+          clang-tools # clang-format
+          nodePackages.prettier # prettier
+          nixfmt
+          black
+          shfmt
+          git
+        ];
     in
     {
       packages = forAllSystems (
@@ -85,14 +97,7 @@
           formatting =
             pkgs.runCommand "check-formatting"
               {
-                nativeBuildInputs = with pkgs; [
-                  treefmt
-                  clang-tools
-                  nodePackages.prettier
-                  nixfmt
-                  black
-                  git
-                ];
+                nativeBuildInputs = mkFormattingTools pkgs;
                 src = ./.;
               }
               ''
@@ -321,35 +326,30 @@
         in
         {
           default = pkgs.mkShell {
-            packages = with pkgs; [
-              # Core Arduino tools (Wrapped)
-              arduino-cli-wrapped
-              # Tools for ESP32 often needed
-              (python3.withPackages (ps: [ ps.pyserial ]))
-              esptool
-              # Ensure git is available for build script
-              git
-              # For OTA upload
-              curl
-
-              # Formatting & Linting
-              treefmt
-              clang-tools # clang-format
-              nodePackages.prettier # prettier
-              nixfmt
-              black
-
-              # Helper scripts
-              buildFirmware
-              uploadFirmware
-              monitorFirmware
-              nimrsTelemetry
-              nimrsLogs
-              runTests
-              ciReady
-              agentCheck
-              syncLibs
-            ];
+            packages =
+              with pkgs;
+              [
+                # Core Arduino tools (Wrapped)
+                arduino-cli-wrapped
+                # Tools for ESP32 often needed
+                (python3.withPackages (ps: [ ps.pyserial ]))
+                esptool
+                # For OTA upload
+                curl
+              ]
+              ++ mkFormattingTools pkgs
+              ++ [
+                # Helper scripts
+                buildFirmware
+                uploadFirmware
+                monitorFirmware
+                nimrsTelemetry
+                nimrsLogs
+                runTests
+                ciReady
+                agentCheck
+                syncLibs
+              ];
 
             shellHook = ''
                             echo "NIMRS-Firmware Development Environment (ESP32-S3)"
