@@ -77,10 +77,14 @@ public:
     }
     return obj;
   }
+  void clear() { _data.clear(); }
 };
 
 inline void serializeJson(const JsonDocument &doc, String &out) {
   out = "{\"mock\":true}";
+}
+inline void serializeJson(const JsonDocument &doc, Print &out) {
+  out.print("{\"mock\":true}");
 }
 inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }

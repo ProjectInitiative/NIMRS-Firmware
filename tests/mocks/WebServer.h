@@ -21,23 +21,24 @@ struct HTTPUpload {
   String filename;
   size_t currentSize;
   size_t totalSize;
-  uint8_t status;
+  int status;
   uint8_t buf[256];
 };
 
 #define UPLOAD_FILE_START 0
 #define UPLOAD_FILE_WRITE 1
 #define UPLOAD_FILE_END 2
+#define CONTENT_LENGTH_UNKNOWN 0
 
 class File {
 public:
   operator bool() const { return _valid; }
   void close() {}
   size_t write(const uint8_t *buf, size_t size) { return size; }
-  String name() const { return _name; }
+  const char *name() const { return _name.c_str(); }
   size_t size() const { return _size; }
   bool isDirectory() const { return _isDir; }
-  File openNextFile();
+  File openNextFile(); // Defined in mocks.cpp
   File() : _name(""), _size(0), _isDir(false), _valid(false), _nextIdx(0) {}
   File(String name, size_t size, bool isDir = false)
       : _name(name), _size(size), _isDir(isDir), _valid(true), _nextIdx(0) {}
@@ -69,6 +70,10 @@ public:
   void send_P(int code, const char *content_type, const char *content) {
     send(code, content_type, String(content));
   }
+  void sendContent(const String &content) {}
+  void sendContent(const char *content, size_t length) {}
+  void setContentLength(size_t length) {}
+
   bool hasArg(const String &name) {
     return args.find((std::string)name) != args.end();
   }
@@ -77,6 +82,10 @@ public:
   String uri() { return _uri; }
   void streamFile(File &file, const String &contentType) {}
   HTTPUpload &upload() { return _upload; }
+
+  // Authentication methods (Mocked)
+  bool authenticate(const char *user, const char *pass) { return true; }
+  void requestAuthentication() {}
 
   // Test helpers
   std::map<std::string, String> args;
