@@ -27,9 +27,15 @@ public:
     return this->compare(0, s.length(), s) == 0;
   }
   bool endsWith(const String &s) const {
-    if (s.length() < s.length())
+    if (this->length() < s.length())
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
+  }
+  int indexOf(const String &s) const {
+    size_t found = this->find(s);
+    if (found == std::string::npos)
+      return -1;
+    return (int)found;
   }
   int toInt() const {
     if (this->empty())
