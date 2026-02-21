@@ -7,18 +7,19 @@
 
 class LittleFSClass {
 public:
-    bool begin(bool format = true) { return true; }
-    size_t totalBytes() { return 1000; }
-    size_t usedBytes() { return 100; }
-    bool exists(const String& path) { return false; }
-    bool remove(const String& path) { return true; }
-    File open(const String& path, const char* mode = "r") {
-        if (path == "/") return File("/", 0, true);
-        return File();
-    }
+  bool begin(bool format = true) { return true; }
+  size_t totalBytes() { return 1000; }
+  size_t usedBytes() { return 100; }
+  bool exists(const String &path) { return false; }
+  bool remove(const String &path) { return true; }
+  File open(const String &path, const char *mode = "r") {
+    if (path == "/")
+      return File("/", 0, true);
+    return File();
+  }
 
-    // Mock file system
-    std::vector<File> mockFiles;
+  // Mock file system
+  std::vector<File> mockFiles;
 };
 
 extern LittleFSClass LittleFS;

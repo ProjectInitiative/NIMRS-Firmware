@@ -15,12 +15,6 @@ ESPClass ESP;
 
 // Print::printf is already defined in Arduino.h
 
-Logger::Logger() {}
-Logger::~Logger() {}
-Logger &Logger::getInstance() {
-  static Logger instance;
-  return instance;
-}
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
@@ -30,7 +24,10 @@ size_t Logger::printf(const char *format, ...) {
 }
 void Logger::debug(const char *format, ...) {}
 size_t Logger::write(uint8_t c) { return 1; }
+size_t Logger::write(const uint8_t *buffer, size_t size) { return size; }
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
+String Logger::getLogsHTML() { return ""; }
+void Logger::_addToBuffer(const String &line) {}
 
 AudioController &AudioController::getInstance() {
   static AudioController instance;
