@@ -54,6 +54,20 @@
             inherit gitHash lamejs;
             src = ./.;
           };
+
+          # Host-side unit tests
+          tests = pkgs.stdenv.mkDerivation {
+            name = "nimrs-tests";
+            src = ./.;
+            nativeBuildInputs = [ pkgs.gnumake pkgs.gcc ];
+            buildPhase = ''
+              make -f tests/Makefile
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp tests/test_ConnectivityManager $out/
+            '';
+          };
         }
       );
 
@@ -187,6 +201,13 @@
             python3 tools/nimrs-telemetry.py "$@"
           '';
 
+          # Script to run unit tests
+          runTests = pkgs.writeShellScriptBin "run-tests" ''
+            echo "Running NIMRS Firmware Unit Tests..."
+            make -f tests/Makefile clean
+            make -f tests/Makefile
+          '';
+
         in
         {
           default = pkgs.mkShell {
@@ -213,6 +234,7 @@
               monitorFirmware
               nimrsTelemetry
               nimrsLogs
+              runTests
             ];
 
             shellHook = ''
@@ -231,8 +253,10 @@
               echo "  monitor-firmware <port|IP>: Monitor logs (Serial or WiFi)"
               echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
               echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
+              echo "  run-tests                 : Run host-side unit tests"
               echo "  treefmt                   : Format all code (C++, JSON, MD)"
               echo "  nix build                 : Clean build of the firmware"
+              echo "  nix build .#tests         : Build and run tests in a sandbox"
             '';
           };
         }
