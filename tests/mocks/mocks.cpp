@@ -13,6 +13,7 @@ WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
 
+// Logger methods not inline in header
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
