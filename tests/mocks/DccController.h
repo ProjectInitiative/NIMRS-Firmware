@@ -6,12 +6,13 @@
 
 class DccController {
 public:
-    static DccController &getInstance();
-    DccController();
-    NmraDcc &getDcc();
-    bool isPacketValid();
+  static DccController &getInstance();
+  DccController();
+  NmraDcc &getDcc();
+  bool isPacketValid();
+
 private:
-    NmraDcc _dcc;
+  NmraDcc _dcc;
 };
 
 #endif
