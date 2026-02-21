@@ -9,17 +9,22 @@
 
 struct JsonVariant {
   String val;
-  JsonVariant() : val("") {}
-  JsonVariant(const char *v) : val(v) {}
-  JsonVariant(String v) : val(v) {}
-  JsonVariant(int v) : val(std::to_string(v)) {}
-  JsonVariant(unsigned int v) : val(std::to_string(v)) {}
-  JsonVariant(long unsigned int v) : val(std::to_string(v)) {}
-  JsonVariant(bool v) : val(v ? "true" : "false") {}
+  bool isString;
+  JsonVariant() : val(""), isString(true) {}
+  JsonVariant(const char *v) : val(v), isString(true) {}
+  JsonVariant(String v) : val(v), isString(true) {}
+  JsonVariant(int v) : val(std::to_string(v)), isString(false) {}
+  JsonVariant(unsigned int v) : val(std::to_string(v)), isString(false) {}
+  JsonVariant(long unsigned int v) : val(std::to_string(v)), isString(false) {}
+  JsonVariant(bool v) : val(v ? "true" : "false"), isString(false) {}
 
   template <typename T> T as() const { return (T) * this; }
 
-  template <typename T> void operator=(T v) { val = JsonVariant(v).val; }
+  template <typename T> void operator=(T v) {
+      JsonVariant temp(v);
+      val = temp.val;
+      isString = temp.isString;
+  }
 
   template <typename T> T to() { return T(); }
 
@@ -29,11 +34,17 @@ struct JsonVariant {
   operator bool() const { return val == "true" || val == "1"; }
 };
 
+class JsonDocument;
+
 class JsonArray {
+  JsonDocument* _doc;
 public:
-  std::vector<JsonVariant> _data;
+  std::vector<JsonVariant> _localData;
+
+  JsonArray(JsonDocument* doc = nullptr) : _doc(doc) {}
+
   template <typename T> T add() { return T(); }
-  void add(JsonVariant v) { _data.push_back(v); }
+  void add(JsonVariant v);
   template <typename T> T to() { return T(); }
 };
 
@@ -65,9 +76,12 @@ typedef JsonObject::Pair JsonPair;
 class JsonDocument {
 public:
   std::map<std::string, JsonVariant> _data;
+  std::vector<JsonVariant> _arrData;
+  bool _isArray = false;
+
   JsonVariant &operator[](String key) { return _data[(std::string)key]; }
 
-  template <typename T> T to() { return T(); }
+  template <typename T> T to();
 
   template <typename T> T as() {
     JsonObject obj;
@@ -77,16 +91,55 @@ public:
     }
     return obj;
   }
-  void clear() { _data.clear(); }
+  void clear() {
+      _data.clear();
+      _arrData.clear();
+      _isArray = false;
+  }
 };
 
+inline void JsonArray::add(JsonVariant v) {
+  if (_doc) {
+      _doc->_arrData.push_back(v);
+  } else {
+      _localData.push_back(v);
+  }
+}
+
+template <> inline JsonArray JsonDocument::to<JsonArray>() {
+  _isArray = true;
+  _data.clear();
+  _arrData.clear();
+  return JsonArray(this);
+}
+
+template <typename T> T JsonDocument::to() { return T(); }
+
 inline void serializeJson(const JsonDocument &doc, String &out) {
-  out = "{\"mock\":true}";
+  if (doc._isArray) {
+      out = "[";
+      for (size_t i = 0; i < doc._arrData.size(); ++i) {
+          if (i > 0) out += ",";
+          if (doc._arrData[i].isString)
+              out += "\"" + doc._arrData[i].val + "\"";
+          else
+              out += doc._arrData[i].val;
+      }
+      out += "]";
+  } else {
+      out = "{\"mock\":true}";
+  }
 }
+
 inline void serializeJson(const JsonDocument &doc, Print &out) {
-  out.print("{\"mock\":true}");
+    String s;
+    serializeJson(doc, s);
+    out.print(s);
 }
-inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
+
+inline void serializeJson(const JsonArray &arr, String &out) {
+    out = "[]";
+}
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }
 
 struct DeserializationError {
@@ -128,7 +181,6 @@ inline DeserializationError deserializeJson(JsonDocument &doc,
       break;
     pos++;
 
-    // Skip whitespace
     pos = s.find_first_not_of(" \t\n\r", pos);
     if (pos == std::string::npos)
       break;
