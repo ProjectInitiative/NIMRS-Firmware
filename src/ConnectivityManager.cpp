@@ -407,6 +407,29 @@ void ConnectivityManager::handleFileUpload() {
     if (!filename.startsWith("/"))
       filename = "/" + filename;
 
+    // Security Check: Path Traversal
+    if (filename.indexOf("..") >= 0) {
+      Log.printf("Upload Blocked: Path traversal detected in %s\n",
+                 filename.c_str());
+      fsUploadFile = File(); // Ensure invalid
+      return;
+    }
+
+    // Security Check: Whitelist Extensions
+    // Only allow specific asset types to prevent uploading malicious scripts
+    // (HTML/JS) or overwriting system files.
+    bool allowed = false;
+    if (filename.endsWith(".json") || filename.endsWith(".wav") ||
+        filename.endsWith(".mp3")) {
+      allowed = true;
+    }
+
+    if (!allowed) {
+      Log.printf("Upload Blocked: Invalid extension for %s\n", filename.c_str());
+      fsUploadFile = File(); // Ensure invalid
+      return;
+    }
+
     Log.printf("Upload Start: %s\n", filename.c_str());
     fsUploadFile = LittleFS.open(filename, "w");
     filename = String();
