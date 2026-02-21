@@ -35,7 +35,6 @@ public:
   void stop();
 
   void loadAssets();
-  const SoundAsset *getAsset(uint8_t id);
 
 private:
   AudioController();
