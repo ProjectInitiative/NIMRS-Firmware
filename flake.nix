@@ -230,6 +230,7 @@
               clang-tools # clang-format
               nodePackages.prettier # prettier
               nixfmt
+              black
 
               # Helper scripts
               buildFirmware
