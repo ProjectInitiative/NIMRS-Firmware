@@ -74,11 +74,32 @@ TEST_CASE(test_handleCV_read) {
   assert(cm._server.lastCode == 200);
 }
 
+TEST_CASE(test_handleStaticFile_optimization) {
+  ConnectivityManager cm;
+  LittleFS.files.clear();
+  LittleFS.existsCount = 0;
+  LittleFS.openCount = 0;
+
+  String filePath = "/test.txt";
+  LittleFS.files[filePath] = File(filePath, 100);
+  cm._server._uri = filePath;
+  cm._server.streamFileCount = 0;
+
+  cm.handleStaticFile();
+
+  // Verify optimization: exists() should NOT be called
+  assert(LittleFS.existsCount == 0);
+  // Verify functionality: file should be opened and streamed
+  assert(LittleFS.openCount == 1);
+  assert(cm._server.streamFileCount == 1);
+}
+
 int main() {
   RUN_TEST(test_handleControl_stop);
   RUN_TEST(test_handleControl_set_speed);
   RUN_TEST(test_handleFileList);
   RUN_TEST(test_handleCV_read);
+  RUN_TEST(test_handleStaticFile_optimization);
   std::cout << "All tests passed!" << std::endl;
   return 0;
 }

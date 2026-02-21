@@ -53,7 +53,7 @@ private:
 
 class WebServer {
 public:
-  WebServer(int port) : _method(HTTP_GET), lastCode(0) {}
+  WebServer(int port) : _method(HTTP_GET), lastCode(0), streamFileCount(0) {}
   void on(const String &uri, std::function<void()> handler) {}
   void on(const String &uri, HTTPMethod method, std::function<void()> handler) {
   }
@@ -79,7 +79,7 @@ public:
   String arg(const String &name) { return args[(std::string)name]; }
   HTTPMethod method() { return _method; }
   String uri() { return _uri; }
-  void streamFile(File &file, const String &contentType) {}
+  void streamFile(File &file, const String &contentType) { streamFileCount++; }
   HTTPUpload &upload() { return _upload; }
 
   // Authentication methods (Mocked)
@@ -94,6 +94,7 @@ public:
   String lastContentType;
   String lastContent;
   HTTPUpload _upload;
+  int streamFileCount;
 };
 
 #endif
