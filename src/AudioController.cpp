@@ -161,13 +161,6 @@ void AudioController::loadAssets() {
   file.close();
 }
 
-const SoundAsset *AudioController::getAsset(uint8_t id) {
-  if (_assets.find(id) != _assets.end()) {
-    return &_assets.at(id);
-  }
-  return nullptr;
-}
-
 void AudioController::playFile(const char *filename) {
   if (filename == nullptr) {
     Log.println("Audio: Invalid filename (null)");
