@@ -19,4 +19,6 @@ nix-shell --run "echo 'Nix environment is ready for Jules!'"
 
 # 5. Utilize the tools and environment setup in flake.nix
 
-# 6. Note: use treefmt from the nix shell environment to format changes prior to commiting
+# 6. The following can be used to validate we are ready for CI to build this.
+
+nix develop --command ci-ready
