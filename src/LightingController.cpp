@@ -88,14 +88,12 @@ void LightingController::loop() {
   driveOutput("AUX2", Pinout::AUX2, dcc.getCV(CV::AUX2), false, false);
 
   // GPIO 35 is Input Only on S3
-  // driveOutput("AUX3",  Pinout::AUX3,        dcc.getCV(CV::AUX3),  false,
-  // false);
+  driveOutput("AUX3",  Pinout::AUX3,        dcc.getCV(CV::AUX3),  false, false);
 
   driveOutput("AUX4", Pinout::AUX4, dcc.getCV(CV::AUX4), false, false);
 
   // GPIO 17 often PSRAM
-  // driveOutput("AUX5",  Pinout::AUX5,        dcc.getCV(CV::AUX5),  false,
-  // false);
+  driveOutput("AUX5",  Pinout::AUX5,        dcc.getCV(CV::AUX5),  false, false);
 
   driveOutput("AUX6", Pinout::AUX6, dcc.getCV(CV::AUX6), false, false);
   driveOutput("AUX7", Pinout::INPUT1_AUX7, dcc.getCV(CV::AUX7), false, false);
