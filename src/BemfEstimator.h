@@ -5,41 +5,41 @@
 
 class BemfEstimator {
 public:
-    BemfEstimator();
+  BemfEstimator();
 
-    // Configuration
-    void setMotorParams(float rArmature, int poles);
+  // Configuration
+  void setMotorParams(float rArmature, int poles);
 
-    // Runtime Updates
-    void updateLowSpeedData(float vApplied, float iAvg);
-    void updateRippleFreq(float freqHz);
+  // Runtime Updates
+  void updateLowSpeedData(float vApplied, float iAvg);
+  void updateRippleFreq(float freqHz);
 
-    // Calculation
-    void calculateEstimate();
+  // Calculation
+  void calculateEstimate();
 
-    // Output
-    float getEstimatedRpm() const;
-    float getBemfVoltage() const;
-    bool isStalled() const;
+  // Output
+  float getEstimatedRpm() const;
+  float getBemfVoltage() const;
+  bool isStalled() const;
 
 private:
-    float _rArmature; // Ohms
-    int _poles;
+  float _rArmature; // Ohms
+  int _poles;
 
-    // Inputs
-    float _vApplied;
-    float _iAvg;
-    float _rippleFreq;
+  // Inputs
+  float _vApplied;
+  float _iAvg;
+  float _rippleFreq;
 
-    // Outputs
-    float _vBemf;
-    float _estimatedRpm;
+  // Outputs
+  float _vBemf;
+  float _estimatedRpm;
 
-    // Internal
-    float _bemfConstant; // V/RPM
-    EmaFilter _bemfKFilter; // To smooth the learned K
+  // Internal
+  float _bemfConstant;    // V/RPM
+  EmaFilter _bemfKFilter; // To smooth the learned K
 
-    bool _useRipple;
+  bool _useRipple;
 };
 
 #endif

@@ -8,21 +8,25 @@
 
 class MotorController {
 public:
-  static MotorController& getInstance() {
-      static MotorController instance;
-      return instance;
+  static MotorController &getInstance() {
+    static MotorController instance;
+    return instance;
   }
-  
+
   void setup();
   void loop();
   void streamTelemetry();
 
-  MotorController(const MotorController&) = delete;
-  MotorController& operator=(const MotorController&) = delete;
+  // Test Mode Stubs
+  void startTest();
+  String getTestJSON();
+
+  MotorController(const MotorController &) = delete;
+  MotorController &operator=(const MotorController &) = delete;
 
 private:
   MotorController();
-  
+
   unsigned long _lastCvUpdate = 0;
 };
 #endif

@@ -44,7 +44,6 @@ void controlPlaneTask(void *pvParameters) {
 
 void setup() {
   // 1. Initialize Logging (Serial remains disabled to avoid Pin 1 conflict)
-  // Log.begin(115200);
   Log.println("\n\nNIMRS Decoder Starting...");
 
   // 2. Connectivity (WiFi, Web, Filesystem) - Core 1

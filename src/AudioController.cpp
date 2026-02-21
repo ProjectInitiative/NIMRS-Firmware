@@ -8,6 +8,8 @@
 #include <AudioGeneratorWAV.h>
 #include <AudioOutputI2S.h>
 #include <LittleFS.h>
+#include <cstring>
+#include <strings.h>
 
 AudioController::AudioController()
     : _out(nullptr), _generator(nullptr), _file(nullptr) {}
@@ -190,8 +192,10 @@ void AudioController::playFile(const char *filename) {
 
   _file = new AudioFileSourceLittleFS(filename);
 
-  String fn = String(filename);
-  if (fn.endsWith(".mp3") || fn.endsWith(".MP3")) {
+  size_t len = strlen(filename);
+  bool isMp3 = (len >= 4 && strcasecmp(filename + len - 4, ".mp3") == 0);
+
+  if (isMp3) {
     Log.println("Audio: Detected MP3");
     _generator = new AudioGeneratorMP3();
   } else {
