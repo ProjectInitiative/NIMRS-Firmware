@@ -46,3 +46,18 @@ echo "Nix environment successfully forced into existence."
 # 6. The following can be used to validate we are ready for CI to build this.
 
 # nix develop --command ci-ready
+
+# 7. Pre-Submission Check for Agents
+
+Before requesting a review or submitting a PR, you **MUST** run the following command to verify your work:
+
+```bash
+nix develop --command agent-check
+```
+
+This command performs two critical checks:
+
+1.  **CI Readiness**: Verifies formatting, runs tests, and ensures the firmware builds.
+2.  **Merge Conflict Check**: Fetches `origin/main` and performs a dry-run merge to ensure your branch has no conflicts.
+
+If `agent-check` fails, you must resolve the issues (fix tests, format code, or resolve merge conflicts) before proceeding.

@@ -237,6 +237,52 @@
             echo "All checks passed! Ready for CI."
           '';
 
+          # Script tailored for Jules agents to verify readiness and conflicts
+          agentCheck = pkgs.writeShellScriptBin "agent-check" ''
+            set -e
+            echo "=== Running Agent Pre-Submission Check ==="
+
+            # 1. Run CI Readiness (Builds, Tests, Formatting check, Dirty check)
+            ${ciReady}/bin/ci-ready
+
+            # 2. Check for Merge Conflicts
+            echo "--------------------------------"
+            echo "5. Checking for Merge Conflicts with origin/main..."
+
+            # Ensure we have the latest remote refs
+            git fetch origin main
+
+            # Check if we are on a branch
+            CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+            if [ "$CURRENT_BRANCH" == "main" ]; then
+                echo "On main branch. Skipping conflict check."
+                exit 0
+            fi
+
+            echo "Attempting dry-run merge of origin/main into $CURRENT_BRANCH..."
+
+            # Temporarily disable exit on error to capture merge result
+            set +e
+            git merge --no-commit --no-ff origin/main > /dev/null 2>&1
+            MERGE_RESULT=$?
+            set -e
+
+            if [ $MERGE_RESULT -eq 0 ]; then
+                # Merge successful, abort the temporary state
+                git merge --abort
+                echo "✔ Merge check passed: No conflicts with origin/main."
+            else
+                # Merge failed
+                git merge --abort > /dev/null 2>&1 || true
+                echo "❌ MERGE CONFLICT DETECTED!"
+                echo "Please resolve conflicts with 'git merge origin/main' before submitting."
+                exit 1
+            fi
+
+            echo "--------------------------------"
+            echo "=== Agent Check Complete: READY FOR REVIEW ==="
+          '';
+
           # Script to sync platformio.ini libs
           syncLibs = pkgs.writeShellScriptBin "sync-libs" ''
             python3 tools/sync_libs.py
@@ -271,6 +317,7 @@
               nimrsLogs
               runTests
               ciReady
+              agentCheck
               syncLibs
             ];
 
@@ -312,6 +359,7 @@
                             echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
                             echo "  run-tests                 : Run host-side unit tests"
                             echo "  ci-ready                  : Run formatting, tests, and build to verify CI readiness"
+                            echo "  agent-check               : Run ci-ready + check for merge conflicts (REQUIRED for Agents)"
                             echo "  treefmt                   : Format all code (C++, JSON, MD)"
                             echo "  sync-libs                 : Sync libs from common-libs.nix to platformio.ini"
                             echo "  nix build                 : Clean build of the firmware"
