@@ -12,6 +12,7 @@ SRCS_MAIN = tests/test_main.cpp tests/mocks/mocks.cpp
 SRCS_LOGIC = tests/test_logic.cpp src/BemfEstimator.cpp src/DspFilters.cpp src/RippleDetector.cpp
 
 all: $(TARGET_CONN) $(TARGET_MAIN) $(TARGET_LOGIC)
+	cat tests/mocks/Arduino.h
 	./$(TARGET_MAIN)
 	./$(TARGET_CONN)
 	./$(TARGET_LOGIC)

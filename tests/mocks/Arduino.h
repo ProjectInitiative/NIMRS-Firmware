@@ -44,14 +44,6 @@ public:
     }
   }
 
-  // Ensure this is defined exactly once
-  int indexOf(const String &s) const {
-    size_t pos = this->find(s);
-    if (pos == std::string::npos)
-      return -1;
-    return (int)pos;
-  }
-
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
 };
