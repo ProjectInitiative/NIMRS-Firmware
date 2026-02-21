@@ -601,7 +601,7 @@ void ConnectivityManager::handleCV() {
     int cv = doc["cv"];
     int val = DccController::getInstance().getDcc().getCV(cv);
     char buf[32];
-    sprintf(buf, "{\"cv\":%d,\"value\":%d}", cv, val);
+    snprintf(buf, sizeof(buf), "{\"cv\":%d,\"value\":%d}", cv, val);
     _server.send(200, "application/json", buf);
   } else if (cmd == "write") {
     int cv = doc["cv"];
@@ -623,7 +623,7 @@ void ConnectivityManager::handleCvAll() {
     for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
       uint16_t id = CV_DEFS[i].id;
       char buf[12];
-      sprintf(buf, "%d", id);
+      snprintf(buf, sizeof(buf), "%d", id);
       obj[buf] = dcc.getCV(id);
     }
 

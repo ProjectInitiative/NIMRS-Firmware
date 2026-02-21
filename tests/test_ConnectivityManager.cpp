@@ -73,6 +73,18 @@ TEST_CASE(test_handleCV_read) {
   cm.handleCV();
 
   assert(cm._server.lastCode == 200);
+  assert(cm._server.lastContent.indexOf("\"cv\":1") != -1);
+}
+
+TEST_CASE(test_handleCvAll_read) {
+  ConnectivityManager cm;
+  cm._server._method = HTTP_GET;
+
+  cm.handleCvAll();
+
+  assert(cm._server.lastCode == 200);
+  // Verify content is generated (Mock ArduinoJson returns fixed string)
+  assert(cm._server.lastContent == "{\"mock\":true}");
 }
 
 int main() {
@@ -80,6 +92,7 @@ int main() {
   RUN_TEST(test_handleControl_set_speed);
   RUN_TEST(test_handleFileList);
   RUN_TEST(test_handleCV_read);
+  RUN_TEST(test_handleCvAll_read);
   std::cout << "All tests passed!" << std::endl;
   return 0;
 }
