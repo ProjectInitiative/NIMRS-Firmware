@@ -14,6 +14,7 @@ LittleFSClass LittleFS;
 ESPClass ESP;
 
 // Logger methods not inline in header
+#ifndef TEST_LOGGER
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
@@ -27,6 +28,7 @@ size_t Logger::write(const uint8_t *buffer, size_t size) { return size; }
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
 String Logger::getLogsHTML() { return ""; }
 void Logger::_addToBuffer(const String &line) {}
+#endif
 
 AudioController &AudioController::getInstance() {
   static AudioController instance;

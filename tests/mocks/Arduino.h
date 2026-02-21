@@ -42,6 +42,14 @@ public:
   }
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
+  int indexOf(const String &s) const {
+    size_t pos = this->find(s);
+    return (pos == std::string::npos) ? -1 : (int)pos;
+  }
+  int indexOf(char c) const {
+    size_t pos = this->find(c);
+    return (pos == std::string::npos) ? -1 : (int)pos;
+  }
 };
 
 #define PROGMEM
@@ -87,8 +95,14 @@ public:
 
 class MockSerial : public Print {
 public:
-  void begin(unsigned long baud) {}
-  virtual size_t write(uint8_t c) override { return putchar(c); }
+  using Print::write;
+  std::string mockBuffer;
+  void begin(unsigned long baud) { mockBuffer = ""; }
+  virtual size_t write(uint8_t c) override {
+    mockBuffer += (char)c;
+    return 1;
+  }
+  void clear() { mockBuffer = ""; }
 };
 
 extern MockSerial Serial;
