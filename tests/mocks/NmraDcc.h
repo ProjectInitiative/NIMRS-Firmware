@@ -10,9 +10,9 @@ typedef uint8_t FN_GROUP;
 
 class NmraDcc {
 public:
-  uint16_t getAddr() { return 3; }
-  int getCV(int cv) { return 0; }
-  void setCV(int cv, int val) {}
+    uint16_t getAddr() { return 3; }
+    int getCV(int cv) { return 0; }
+    void setCV(int cv, int val) {}
 };
 
 #endif
