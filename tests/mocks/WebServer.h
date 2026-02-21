@@ -28,13 +28,14 @@ struct HTTPUpload {
 #define UPLOAD_FILE_START 0
 #define UPLOAD_FILE_WRITE 1
 #define UPLOAD_FILE_END 2
+#define CONTENT_LENGTH_UNKNOWN 0
 
 class File {
 public:
   operator bool() const { return _valid; }
   void close() {}
   size_t write(const uint8_t *buf, size_t size) { return size; }
-  String name() const { return _name; }
+  const char *name() const { return _name.c_str(); }
   size_t size() const { return _size; }
   bool isDirectory() const { return _isDir; }
   File openNextFile(); // Defined in mocks.cpp
@@ -69,6 +70,10 @@ public:
   void send_P(int code, const char *content_type, const char *content) {
     send(code, content_type, String(content));
   }
+  void sendContent(const String &content) {}
+  void sendContent(const char *content, size_t length) {}
+  void setContentLength(size_t length) {}
+
   bool hasArg(const String &name) {
     return args.find((std::string)name) != args.end();
   }
