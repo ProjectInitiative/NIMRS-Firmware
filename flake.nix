@@ -203,17 +203,9 @@
 
           # Script to run unit tests
           runTests = pkgs.writeShellScriptBin "run-tests" ''
-            if [ ! -d "tests" ]; then
-               echo "Error: tests directory not found. Please run this from the project root."
-               exit 1
-            fi
-
-            # Clean and build tests
-            make -C tests clean
-            make -C tests
-
-            # Run tests
-            ./tests/run_tests
+            echo "Running NIMRS Firmware Unit Tests..."
+            make -f tests/Makefile clean
+            make -f tests/Makefile
           '';
 
         in
