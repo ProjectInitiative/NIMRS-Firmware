@@ -1,3 +1,4 @@
+// TEST_SOURCES: src/ConnectivityManager.cpp tests/mocks/mocks.cpp
 #include <cassert>
 #include <iostream>
 #include <string>

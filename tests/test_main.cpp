@@ -1,3 +1,4 @@
+// TEST_SOURCES: tests/mocks/mocks.cpp
 #include "Arduino.h"
 #include "SystemContext.h"
 #include <assert.h>
