@@ -59,7 +59,8 @@ inline void delay(unsigned long ms) { _mockMillis += ms; }
 
 extern std::function<int(uint8_t)> _mockAnalogRead;
 inline int analogRead(uint8_t pin) {
-  if (_mockAnalogRead) return _mockAnalogRead(pin);
+  if (_mockAnalogRead)
+    return _mockAnalogRead(pin);
   return 0;
 }
 inline void analogReadResolution(int res) {}
@@ -71,7 +72,7 @@ extern std::map<int, int> _mockLedcValues;
 inline void ledcSetup(uint8_t channel, double freq, uint8_t resolution_bits) {}
 inline void ledcAttachPin(uint8_t pin, uint8_t channel) {}
 inline void ledcWrite(uint8_t channel, uint32_t duty) {
-    _mockLedcValues[channel] = duty;
+  _mockLedcValues[channel] = duty;
 }
 
 class IPAddress {
@@ -125,6 +126,7 @@ extern ESPClass ESP;
 #define map(x, in_min, in_max, out_min, out_max)                               \
   ((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min)
 
-#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+#define constrain(amt, low, high)                                              \
+  ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
 
 #endif
