@@ -102,4 +102,16 @@ extern ESPClass ESP;
 #define map(x, in_min, in_max, out_min, out_max)                               \
   ((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min)
 
+#define LOW 0
+#define HIGH 1
+#define INPUT 0
+#define OUTPUT 1
+
+void pinMode(uint8_t pin, uint8_t mode);
+void digitalWrite(uint8_t pin, uint8_t val);
+int digitalRead(uint8_t pin);
+
+extern std::map<uint8_t, uint8_t> pinStates;
+extern std::map<uint8_t, uint8_t> pinModes;
+
 #endif

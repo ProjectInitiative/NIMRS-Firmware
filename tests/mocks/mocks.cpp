@@ -13,6 +13,21 @@ WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
 
+std::map<uint8_t, uint8_t> pinStates;
+std::map<uint8_t, uint8_t> pinModes;
+
+void pinMode(uint8_t pin, uint8_t mode) {
+  pinModes[pin] = mode;
+}
+
+void digitalWrite(uint8_t pin, uint8_t val) {
+  pinStates[pin] = val;
+}
+
+int digitalRead(uint8_t pin) {
+  return pinStates[pin];
+}
+
 // Logger methods not inline in header
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
@@ -36,15 +51,12 @@ AudioController::AudioController() {}
 void AudioController::loadAssets() {}
 void AudioController::playFile(const char *file) {}
 
-DccController &DccController::getInstance() {
-  static DccController instance;
-  return instance;
-}
+// Implement missing members of DccController (since using real header)
 DccController::DccController() {}
-NmraDcc &DccController::getDcc() {
-  static NmraDcc dcc;
-  return dcc;
-}
+void DccController::setup() {}
+void DccController::loop() {}
+void DccController::updateSpeed(uint8_t speed, bool direction) {}
+void DccController::updateFunction(uint8_t functionIndex, bool active) {}
 bool DccController::isPacketValid() { return true; }
 
 MotorController &MotorController::getInstance() {
