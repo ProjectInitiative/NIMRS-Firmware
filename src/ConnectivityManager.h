@@ -37,6 +37,11 @@ private:
   void handleCvAll();
   void handleAudioPlay();
 
+  // Authentication
+  bool isAuthenticated();
+  String _webUser;
+  String _webPass;
+
   bool _shouldRestart = false;
   uint32_t _restartTimer = 0;
 };
