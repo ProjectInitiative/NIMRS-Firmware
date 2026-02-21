@@ -97,6 +97,7 @@
               }
               ''
                 cp -r $src/. .
+                chmod -R +w .
                 export XDG_CACHE_HOME=$TMPDIR
                 treefmt --fail-on-change
                 touch $out

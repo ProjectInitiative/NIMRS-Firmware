@@ -470,8 +470,8 @@ void ConnectivityManager::handleStaticFile() {
   else if (path.endsWith(".mp3"))
     contentType = "audio/mpeg";
 
-  if (LittleFS.exists(path)) {
-    File file = LittleFS.open(path, "r");
+  File file = LittleFS.open(path, "r");
+  if (file) {
     _server.streamFile(file, contentType);
     file.close();
   } else {
