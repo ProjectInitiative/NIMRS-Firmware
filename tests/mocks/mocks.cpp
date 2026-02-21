@@ -13,8 +13,6 @@ WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
 
-// Print::printf is already defined in Arduino.h
-
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);

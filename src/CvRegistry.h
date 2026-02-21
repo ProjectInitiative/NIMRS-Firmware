@@ -47,6 +47,12 @@ static constexpr uint16_t LOAD_GAIN_SCALAR = 146; // Multiplier for CV 60
 static constexpr uint16_t LEARN_THRESHOLD = 147;  // Min speed to learn baseline
 static constexpr uint16_t HARDWARE_GAIN = 148;    // 0=Low, 1=High
 
+// Sensorless Control
+static constexpr uint16_t MOTOR_POLES = 143;   // Number of poles
+static constexpr uint16_t TRACK_VOLTAGE = 145; // Track Voltage (100mV units)
+static constexpr uint16_t MOTOR_R_ARM =
+    149; // Armature Resistance (10mOhm units)
+
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
 static constexpr uint16_t REAR = 34;
@@ -117,6 +123,13 @@ static const CvDef CV_DEFS[] = {
     {CV::LEARN_THRESHOLD, 20, "Learn Thresh",
      "Min speed to learn baseline (0-255)."},
     {CV::HARDWARE_GAIN, 1, "Hardware Gain", "0=Low, 1=High-Z (Med), 2=High."},
+
+    // Sensorless Motor Control
+    {CV::MOTOR_R_ARM, 200, "Armature R",
+     "Armature Resistance in 10mOhm units (200=2.0 Ohm)."},
+    {CV::TRACK_VOLTAGE, 140, "Track Voltage",
+     "Track Voltage in 100mV units (140=14.0V)."},
+    {CV::MOTOR_POLES, 5, "Motor Poles", "Number of motor poles (Default 5)."},
 
     // Audio Mapping (Examples for common IDs)
     {CV::AUDIO_MAP_BASE + 1, 0, "Map: Sound ID 1",

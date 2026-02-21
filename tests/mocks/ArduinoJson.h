@@ -114,11 +114,11 @@ inline DeserializationError deserializeJson(JsonDocument &doc,
   pos++;
 
   while (true) {
-    pos = s.find('\"', pos);
+    pos = s.find('"', pos);
     if (pos == std::string::npos)
       break;
     size_t key_start = pos + 1;
-    size_t key_end = s.find('\"', key_start);
+    size_t key_end = s.find('"', key_start);
     if (key_end == std::string::npos)
       break;
     std::string key = s.substr(key_start, key_end - key_start);
@@ -134,9 +134,9 @@ inline DeserializationError deserializeJson(JsonDocument &doc,
       break;
 
     std::string val;
-    if (s[pos] == '\"') {
+    if (s[pos] == '"') {
       size_t val_start = pos + 1;
-      size_t val_end = s.find('\"', val_start);
+      size_t val_end = s.find('"', val_start);
       if (val_end == std::string::npos)
         break;
       val = s.substr(val_start, val_end - val_start);
