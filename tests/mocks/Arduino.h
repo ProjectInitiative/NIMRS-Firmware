@@ -31,6 +31,7 @@ public:
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
   }
+  int indexOf(const String &s) const { return (int)this->find(s); }
   int toInt() const {
     if (this->empty())
       return 0;
