@@ -3,8 +3,8 @@
 #include "CvRegistry.h"
 #include "DccController.h"
 #include "LameJs.h"
-#include "WebAssets.h"
 #include "MotorController.h"
+#include "WebAssets.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -17,7 +17,9 @@
 #define GIT_HASH "unknown"
 #endif
 
-#define AUTH_CHECK() if(!isAuthenticated()) return
+#define AUTH_CHECK()                                                           \
+  if (!isAuthenticated())                                                      \
+  return
 
 ConnectivityManager::ConnectivityManager() : _server(80) {}
 
@@ -63,14 +65,22 @@ void ConnectivityManager::setup() {
   // 3. Web Server Handlers
 
   // Embedded UI
-  _server.on("/", HTTP_GET,
-             [this]() { AUTH_CHECK(); _server.send(200, "text/html", INDEX_HTML); });
-  _server.on("/index.html", HTTP_GET,
-             [this]() { AUTH_CHECK(); _server.send(200, "text/html", INDEX_HTML); });
-  _server.on("/style.css", HTTP_GET,
-             [this]() { AUTH_CHECK(); _server.send(200, "text/css", STYLE_CSS); });
-  _server.on("/app.js", HTTP_GET,
-             [this]() { AUTH_CHECK(); _server.send(200, "application/javascript", APP_JS); });
+  _server.on("/", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "text/html", INDEX_HTML);
+  });
+  _server.on("/index.html", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "text/html", INDEX_HTML);
+  });
+  _server.on("/style.css", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "text/css", STYLE_CSS);
+  });
+  _server.on("/app.js", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "application/javascript", APP_JS);
+  });
   _server.on("/lame.min.js", HTTP_GET, [this]() {
     AUTH_CHECK();
     _server.send_P(200, "application/javascript", LAME_MIN_JS);
@@ -155,7 +165,8 @@ void ConnectivityManager::setup() {
       prefs.putString("web_user", _webUser);
       prefs.putString("web_pass", _webPass);
       prefs.end();
-      _server.send(200, "text/plain", "Web credentials saved. Restart required.");
+      _server.send(200, "text/plain",
+                   "Web credentials saved. Restart required.");
       _shouldRestart = true;
       _restartTimer = millis();
     } else {
@@ -178,43 +189,81 @@ void ConnectivityManager::setup() {
   });
 
   // API: File List
-  _server.on("/api/files/list", HTTP_GET, [this]() { AUTH_CHECK(); handleFileList(); });
+  _server.on("/api/files/list", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    handleFileList();
+  });
 
   // API: File Delete
-  _server.on("/api/files/delete", HTTP_POST, [this]() { AUTH_CHECK(); handleFileDelete(); });
-  _server.on("/api/files/delete", HTTP_DELETE,
-             [this]() { AUTH_CHECK(); handleFileDelete(); });
+  _server.on("/api/files/delete", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleFileDelete();
+  });
+  _server.on("/api/files/delete", HTTP_DELETE, [this]() {
+    AUTH_CHECK();
+    handleFileDelete();
+  });
 
   // API: File Upload
   _server.on(
       "/api/files/upload", HTTP_POST,
-      [this]() { AUTH_CHECK(); _server.send(200, "text/plain", "Upload OK"); },
-      [this]() { AUTH_CHECK(); handleFileUpload(); });
+      [this]() {
+        AUTH_CHECK();
+        _server.send(200, "text/plain", "Upload OK");
+      },
+      [this]() {
+        AUTH_CHECK();
+        handleFileUpload();
+      });
 
   // API: WiFi Management
-  _server.on("/api/wifi/save", HTTP_POST, [this]() { AUTH_CHECK(); handleWifiSave(); });
-  _server.on("/api/wifi/reset", HTTP_POST, [this]() { AUTH_CHECK(); handleWifiReset(); });
-  _server.on("/api/wifi/scan", HTTP_GET, [this]() { AUTH_CHECK(); handleWifiScan(); });
+  _server.on("/api/wifi/save", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleWifiSave();
+  });
+  _server.on("/api/wifi/reset", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleWifiReset();
+  });
+  _server.on("/api/wifi/scan", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    handleWifiScan();
+  });
 
   // API: Control
-  _server.on("/api/control", HTTP_POST, [this]() { AUTH_CHECK(); handleControl(); });
-  _server.on("/api/cv", HTTP_POST, [this]() { AUTH_CHECK(); handleCV(); });
-  _server.on("/api/cv/all", HTTP_GET, [this]() { AUTH_CHECK(); handleCvAll(); });
-  _server.on("/api/cv/all", HTTP_POST, [this]() { AUTH_CHECK(); handleCvAll(); });
-  _server.on("/api/audio/play", HTTP_POST, [this]() { AUTH_CHECK(); handleAudioPlay(); });
+  _server.on("/api/control", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleControl();
+  });
+  _server.on("/api/cv", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleCV();
+  });
+  _server.on("/api/cv/all", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    handleCvAll();
+  });
+  _server.on("/api/cv/all", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleCvAll();
+  });
+  _server.on("/api/audio/play", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleAudioPlay();
+  });
 
   // API: Motor Test
   _server.on("/api/motor/test", [this]() {
-      AUTH_CHECK();
-      if (_server.method() == HTTP_POST) {
-          MotorController::getInstance().startTest();
-          _server.send(200, "application/json", "{\"status\":\"started\"}");
-      } else if (_server.method() == HTTP_GET) {
-          String json = MotorController::getInstance().getTestJSON();
-          _server.send(200, "application/json", json);
-      } else {
-          _server.send(405, "text/plain", "Method Not Allowed");
-      }
+    AUTH_CHECK();
+    if (_server.method() == HTTP_POST) {
+      MotorController::getInstance().startTest();
+      _server.send(200, "application/json", "{\"status\":\"started\"}");
+    } else if (_server.method() == HTTP_GET) {
+      String json = MotorController::getInstance().getTestJSON();
+      _server.send(200, "application/json", json);
+    } else {
+      _server.send(405, "text/plain", "Method Not Allowed");
+    }
   });
 
   // API: CV Definitions
@@ -237,7 +286,10 @@ void ConnectivityManager::setup() {
   _httpUpdater.setup(&_server, "/update", _webUser.c_str(), _webPass.c_str());
 
   // Static File Catch-All (For serving audio files or other assets from FS)
-  _server.onNotFound([this]() { AUTH_CHECK(); handleStaticFile(); });
+  _server.onNotFound([this]() {
+    AUTH_CHECK();
+    handleStaticFile();
+  });
 
   _server.begin();
   Log.println("ConnectivityManager: Web Server started on port 80");
@@ -539,7 +591,8 @@ void ConnectivityManager::handleAudioPlay() {
 }
 
 bool ConnectivityManager::isAuthenticated() {
-  if (_webUser.length() == 0 || _server.authenticate(_webUser.c_str(), _webPass.c_str())) {
+  if (_webUser.length() == 0 ||
+      _server.authenticate(_webUser.c_str(), _webPass.c_str())) {
     return true;
   }
   _server.requestAuthentication();
