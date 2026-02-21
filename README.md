@@ -39,8 +39,8 @@ This project contains the firmware for the open-source [NIMRS-21Pin-Decoder](htt
 
 We provide detailed instructions for building the firmware using either the reproducible Nix environment (recommended) or standard tools like PlatformIO/Arduino IDE.
 
--   **[Building with Nix](docs/build-with-nix.md)** (Recommended)
--   **[Building without Nix (PlatformIO/Arduino)](docs/build-without-nix.md)**
+- **[Building with Nix](docs/build-with-nix.md)** (Recommended)
+- **[Building without Nix (PlatformIO/Arduino)](docs/build-without-nix.md)**
 
 ## Flashing & Monitoring
 
