@@ -106,6 +106,9 @@ def update_platformio_ini(ini_file, libs, index_data):
             in_lib_deps = True
             new_lines.append("lib_deps =\n")
             # Add synced libs
+            new_lines.append(
+                "    ; Dependencies synced from common-libs.nix (pointing to source repositories)\n"
+            )
             for lib in libs:
                 resolved_name = resolve_lib_name(lib, index_data)
                 version = lib["version"]
