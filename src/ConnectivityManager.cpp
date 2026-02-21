@@ -52,7 +52,9 @@ void ConnectivityManager::setup() {
   });
   _wifiManager.setDebugOutput(true);
 
-  if (!_wifiManager.autoConnect(hostname.c_str())) {
+  // Use a default password to secure the AP against passive sniffing (WPA2)
+  // instead of creating an Open AP.
+  if (!_wifiManager.autoConnect(hostname.c_str(), "nimrs123")) {
     Log.println("ConnectivityManager: Failed to connect, restarting...");
     delay(3000);
     ESP.restart();
@@ -468,7 +470,9 @@ void ConnectivityManager::handleWifiSave() {
   String ssid = _server.arg("ssid");
   String pass = _server.arg("pass");
 
-  Log.printf("WiFi Config Update: SSID=%s\n", ssid.c_str());
+  // NOTE: We do not log SSID here to avoid leaking potentially sensitive info.
+  // We cannot easily use HTTPS on this platform, so this endpoint relies on
+  // the underlying network security (WPA2) or the secured SoftAP.
 
   WiFi.persistent(true);
   WiFi.begin(ssid.c_str(), pass.c_str());

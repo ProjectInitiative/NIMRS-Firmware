@@ -11,6 +11,7 @@
 #include "DccController.h"
 #include "LittleFS.h"
 #include "SystemContext.h"
+#include "WiFi.h"
 
 // Simple test framework
 #define TEST_CASE(name) void name()
@@ -74,11 +75,33 @@ TEST_CASE(test_handleCV_read) {
   assert(cm._server.lastCode == 200);
 }
 
+TEST_CASE(test_handleWifiSave) {
+  ConnectivityManager cm;
+
+  // Setup simulated POST data
+  cm._server.args["ssid"] = "TestNetwork";
+  cm._server.args["pass"] = "SuperSecret";
+
+  // Reset mock state
+  WiFi.lastSSID = "";
+  WiFi.lastPass = "";
+
+  cm.handleWifiSave();
+
+  // Verify response
+  assert(cm._server.lastCode == 200);
+
+  // Verify WiFi.begin was called with correct args
+  assert(WiFi.lastSSID == "TestNetwork");
+  assert(WiFi.lastPass == "SuperSecret");
+}
+
 int main() {
   RUN_TEST(test_handleControl_stop);
   RUN_TEST(test_handleControl_set_speed);
   RUN_TEST(test_handleFileList);
   RUN_TEST(test_handleCV_read);
+  RUN_TEST(test_handleWifiSave);
   std::cout << "All tests passed!" << std::endl;
   return 0;
 }
