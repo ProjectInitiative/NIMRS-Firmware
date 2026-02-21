@@ -68,7 +68,7 @@
             '';
             installPhase = ''
               mkdir -p $out
-              cp tests/test_ConnectivityManager $out/
+              cp tests/run_tests $out/
             '';
           };
         }
