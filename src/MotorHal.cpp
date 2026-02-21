@@ -9,12 +9,17 @@
 #include <esp_log.h>
 #include <cmath>
 
+#ifndef SOC_ADC_DIGI_MAX_BITWIDTH
+#define SOC_ADC_DIGI_MAX_BITWIDTH 12
+#endif
+
 // ADC Configuration (Legacy IDF 4.4 / Arduino 2.x)
 #define ADC_READ_LEN 1024
 #define ADC_UNIT ADC_UNIT_1
 #define ADC_CHAN ADC_CHANNEL_4 // GPIO 5 (Check pinout for S3)
 
-static uint8_t result_data[ADC_READ_LEN]; // Static buffer for DMA
+static uint32_t result_data_aligned[ADC_READ_LEN / 4]; // Static buffer aligned for 32-bit access
+static uint8_t* result_data = (uint8_t*)result_data_aligned;
 
 MotorHal::MotorHal() : _sampleRate(20000.0f) {}
 
