@@ -1,6 +1,9 @@
 #ifndef ARDUINO_MOCK_H
 #define ARDUINO_MOCK_H
 
+// NIMRS Firmware Test Mock
+// Updated to ensure single definition of String::indexOf
+
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -40,12 +43,15 @@ public:
       return 0;
     }
   }
+
+  // Ensure this is defined exactly once
   int indexOf(const String &s) const {
     size_t pos = this->find(s);
     if (pos == std::string::npos)
       return -1;
     return (int)pos;
   }
+
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
 };
