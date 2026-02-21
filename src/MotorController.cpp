@@ -269,9 +269,10 @@ String MotorController::getTestJSON() {
   String out = "[";
   for (int i = 0; i < _testDataIdx; i++) {
     char buf[128];
-    snprintf(buf, sizeof(buf), "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
-            _testData[i].t, _testData[i].target, _testData[i].pwm,
-            _testData[i].current, _testData[i].speed);
+    snprintf(buf, sizeof(buf),
+             "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
+             _testData[i].t, _testData[i].target, _testData[i].pwm,
+             _testData[i].current, _testData[i].speed);
     out += buf;
     if (i < _testDataIdx - 1)
       out += ",";
