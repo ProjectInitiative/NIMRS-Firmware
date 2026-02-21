@@ -5,10 +5,10 @@
 
 class AudioController {
 public:
-    static AudioController &getInstance();
-    AudioController();
-    void loadAssets();
-    void playFile(const char* file);
+  static AudioController &getInstance();
+  AudioController();
+  void loadAssets();
+  void playFile(const char *file);
 };
 
 #endif
