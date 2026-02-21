@@ -48,8 +48,31 @@ public:
 #define PSTR(s) s
 #define F(s) s
 
-inline unsigned long millis() { return 1000; }
-inline void delay(unsigned long ms) {}
+extern unsigned long _mockMillis;
+inline unsigned long millis() { return _mockMillis; }
+inline void delay(unsigned long ms) { _mockMillis += ms; }
+
+// --- GPIO & ADC Mocks ---
+#define OUTPUT 1
+#define INPUT 0
+#define ADC_0db 0
+
+extern std::function<int(uint8_t)> _mockAnalogRead;
+inline int analogRead(uint8_t pin) {
+  if (_mockAnalogRead) return _mockAnalogRead(pin);
+  return 0;
+}
+inline void analogReadResolution(int res) {}
+inline void analogSetPinAttenuation(int pin, int att) {}
+inline void pinMode(uint8_t pin, uint8_t mode) {}
+
+// --- LEDC (PWM) Mocks ---
+extern std::map<int, int> _mockLedcValues;
+inline void ledcSetup(uint8_t channel, double freq, uint8_t resolution_bits) {}
+inline void ledcAttachPin(uint8_t pin, uint8_t channel) {}
+inline void ledcWrite(uint8_t channel, uint32_t duty) {
+    _mockLedcValues[channel] = duty;
+}
 
 class IPAddress {
 public:
@@ -101,5 +124,7 @@ extern ESPClass ESP;
 
 #define map(x, in_min, in_max, out_min, out_max)                               \
   ((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min)
+
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 #endif

@@ -22,7 +22,7 @@ ESPClass ESP;
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
-  // vprintf(format, arg);
+  vprintf(format, arg);
   va_end(arg);
   return 0;
 }
@@ -51,14 +51,6 @@ NmraDcc &DccController::getDcc() {
   return dcc;
 }
 bool DccController::isPacketValid() { return true; }
-
-MotorController &MotorController::getInstance() {
-  static MotorController instance;
-  return instance;
-}
-MotorController::MotorController() {}
-void MotorController::startTest() {}
-String MotorController::getTestJSON() { return "{}"; }
 
 File File::openNextFile() {
   if (_name == "/" && _nextIdx < LittleFS.mockFiles.size()) {
