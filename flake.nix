@@ -54,6 +54,20 @@
             inherit gitHash lamejs;
             src = ./.;
           };
+
+          # Host-side unit tests
+          tests = pkgs.stdenv.mkDerivation {
+            name = "nimrs-tests";
+            src = ./.;
+            nativeBuildInputs = [ pkgs.gnumake pkgs.gcc ];
+            buildPhase = ''
+              make -f tests/Makefile
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp tests/run_tests $out/
+            '';
+          };
         }
       );
 
@@ -250,6 +264,7 @@
               echo "  run-tests                 : Run host-side unit tests"
               echo "  treefmt                   : Format all code (C++, JSON, MD)"
               echo "  nix build                 : Clean build of the firmware"
+              echo "  nix build .#tests         : Build and run tests in a sandbox"
             '';
           };
         }
