@@ -13,3 +13,5 @@ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 nix-shell --run "echo 'Nix environment is ready for Jules!'"
 
 # 5. Utilize the tools and environment setup in flake.nix
+
+# 6. Note: use treefmt from the nix shell environment to format changes prior to commiting
