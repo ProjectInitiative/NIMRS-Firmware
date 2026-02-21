@@ -13,7 +13,7 @@ struct HTTPUpload {
     String filename;
     size_t currentSize;
     size_t totalSize;
-    uint8_t status;
+    int status;
     uint8_t buf[256];
 };
 
@@ -29,7 +29,7 @@ public:
     String name() const { return _name; }
     size_t size() const { return _size; }
     bool isDirectory() const { return _isDir; }
-    File openNextFile();
+    File openNextFile(); // Defined in mocks.cpp
     File() : _name(""), _size(0), _isDir(false), _valid(false), _nextIdx(0) {}
     File(String name, size_t size, bool isDir = false) : _name(name), _size(size), _isDir(isDir), _valid(true), _nextIdx(0) {}
 private:
@@ -67,6 +67,10 @@ public:
     String uri() { return _uri; }
     void streamFile(File &file, const String& contentType) {}
     HTTPUpload& upload() { return _upload; }
+
+    // Authentication methods (Mocked)
+    bool authenticate(const char* user, const char* pass) { return true; }
+    void requestAuthentication() {}
 
     // Test helpers
     std::map<std::string, String> args;
