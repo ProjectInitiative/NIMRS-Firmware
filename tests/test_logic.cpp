@@ -1,3 +1,4 @@
+// TEST_SOURCES: src/BemfEstimator.cpp src/DspFilters.cpp src/RippleDetector.cpp
 #include "../src/BemfEstimator.h"
 #include "../src/DspFilters.h"
 #include "../src/RippleDetector.h"

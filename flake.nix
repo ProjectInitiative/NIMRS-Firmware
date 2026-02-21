@@ -60,15 +60,16 @@
             name = "nimrs-tests";
             src = ./.;
             nativeBuildInputs = [
-              pkgs.gnumake
               pkgs.gcc
+              pkgs.python3
             ];
             buildPhase = ''
-              make -f tests/Makefile
+              python3 tools/test_runner.py
             '';
             installPhase = ''
               mkdir -p $out
-              cp tests/run_tests $out/
+              # Copy all test executables to output
+              find tests -maxdepth 1 -type f -executable -not -name "*.*" -exec cp {} $out/ \;
             '';
           };
         }
@@ -207,8 +208,9 @@
           # Script to run unit tests
           runTests = pkgs.writeShellScriptBin "run-tests" ''
             echo "Running NIMRS Firmware Unit Tests..."
-            make -f tests/Makefile clean
-            make -f tests/Makefile
+            # Clean up old tests if any
+            find tests -maxdepth 1 -type f -executable -not -name "*.*" -delete
+            python3 tools/test_runner.py
           '';
 
           # Script to verify CI readiness
