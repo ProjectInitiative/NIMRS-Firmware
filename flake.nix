@@ -285,6 +285,7 @@
 
           # Script to sync platformio.ini libs
           syncLibs = pkgs.writeShellScriptBin "sync-libs" ''
+            export ARDUINO_LIBRARY_INDEX="${arduino-indexes}/index/library_index.json"
             python3 tools/sync_libs.py
           '';
 
