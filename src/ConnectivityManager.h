@@ -33,6 +33,7 @@ private:
 
   // Control Handler
   void handleControl();
+  void handleStatus();
   void handleCV();
   void handleCvAll();
   void handleAudioPlay();

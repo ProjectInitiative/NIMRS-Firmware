@@ -83,8 +83,8 @@ TEST_CASE(test_handleCvAll_read) {
   cm.handleCvAll();
 
   assert(cm._server.lastCode == 200);
-  // Verify content is generated (Mock ArduinoJson returns fixed string)
-  assert(cm._server.lastContent == "{\"mock\":true}");
+  // Verify content is generated (Mock ArduinoJson now serializes data)
+  assert(cm._server.lastContent.indexOf("\"1\":") != -1);
 }
 
 int main() {

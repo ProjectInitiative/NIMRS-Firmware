@@ -3,14 +3,6 @@
 The repository history was rewritten to remove large binaries, which orphaned several active Pull Requests. This document serves as a "Todo List" to re-implement those features and fixes on the current clean history.
 
 ---
-
-## 🚨 Category 1: Security (Highest Priority)
-
-### 2. Mask WiFi Credentials
-
-- **Source Branch**: `security-fix-wifi-cleartext`
-- **Task**: Update `ConnectivityManager` handlers to ensure that WiFi passwords are never logged or returned in plain text via the status API.
-
 ---
 
 ## ⚙️ Category 2: CI & Infrastructure
