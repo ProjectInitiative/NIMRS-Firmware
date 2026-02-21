@@ -21,6 +21,54 @@
   if (!isAuthenticated())                                                      \
   return
 
+/**
+ * Helper to bridge ArduinoJson serialization and WebServer chunked streaming.
+ */
+class ChunkedPrint : public Print {
+public:
+  ChunkedPrint(WebServer &server) : _server(server), _pos(0) {}
+  ~ChunkedPrint() { flush(); }
+
+  size_t write(uint8_t c) override {
+    if (_pos >= sizeof(_buffer)) {
+      flush();
+    }
+    _buffer[_pos++] = c;
+    return 1;
+  }
+
+  size_t write(const uint8_t *buffer, size_t size) override {
+    if (_pos + size <= sizeof(_buffer)) {
+      memcpy(_buffer + _pos, buffer, size);
+      _pos += size;
+      if (_pos == sizeof(_buffer)) {
+        flush();
+      }
+    } else {
+      flush();
+      if (size >= sizeof(_buffer)) {
+        _server.sendContent((const char *)buffer, size);
+      } else {
+        memcpy(_buffer, buffer, size);
+        _pos = size;
+      }
+    }
+    return size;
+  }
+
+  void flush() {
+    if (_pos > 0) {
+      _server.sendContent((const char *)_buffer, _pos);
+      _pos = 0;
+    }
+  }
+
+private:
+  WebServer &_server;
+  uint8_t _buffer[128];
+  size_t _pos;
+};
+
 ConnectivityManager::ConnectivityManager() : _server(80) {}
 
 void ConnectivityManager::setup() {
@@ -259,8 +307,10 @@ void ConnectivityManager::setup() {
       MotorController::getInstance().startTest();
       _server.send(200, "application/json", "{\"status\":\"started\"}");
     } else if (_server.method() == HTTP_GET) {
-      String json = MotorController::getInstance().getTestJSON();
-      _server.send(200, "application/json", json);
+      _server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+      _server.send(200, "application/json", "");
+      ChunkedPrint writer(_server);
+      MotorController::getInstance().printTestJSON(writer);
     } else {
       _server.send(405, "text/plain", "Method Not Allowed");
     }
@@ -304,41 +354,6 @@ void ConnectivityManager::loop() {
 }
 
 // --- File Management Implementation ---
-
-/**
- * Helper to bridge ArduinoJson serialization and WebServer chunked streaming.
- */
-class ChunkedPrint : public Print {
-public:
-  ChunkedPrint(WebServer &server) : _server(server), _pos(0) {}
-  ~ChunkedPrint() { flush(); }
-
-  size_t write(uint8_t c) override {
-    if (_pos >= sizeof(_buffer)) {
-      flush();
-    }
-    _buffer[_pos++] = c;
-    return 1;
-  }
-
-  size_t write(const uint8_t *buffer, size_t size) override {
-    flush();
-    _server.sendContent((const char *)buffer, size);
-    return size;
-  }
-
-  void flush() {
-    if (_pos > 0) {
-      _server.sendContent((const char *)_buffer, _pos);
-      _pos = 0;
-    }
-  }
-
-private:
-  WebServer &_server;
-  uint8_t _buffer[128];
-  size_t _pos;
-};
 
 void ConnectivityManager::handleFileList() {
   File root = LittleFS.open("/");

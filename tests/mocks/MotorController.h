@@ -8,7 +8,7 @@ public:
   static MotorController &getInstance();
   MotorController();
   void startTest();
-  String getTestJSON();
+  void printTestJSON(Print &p);
 };
 
 #endif

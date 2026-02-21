@@ -8,9 +8,9 @@
 #include <cmath>
 
 MotorController::MotorController()
-    : _currentSpeed(0.0f), _lastMomentumUpdate(0), _avgCurrent(0.0f),
-      _currentOffset(5.0f), _piErrorSum(0.0f), _maxPwm(DEFAULT_MAX_PWM),
-      _pwmFreq(DEFAULT_PWM_FREQ) {}
+    : _maxPwm(DEFAULT_MAX_PWM), _pwmFreq(DEFAULT_PWM_FREQ), _piErrorSum(0.0f),
+      _currentSpeed(0.0f), _lastMomentumUpdate(0), _avgCurrent(0.0f),
+      _currentOffset(5.0f) {}
 
 void MotorController::setup() {
   Log.println("NIMRS: PI Mode - 20kHz PWM / Kick Start");
@@ -180,7 +180,7 @@ void MotorController::loop() {
     _piErrorSum = 0.0f; // MUST clear integral windup on stop
   }
 
-  _drive((uint16_t)finalPwm, state.direction);
+  _drive((uint16_t)finalPwm, direction);
   streamTelemetry();
 }
 
@@ -265,17 +265,17 @@ void MotorController::startTest() {
   Log.println("Motor: Starting Self-Test...");
 }
 
-String MotorController::getTestJSON() {
-  String out = "[";
+void MotorController::printTestJSON(Print &p) {
+  p.print("[");
   for (int i = 0; i < _testDataIdx; i++) {
     char buf[128];
-    sprintf(buf, "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
-            _testData[i].t, _testData[i].target, _testData[i].pwm,
-            _testData[i].current, _testData[i].speed);
-    out += buf;
+    snprintf(buf, sizeof(buf),
+             "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
+             _testData[i].t, _testData[i].target, _testData[i].pwm,
+             _testData[i].current, _testData[i].speed);
+    p.print(buf);
     if (i < _testDataIdx - 1)
-      out += ",";
+      p.print(",");
   }
-  out += "]";
-  return out;
+  p.print("]");
 }

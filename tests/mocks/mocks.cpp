@@ -5,8 +5,11 @@
 #include "Logger.h"
 #include "MotorController.h"
 #include "WiFi.h"
+#include "driver/gpio.h"
 #include <stdarg.h>
 #include <stdio.h>
+
+void gpio_reset_pin(gpio_num_t gpio_num) {}
 
 MockSerial Serial;
 WiFiClass WiFi;
@@ -47,13 +50,15 @@ NmraDcc &DccController::getDcc() {
 }
 bool DccController::isPacketValid() { return true; }
 
+#ifndef SKIP_MOCK_MOTOR_CONTROLLER
 MotorController &MotorController::getInstance() {
   static MotorController instance;
   return instance;
 }
 MotorController::MotorController() {}
 void MotorController::startTest() {}
-String MotorController::getTestJSON() { return "{}"; }
+void MotorController::printTestJSON(Print &p) { p.print("{}"); }
+#endif
 
 File File::openNextFile() {
   if (_name == "/" && _nextIdx < LittleFS.mockFiles.size()) {

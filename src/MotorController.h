@@ -18,7 +18,7 @@ public:
   void loop();
   void streamTelemetry();
   void startTest();
-  String getTestJSON();
+  void printTestJSON(Print &p);
 
   MotorController(const MotorController &) = delete;
   MotorController &operator=(const MotorController &) = delete;
