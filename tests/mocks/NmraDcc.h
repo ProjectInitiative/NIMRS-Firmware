@@ -1,8 +1,8 @@
 #ifndef NMRADCC_MOCK_H
 #define NMRADCC_MOCK_H
 
-#include <stdint.h>
 #include <map>
+#include <stdint.h>
 
 typedef uint8_t DCC_ADDR_TYPE;
 typedef uint8_t DCC_DIRECTION;
