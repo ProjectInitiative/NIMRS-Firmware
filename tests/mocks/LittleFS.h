@@ -16,8 +16,9 @@ public:
 
   bool exists(const String &path) {
     callCount_exists++;
-    for(const auto& f : mockFiles) {
-      if(String(f.name()) == path) return true;
+    for (const auto &f : mockFiles) {
+      if (String(f.name()) == path)
+        return true;
     }
     return false;
   }
@@ -31,8 +32,9 @@ public:
     if (path == "/")
       return File("/", 0, true);
 
-    for(auto& f : mockFiles) {
-      if(String(f.name()) == path) return f;
+    for (auto &f : mockFiles) {
+      if (String(f.name()) == path)
+        return f;
     }
 
     return File();

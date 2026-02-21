@@ -45,25 +45,25 @@ TEST_CASE(test_redundant_check) {
 }
 
 TEST_CASE(test_file_not_found) {
-    // Setup
-    LittleFS.mockFiles.clear();
-    LittleFS.callCount_exists = 0;
-    LittleFS.callCount_open = 0;
+  // Setup
+  LittleFS.mockFiles.clear();
+  LittleFS.callCount_exists = 0;
+  LittleFS.callCount_open = 0;
 
-    ConnectivityManager cm;
-    cm._server._uri = "/missing.html";
+  ConnectivityManager cm;
+  cm._server._uri = "/missing.html";
 
-    // Act
-    cm.handleStaticFile();
+  // Act
+  cm.handleStaticFile();
 
-    // Assert
-    std::cout << "  callCount_exists: " << LittleFS.callCount_exists << std::endl;
-    std::cout << "  callCount_open: " << LittleFS.callCount_open << std::endl;
+  // Assert
+  std::cout << "  callCount_exists: " << LittleFS.callCount_exists << std::endl;
+  std::cout << "  callCount_open: " << LittleFS.callCount_open << std::endl;
 
-    // Expect 0 exists calls, 1 open call (which returns invalid file)
-    assert(LittleFS.callCount_exists == 0);
-    assert(LittleFS.callCount_open == 1);
-    assert(cm._server.lastCode == 404);
+  // Expect 0 exists calls, 1 open call (which returns invalid file)
+  assert(LittleFS.callCount_exists == 0);
+  assert(LittleFS.callCount_open == 1);
+  assert(cm._server.lastCode == 404);
 }
 
 int main() {
