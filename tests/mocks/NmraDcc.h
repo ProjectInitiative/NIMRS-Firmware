@@ -1,8 +1,8 @@
 #ifndef NMRADCC_MOCK_H
 #define NMRADCC_MOCK_H
 
-#include <stdint.h>
 #include <map>
+#include <stdint.h>
 
 typedef uint8_t DCC_ADDR_TYPE;
 typedef uint8_t DCC_DIRECTION;
@@ -24,9 +24,9 @@ typedef uint8_t FN_GROUP;
 #define FN_BIT_04 0x08
 
 // Function Groups
-#define FN_0_4   0
-#define FN_5_8   1
-#define FN_9_12  2
+#define FN_0_4 0
+#define FN_5_8 1
+#define FN_9_12 2
 #define FN_13_20 3
 #define FN_21_28 4
 
@@ -51,13 +51,12 @@ public:
   uint16_t getAddr() { return 3; }
 
   int getCV(int cv) {
-    if (cvs.find(cv) != cvs.end()) return cvs[cv];
+    if (cvs.find(cv) != cvs.end())
+      return cvs[cv];
     return 0;
   }
 
-  void setCV(int cv, int val) {
-    cvs[cv] = val;
-  }
+  void setCV(int cv, int val) { cvs[cv] = val; }
 
   // New methods
   void pin(int pin, int pullup) {
@@ -69,15 +68,13 @@ public:
     initCalled = true;
   }
 
-  void process() {
-    processCalled = true;
-  }
+  void process() { processCalled = true; }
 };
 
 // Define statics in a cpp file or header if using C++17 inline variables
-// Since this is a header-only mock used in multiple tests, we should use inline or define in test cpp
-// But existing tests include this header.
-// Use inline variables if C++17 (Makefile says -std=c++17)
+// Since this is a header-only mock used in multiple tests, we should use inline
+// or define in test cpp But existing tests include this header. Use inline
+// variables if C++17 (Makefile says -std=c++17)
 
 inline std::map<int, int> NmraDcc::cvs;
 inline int NmraDcc::lastPin = -1;
