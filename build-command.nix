@@ -46,5 +46,13 @@
     --build-property "compiler.cpp.extra_flags=-DBUILD_VERSION=\"$BUILD_VERSION\" -DGIT_HASH=\"$GIT_HASH\"" \
     --output-dir "${outputDir}" \
     --warnings default \
-    .
+    . || exit 1
+
+  # Verify compiled binary size
+  echo "Verifying firmware size..."
+  if [ -f "tools/check_firmware_size.py" ]; then
+      python3 tools/check_firmware_size.py "${outputDir}/NIMRS-Firmware.ino.bin" partitions.csv app0 || exit 1
+  else
+      echo "Warning: tools/check_firmware_size.py not found. Skipping size check."
+  fi
 ''
