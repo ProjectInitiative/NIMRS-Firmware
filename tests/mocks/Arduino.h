@@ -45,7 +45,8 @@ public:
 
   int indexOf(const String &s) const {
     size_t pos = this->find(s);
-    if (pos == std::string::npos) return -1;
+    if (pos == std::string::npos)
+      return -1;
     return (int)pos;
   }
 
