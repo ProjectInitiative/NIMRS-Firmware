@@ -99,7 +99,13 @@ void Logger::debug(const char *format, ...) {
 void Logger::_addToBuffer(const String &line) {
   if (xSemaphoreTake(_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
     // Add timestamp
-    String entry = "[" + String(millis()) + "] " + line;
+    char ts_buffer[24];
+    int ts_len = snprintf(ts_buffer, sizeof(ts_buffer), "[%lu] ", millis());
+
+    String entry;
+    entry.reserve(ts_len + line.length());
+    entry += ts_buffer;
+    entry += line;
 
     if (line.indexOf("[NIMRS_DATA]") != -1) {
       // High-frequency telemetry goes to the data buffer
