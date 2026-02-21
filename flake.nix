@@ -211,6 +211,22 @@
             make -f tests/Makefile
           '';
 
+          # Script to verify CI readiness
+          ciReady = pkgs.writeShellScriptBin "ci-ready" ''
+            set -e # Exit on error
+            echo "1. Checking/Fixing Formatting..."
+            ${pkgs.treefmt}/bin/treefmt
+
+            echo "2. Running Unit Tests..."
+            ${runTests}/bin/run-tests
+
+            echo "3. Verifying Firmware Build..."
+            ${buildFirmware}/bin/build-firmware
+
+            echo "--------------------------------"
+            echo "All checks passed! Ready for CI."
+          '';
+
         in
         {
           default = pkgs.mkShell {
@@ -238,6 +254,7 @@
               nimrsTelemetry
               nimrsLogs
               runTests
+              ciReady
             ];
 
             shellHook = ''
@@ -257,6 +274,7 @@
               echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
               echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
               echo "  run-tests                 : Run host-side unit tests"
+              echo "  ci-ready                  : Run formatting, tests, and build to verify CI readiness"
               echo "  treefmt                   : Format all code (C++, JSON, MD)"
               echo "  nix build                 : Clean build of the firmware"
               echo "  nix build .#tests         : Build and run tests in a sandbox"
