@@ -3,9 +3,6 @@
 #include "SystemContext.h"
 #include "Arduino.h"
 
-// Define the mock Serial object
-MockSerial Serial;
-
 void test_system_context() {
     SystemContext& ctx = SystemContext::getInstance();
     SystemState& state = ctx.getState();

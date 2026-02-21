@@ -1,24 +1,23 @@
 CXX = g++
-CXXFLAGS = -I../src -Imocks -Imocks/freertos -Wall -std=c++17
+CXXFLAGS = -std=c++17 -Isrc -Itests/mocks -Itests/mocks/freertos -Wall
 
-# List of test binaries to build
-TESTS = run_tests test_ConnectivityManager
+# Targets
+TARGET_CONN = tests/test_ConnectivityManager
+TARGET_MAIN = tests/run_tests
 
-# Sources for each test
-SRCS_RUN_TESTS = test_main.cpp
-SRCS_CONN_MGR = ../src/ConnectivityManager.cpp mocks/mocks.cpp test_ConnectivityManager.cpp
+# Sources
+SRCS_CONN = src/ConnectivityManager.cpp tests/mocks/mocks.cpp tests/test_ConnectivityManager.cpp
+SRCS_MAIN = tests/test_main.cpp tests/mocks/mocks.cpp
 
-all: $(TESTS)
+all: $(TARGET_CONN) $(TARGET_MAIN)
+	./$(TARGET_MAIN)
+	./$(TARGET_CONN)
 
-run_tests: $(SRCS_RUN_TESTS)
+$(TARGET_CONN): $(SRCS_CONN)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-test_ConnectivityManager: $(SRCS_CONN_MGR)
+$(TARGET_MAIN): $(SRCS_MAIN)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-test: $(TESTS)
-	./run_tests
-	./test_ConnectivityManager
 
 clean:
-	rm -f $(TESTS)
+	rm -f $(TARGET_CONN) $(TARGET_MAIN)
