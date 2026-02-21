@@ -1,9 +1,9 @@
 #include "ConnectivityManager.h"
-#include "AudioController.h"
+#include <AudioController.h>
 #include "CvRegistry.h"
-#include "DccController.h"
+#include <DccController.h>
 #include "LameJs.h"
-#include "MotorController.h"
+#include <MotorController.h>
 #include "WebAssets.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
@@ -616,7 +616,7 @@ void ConnectivityManager::handleCvAll() {
     NmraDcc &dcc = DccController::getInstance().getDcc();
 
     for (JsonPair p : obj) {
-      uint16_t cv = String(p.key().c_str()).toInt();
+      uint16_t cv = atoi(p.key().c_str());
       uint8_t val = p.value().as<uint8_t>();
       if (cv > 0) {
         dcc.setCV(cv, val);

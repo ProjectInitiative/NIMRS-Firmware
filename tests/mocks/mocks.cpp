@@ -17,7 +17,7 @@ ESPClass ESP;
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
-  // vprintf(format, arg);
+  vprintf(format, arg);
   va_end(arg);
   return 0;
 }

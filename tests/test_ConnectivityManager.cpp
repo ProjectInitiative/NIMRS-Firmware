@@ -74,11 +74,27 @@ TEST_CASE(test_handleCV_read) {
   assert(cm._server.lastCode == 200);
 }
 
+TEST_CASE(test_handleCvAll_write) {
+  ConnectivityManager cm;
+  NmraDcc &dcc = DccController::getInstance().getDcc();
+  dcc.reset();
+
+  cm._server._method = HTTP_POST;
+  cm._server.args["plain"] = "{\"1\":10,\"2\":20}";
+
+  cm.handleCvAll();
+
+  assert(cm._server.lastCode == 200);
+  assert(dcc.getCV(1) == 10);
+  assert(dcc.getCV(2) == 20);
+}
+
 int main() {
   RUN_TEST(test_handleControl_stop);
   RUN_TEST(test_handleControl_set_speed);
   RUN_TEST(test_handleFileList);
   RUN_TEST(test_handleCV_read);
+  RUN_TEST(test_handleCvAll_write);
   std::cout << "All tests passed!" << std::endl;
   return 0;
 }
