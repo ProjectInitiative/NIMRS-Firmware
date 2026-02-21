@@ -17,6 +17,10 @@
 #define GIT_HASH "unknown"
 #endif
 
+#define AUTH_CHECK()                                                           \
+  if (!isAuthenticated())                                                      \
+  return
+
 ConnectivityManager::ConnectivityManager() : _server(80) {}
 
 void ConnectivityManager::setup() {
@@ -35,6 +39,8 @@ void ConnectivityManager::setup() {
   Preferences prefs;
   prefs.begin("config", true); // Read-only mode
   String hostname = prefs.getString("hostname", "NIMRS-Decoder");
+  _webUser = prefs.getString("web_user", "admin");
+  _webPass = prefs.getString("web_pass", "admin");
   prefs.end();
 
   Log.printf("ConnectivityManager: Hostname: %s\n", hostname.c_str());
@@ -59,20 +65,30 @@ void ConnectivityManager::setup() {
   // 3. Web Server Handlers
 
   // Embedded UI
-  _server.on("/", HTTP_GET,
-             [this]() { _server.send(200, "text/html", INDEX_HTML); });
-  _server.on("/index.html", HTTP_GET,
-             [this]() { _server.send(200, "text/html", INDEX_HTML); });
-  _server.on("/style.css", HTTP_GET,
-             [this]() { _server.send(200, "text/css", STYLE_CSS); });
-  _server.on("/app.js", HTTP_GET,
-             [this]() { _server.send(200, "application/javascript", APP_JS); });
+  _server.on("/", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "text/html", INDEX_HTML);
+  });
+  _server.on("/index.html", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "text/html", INDEX_HTML);
+  });
+  _server.on("/style.css", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "text/css", STYLE_CSS);
+  });
+  _server.on("/app.js", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.send(200, "application/javascript", APP_JS);
+  });
   _server.on("/lame.min.js", HTTP_GET, [this]() {
+    AUTH_CHECK();
     _server.send_P(200, "application/javascript", LAME_MIN_JS);
   });
 
   // API: System Status
   _server.on("/api/status", HTTP_GET, [this]() {
+    AUTH_CHECK();
     SystemContext &ctx = SystemContext::getInstance();
     ScopedLock lock(ctx);
     SystemState &state = ctx.getState();
@@ -111,6 +127,7 @@ void ConnectivityManager::setup() {
 
   // API: Hostname Config
   _server.on("/api/config/hostname", HTTP_POST, [this]() {
+    AUTH_CHECK();
     if (!_server.hasArg("name")) {
       _server.send(400, "text/plain", "Missing name");
       return;
@@ -129,8 +146,37 @@ void ConnectivityManager::setup() {
     }
   });
 
+  // API: Web Authentication Config
+  _server.on("/api/config/webauth", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    if (!_server.hasArg("user") || !_server.hasArg("pass")) {
+      _server.send(400, "text/plain", "Missing user or pass");
+      return;
+    }
+    String newUser = _server.arg("user");
+    String newPass = _server.arg("pass");
+
+    // Allow empty user/pass to disable authentication
+    if (newUser.length() < 32 && newPass.length() < 32) {
+      _webUser = newUser;
+      _webPass = newPass;
+      Preferences prefs;
+      prefs.begin("config", false);
+      prefs.putString("web_user", _webUser);
+      prefs.putString("web_pass", _webPass);
+      prefs.end();
+      _server.send(200, "text/plain",
+                   "Web credentials saved. Restart required.");
+      _shouldRestart = true;
+      _restartTimer = millis();
+    } else {
+      _server.send(400, "text/plain", "Invalid length");
+    }
+  });
+
   // API: Logs
   _server.on("/api/logs", HTTP_GET, [this]() {
+    AUTH_CHECK();
     String filter = "";
     if (_server.hasArg("type")) {
       String type = _server.arg("type");
@@ -143,33 +189,72 @@ void ConnectivityManager::setup() {
   });
 
   // API: File List
-  _server.on("/api/files/list", HTTP_GET, [this]() { handleFileList(); });
+  _server.on("/api/files/list", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    handleFileList();
+  });
 
   // API: File Delete
-  _server.on("/api/files/delete", HTTP_POST, [this]() { handleFileDelete(); });
-  _server.on("/api/files/delete", HTTP_DELETE,
-             [this]() { handleFileDelete(); });
+  _server.on("/api/files/delete", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleFileDelete();
+  });
+  _server.on("/api/files/delete", HTTP_DELETE, [this]() {
+    AUTH_CHECK();
+    handleFileDelete();
+  });
 
   // API: File Upload
   _server.on(
       "/api/files/upload", HTTP_POST,
-      [this]() { _server.send(200, "text/plain", "Upload OK"); },
-      [this]() { handleFileUpload(); });
+      [this]() {
+        AUTH_CHECK();
+        _server.send(200, "text/plain", "Upload OK");
+      },
+      [this]() {
+        AUTH_CHECK();
+        handleFileUpload();
+      });
 
   // API: WiFi Management
-  _server.on("/api/wifi/save", HTTP_POST, [this]() { handleWifiSave(); });
-  _server.on("/api/wifi/reset", HTTP_POST, [this]() { handleWifiReset(); });
-  _server.on("/api/wifi/scan", HTTP_GET, [this]() { handleWifiScan(); });
+  _server.on("/api/wifi/save", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleWifiSave();
+  });
+  _server.on("/api/wifi/reset", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleWifiReset();
+  });
+  _server.on("/api/wifi/scan", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    handleWifiScan();
+  });
 
   // API: Control
-  _server.on("/api/control", HTTP_POST, [this]() { handleControl(); });
-  _server.on("/api/cv", HTTP_POST, [this]() { handleCV(); });
-  _server.on("/api/cv/all", HTTP_GET, [this]() { handleCvAll(); });
-  _server.on("/api/cv/all", HTTP_POST, [this]() { handleCvAll(); });
-  _server.on("/api/audio/play", HTTP_POST, [this]() { handleAudioPlay(); });
+  _server.on("/api/control", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleControl();
+  });
+  _server.on("/api/cv", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleCV();
+  });
+  _server.on("/api/cv/all", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    handleCvAll();
+  });
+  _server.on("/api/cv/all", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleCvAll();
+  });
+  _server.on("/api/audio/play", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleAudioPlay();
+  });
 
   // API: Motor Test
   _server.on("/api/motor/test", [this]() {
+    AUTH_CHECK();
     if (_server.method() == HTTP_POST) {
       MotorController::getInstance().startTest();
       _server.send(200, "application/json", "{\"status\":\"started\"}");
@@ -183,6 +268,7 @@ void ConnectivityManager::setup() {
 
   // API: CV Definitions
   _server.on("/api/cv/defs", HTTP_GET, [this]() {
+    AUTH_CHECK();
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
     for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
@@ -197,10 +283,13 @@ void ConnectivityManager::setup() {
   });
 
   // OTA Updater
-  _httpUpdater.setup(&_server, "/update");
+  _httpUpdater.setup(&_server, "/update", _webUser.c_str(), _webPass.c_str());
 
   // Static File Catch-All (For serving audio files or other assets from FS)
-  _server.onNotFound([this]() { handleStaticFile(); });
+  _server.onNotFound([this]() {
+    AUTH_CHECK();
+    handleStaticFile();
+  });
 
   _server.begin();
   Log.println("ConnectivityManager: Web Server started on port 80");
@@ -263,30 +352,32 @@ void ConnectivityManager::handleFileList() {
   _server.send(200, "application/json", "");
   _server.sendContent("[");
 
-  ChunkedPrint writer(_server);
-  JsonDocument doc;
-  bool first = true;
+  {
+    ChunkedPrint writer(_server);
+    JsonDocument doc;
+    bool first = true;
 
-  File file = root.openNextFile();
-  while (file) {
-    if (!first) {
-      _server.sendContent(",");
+    File file = root.openNextFile();
+    while (file) {
+      if (!first) {
+        _server.sendContent(",");
+      }
+      first = false;
+
+      doc.clear();
+      JsonObject obj = doc.to<JsonObject>();
+      const char *fileName = file.name();
+      if (fileName[0] != '/') {
+        String path = "/" + String(fileName);
+        obj["name"] = path;
+      } else {
+        obj["name"] = fileName;
+      }
+      obj["size"] = file.size();
+
+      serializeJson(doc, writer);
+      file = root.openNextFile();
     }
-    first = false;
-
-    doc.clear();
-    JsonObject obj = doc.to<JsonObject>();
-    const char *fileName = file.name();
-    if (fileName[0] != '/') {
-      String path = "/" + String(fileName);
-      obj["name"] = path;
-    } else {
-      obj["name"] = fileName;
-    }
-    obj["size"] = file.size();
-
-    serializeJson(doc, writer);
-    file = root.openNextFile();
   }
 
   _server.sendContent("]");
@@ -548,4 +639,13 @@ void ConnectivityManager::handleAudioPlay() {
 
   AudioController::getInstance().playFile(file.c_str());
   _server.send(200, "text/plain", "Playing");
+}
+
+bool ConnectivityManager::isAuthenticated() {
+  if (_webUser.length() == 0 ||
+      _server.authenticate(_webUser.c_str(), _webPass.c_str())) {
+    return true;
+  }
+  _server.requestAuthentication();
+  return false;
 }
