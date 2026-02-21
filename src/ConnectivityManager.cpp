@@ -305,10 +305,42 @@ void ConnectivityManager::loop() {
 
 // --- File Management Implementation ---
 
-void ConnectivityManager::handleFileList() {
-  JsonDocument doc;
-  JsonArray array = doc.to<JsonArray>();
+/**
+ * Helper to bridge ArduinoJson serialization and WebServer chunked streaming.
+ */
+class ChunkedPrint : public Print {
+public:
+  ChunkedPrint(WebServer &server) : _server(server), _pos(0) {}
+  ~ChunkedPrint() { flush(); }
 
+  size_t write(uint8_t c) override {
+    if (_pos >= sizeof(_buffer)) {
+      flush();
+    }
+    _buffer[_pos++] = c;
+    return 1;
+  }
+
+  size_t write(const uint8_t *buffer, size_t size) override {
+    flush();
+    _server.sendContent((const char *)buffer, size);
+    return size;
+  }
+
+  void flush() {
+    if (_pos > 0) {
+      _server.sendContent((const char *)_buffer, _pos);
+      _pos = 0;
+    }
+  }
+
+private:
+  WebServer &_server;
+  uint8_t _buffer[128];
+  size_t _pos;
+};
+
+void ConnectivityManager::handleFileList() {
   File root = LittleFS.open("/");
   if (!root || !root.isDirectory()) {
     _server.send(500, "application/json",
@@ -316,20 +348,39 @@ void ConnectivityManager::handleFileList() {
     return;
   }
 
-  File file = root.openNextFile();
-  while (file) {
-    JsonObject obj = array.add<JsonObject>();
-    String name = String(file.name());
-    if (!name.startsWith("/"))
-      name = "/" + name;
-    obj["name"] = name;
-    obj["size"] = file.size();
-    file = root.openNextFile();
+  _server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  _server.send(200, "application/json", "");
+  _server.sendContent("[");
+
+  {
+    ChunkedPrint writer(_server);
+    JsonDocument doc;
+    bool first = true;
+
+    File file = root.openNextFile();
+    while (file) {
+      if (!first) {
+        _server.sendContent(",");
+      }
+      first = false;
+
+      doc.clear();
+      JsonObject obj = doc.to<JsonObject>();
+      const char *fileName = file.name();
+      if (fileName[0] != '/') {
+        String path = "/" + String(fileName);
+        obj["name"] = path;
+      } else {
+        obj["name"] = fileName;
+      }
+      obj["size"] = file.size();
+
+      serializeJson(doc, writer);
+      file = root.openNextFile();
+    }
   }
 
-  String output;
-  serializeJson(doc, output);
-  _server.send(200, "application/json", output);
+  _server.sendContent("]");
 }
 
 void ConnectivityManager::handleFileDelete() {
