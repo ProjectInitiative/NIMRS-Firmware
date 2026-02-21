@@ -31,6 +31,12 @@ public:
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
   }
+  int indexOf(const String &s) const {
+    size_t found = this->find(s);
+    if (found == std::string::npos)
+      return -1;
+    return (int)found;
+  }
   int toInt() const {
     if (this->empty())
       return 0;
@@ -42,12 +48,6 @@ public:
   }
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
-  int indexOf(const String &s) const {
-    size_t pos = this->find(s);
-    if (pos == std::string::npos)
-      return -1;
-    return (int)pos;
-  }
   unsigned char concat(const char *cstr, unsigned int length) {
     this->append(cstr, length);
     return 1;
