@@ -48,7 +48,6 @@ public:
   }
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
-
   unsigned char concat(const char *cstr, unsigned int length) {
     this->append(cstr, length);
     return 1;
