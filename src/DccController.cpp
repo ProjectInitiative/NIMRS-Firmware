@@ -41,7 +41,6 @@ void DccController::setup() {
     Log.printf("DCC: Version mismatch (Saved: %d, Target: %d). Skipping "
                "auto-reset to avoid loop.\n",
                currentVersion, targetVersion);
-    // notifyCVResetFactoryDefault(); // Disabled to prevent infinite loop
   }
 
   Log.printf("DccController: Listening on Pin %d\n", Pinout::TRACK_LEFT_3V3);
