@@ -3,6 +3,7 @@ import sys
 import os
 import csv
 
+
 def parse_partition_size(partitions_csv_path, partition_name="app0"):
     try:
         with open(partitions_csv_path, 'r') as f:
@@ -25,12 +26,14 @@ def parse_partition_size(partitions_csv_path, partition_name="app0"):
         return None
     return None
 
+
 def check_size(bin_path, max_size):
     if not os.path.exists(bin_path):
         # Try finding any .bin file in the directory if exact match fails
         # This handles potential naming variations if the user didn't specify the exact file
         directory = os.path.dirname(bin_path)
-        if not directory: directory = "."
+        if not directory:
+            directory = "."
 
         candidates = [f for f in os.listdir(directory) if f.endswith(".bin") and "partitions" not in f and "bootloader" not in f]
         if len(candidates) == 1:
@@ -54,6 +57,7 @@ def check_size(bin_path, max_size):
 
     print("Check passed.")
     return True
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
