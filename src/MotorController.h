@@ -25,12 +25,18 @@ public:
 
 private:
   MotorController();
+
+  // PWM Configuration Constants
+  static constexpr uint32_t DEFAULT_PWM_FREQ = 20000;
+  static constexpr uint8_t DEFAULT_PWM_RES = 10;
+  static constexpr uint32_t DEFAULT_MAX_PWM = (1 << DEFAULT_PWM_RES) - 1;
+
   // PWM Config
   const uint8_t _pwmChannel1 = 2;
   const uint8_t _pwmChannel2 = 3;
-  uint8_t _pwmResolution = 10;
-  uint32_t _maxPwm = 1023;
-  uint32_t _pwmFreq = 20000;
+  uint8_t _pwmResolution = DEFAULT_PWM_RES;
+  uint32_t _maxPwm = DEFAULT_MAX_PWM;
+  uint32_t _pwmFreq = DEFAULT_PWM_FREQ;
 
   // CV Mappings (Defaults from Paragon 4 Spec)
   uint8_t _cvVStart = 20;      // CV2: Starting PWM offset

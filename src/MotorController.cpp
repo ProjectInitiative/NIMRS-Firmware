@@ -13,8 +13,8 @@ MotorController::MotorController() :
     _avgCurrent(0.0f), 
     _currentOffset(5.0f), 
     _piErrorSum(0.0f),
-    _maxPwm(1023), 
-    _pwmFreq(20000)
+    _maxPwm(DEFAULT_MAX_PWM),
+    _pwmFreq(DEFAULT_PWM_FREQ)
 {
 }
 
@@ -33,8 +33,8 @@ void MotorController::setup() {
     
     // high-freq PWM for silent motor operation
     // 20kHz ensures no audible buzzing during the crawl
-    ledcSetup(_pwmChannel1, 20000, 10);
-    ledcSetup(_pwmChannel2, 20000, 10);
+    ledcSetup(_pwmChannel1, _pwmFreq, _pwmResolution);
+    ledcSetup(_pwmChannel2, _pwmFreq, _pwmResolution);
     ledcAttachPin(Pinout::MOTOR_IN1, _pwmChannel1);
     ledcAttachPin(Pinout::MOTOR_IN2, _pwmChannel2);
     
@@ -100,8 +100,8 @@ void MotorController::loop() {
         float speedNorm = _currentSpeed / 255.0f;
         
         // BASELINE: Guarantee the motor has enough power to move
-        float vStart = map(_cvVStart, 0, 255, _cvPedestalFloor, 1023); 
-        float basePwm = vStart + (speedNorm * (1023.0f - vStart));
+        float vStart = map(_cvVStart, 0, 255, _cvPedestalFloor, _maxPwm);
+        float basePwm = vStart + (speedNorm * ((float)_maxPwm - vStart));
 
         // TORQUE PUNCH: Allow negative error so the integral can unwind
         float thresholdBase = _cvLearnThreshold / 100.0f;
@@ -164,7 +164,7 @@ void MotorController::loop() {
             }
         }
         
-        finalPwm = constrain(finalPwm, 0, 1023);
+        finalPwm = constrain(finalPwm, 0, (int32_t)_maxPwm);
 
     } else {
         _isMoving = false;
