@@ -51,8 +51,8 @@
   # Verify compiled binary size
   echo "Verifying firmware size..."
   if [ -f "tools/check_firmware_size.py" ]; then
-      python3 tools/check_firmware_size.py "${outputDir}/NIMRS-Firmware.ino.bin" partitions.csv app0 || exit 1
+    python3 tools/check_firmware_size.py "${outputDir}/NIMRS-Firmware.ino.bin" partitions.csv app0 || exit 1
   else
-      echo "Warning: tools/check_firmware_size.py not found. Skipping size check."
+    echo "Warning: tools/check_firmware_size.py not found. Skipping size check."
   fi
 ''
