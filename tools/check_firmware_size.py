@@ -6,7 +6,7 @@ import csv
 
 def parse_partition_size(partitions_csv_path, partition_name="app0"):
     try:
-        with open(partitions_csv_path, 'r') as f:
+        with open(partitions_csv_path, "r") as f:
             reader = csv.reader(f)
             for row in reader:
                 # Skip comments and empty lines
@@ -19,7 +19,9 @@ def parse_partition_size(partitions_csv_path, partition_name="app0"):
                     try:
                         return int(size_str, 0)
                     except ValueError:
-                        print(f"Error: Invalid size format for partition '{partition_name}': {size_str}")
+                        print(
+                            f"Error: Invalid size format for partition '{partition_name}': {size_str}"
+                        )
                         return None
     except FileNotFoundError:
         print(f"Error: partitions.csv not found at {partitions_csv_path}")
@@ -35,7 +37,11 @@ def check_size(bin_path, max_size):
         if not directory:
             directory = "."
 
-        candidates = [f for f in os.listdir(directory) if f.endswith(".bin") and "partitions" not in f and "bootloader" not in f]
+        candidates = [
+            f
+            for f in os.listdir(directory)
+            if f.endswith(".bin") and "partitions" not in f and "bootloader" not in f
+        ]
         if len(candidates) == 1:
             bin_path = os.path.join(directory, candidates[0])
             print(f"Using binary: {bin_path}")
@@ -52,7 +58,9 @@ def check_size(bin_path, max_size):
     print(f"Usage:       {percentage:.2f}%")
 
     if size > max_size:
-        print(f"ERROR: Firmware binary exceeds maximum allowed size by {size - max_size} bytes!")
+        print(
+            f"ERROR: Firmware binary exceeds maximum allowed size by {size - max_size} bytes!"
+        )
         return False
 
     print("Check passed.")
@@ -61,7 +69,9 @@ def check_size(bin_path, max_size):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python3 check_firmware_size.py <bin_path> <partitions_csv_path> [partition_name]")
+        print(
+            "Usage: python3 check_firmware_size.py <bin_path> <partitions_csv_path> [partition_name]"
+        )
         sys.exit(1)
 
     bin_path = sys.argv[1]
@@ -70,7 +80,9 @@ if __name__ == "__main__":
 
     max_size = parse_partition_size(partitions_csv_path, partition_name)
     if max_size is None:
-        print(f"Error: Could not find size for partition '{partition_name}' in {partitions_csv_path}")
+        print(
+            f"Error: Could not find size for partition '{partition_name}' in {partitions_csv_path}"
+        )
         sys.exit(1)
 
     if not check_size(bin_path, max_size):
