@@ -18,7 +18,10 @@ public:
   virtual uint32_t getPos() override { return 0; }
   virtual uint32_t read(void *data, uint32_t len) override { return 0; }
   virtual bool seek(int32_t pos, int dir) override { return false; }
-  virtual bool close() override { _file.close(); return true; }
+  virtual bool close() override {
+    _file.close();
+    return true;
+  }
 };
 
 #endif

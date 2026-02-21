@@ -60,7 +60,7 @@ public:
   std::vector<Pair> _pairs;
 
   JsonVariant &operator[](String key) { return _data[(std::string)key]; }
-  JsonVariant &operator[](const char* key) { return _data[(std::string)key]; }
+  JsonVariant &operator[](const char *key) { return _data[(std::string)key]; }
 
   typedef std::vector<Pair>::iterator iterator;
   iterator begin() { return _pairs.begin(); }
@@ -70,9 +70,13 @@ public:
 };
 
 // Implementations
-template<> inline JsonObject JsonVariant::as<JsonObject>() const { return JsonObject(); }
-template<> inline JsonArray JsonVariant::as<JsonArray>() const { return JsonArray(); }
-template<> inline String JsonVariant::as<String>() const { return val; }
+template <> inline JsonObject JsonVariant::as<JsonObject>() const {
+  return JsonObject();
+}
+template <> inline JsonArray JsonVariant::as<JsonArray>() const {
+  return JsonArray();
+}
+template <> inline String JsonVariant::as<String>() const { return val; }
 
 inline JsonVariant::operator JsonObject() const { return JsonObject(); }
 inline JsonVariant::operator JsonArray() const { return JsonArray(); }
@@ -81,7 +85,9 @@ class JsonDocument {
 public:
   std::map<std::string, JsonVariant> _data;
   JsonVariant &operator[](String key) { return _data[(std::string)key]; }
-  JsonVariant &operator[](const char* key) { return _data[(std::string)key]; } // Needed for const char*
+  JsonVariant &operator[](const char *key) {
+    return _data[(std::string)key];
+  } // Needed for const char*
 
   template <typename T> T as() { return T(); }
   void clear() { _data.clear(); }
@@ -95,7 +101,8 @@ struct DeserializationError {
   const char *c_str() const { return "error"; }
 };
 
-inline DeserializationError deserializeJson(JsonDocument &doc, const String &in) {
+inline DeserializationError deserializeJson(JsonDocument &doc,
+                                            const String &in) {
   return DeserializationError::Ok;
 }
 
