@@ -100,3 +100,20 @@ We use a custom partition table to support large firmware sizes and ample storag
 - **App Slots (2MB x 2):** Two identical partitions (`app0`, `app1`) enable safe A/B Over-The-Air (OTA) updates.
 - **File System (~3.9MB):** A large `spiffs` partition (mounted as LittleFS) for storing WAV/MP3 files and configuration data.
 - **NVS (20KB):** Non-volatile storage for WiFi credentials and persistent settings.
+
+## Sensorless Motor Control
+
+The NIMRS firmware now implements a hybrid sensorless motor control strategy combining Back-EMF estimation and Commutation Ripple counting.
+
+### Configuration
+
+To enable accurate speed control, you must configure the following CVs:
+
+*   **CV 149 (Armature Resistance):** Measure the resistance of your motor armature (in 10mOhm units).
+    *   Example: 2.0 Ohms = Value `200`.
+    *   **How to measure:** Use a multimeter across the motor terminals (disconnect decoder). Rotate the motor slowly and take the average of several readings.
+*   **CV 145 (Track Voltage):** Set the track voltage (in 100mV units).
+    *   Example: 14.0V = Value `140`.
+*   **CV 143 (Motor Poles):** Number of motor poles (usually 3 or 5). Default is 5.
+
+See [DESIGN.md](DESIGN.md) for detailed architecture.
