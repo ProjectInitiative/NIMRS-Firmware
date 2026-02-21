@@ -3,6 +3,7 @@
 
 #include <map>
 #include <stdint.h>
+#include <iostream>
 
 typedef uint8_t DCC_ADDR_TYPE;
 typedef uint8_t DCC_DIRECTION;
