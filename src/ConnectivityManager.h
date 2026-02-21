@@ -3,6 +3,7 @@
 
 #include "Logger.h"
 #include "SystemContext.h"
+#include <ArduinoJson.h>
 #include <HTTPUpdateServer.h>
 #include <LittleFS.h>
 #include <WebServer.h>
@@ -36,6 +37,9 @@ private:
   void handleCV();
   void handleCvAll();
   void handleAudioPlay();
+
+  // Helper
+  void sendJson(const JsonDocument &doc);
 
   // Authentication
   bool isAuthenticated();

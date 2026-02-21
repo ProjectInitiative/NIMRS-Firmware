@@ -120,9 +120,7 @@ void ConnectivityManager::setup() {
     for (int i = 0; i < 29; i++)
       funcs.add(state.functions[i]);
 
-    String output;
-    serializeJson(doc, output);
-    _server.send(200, "application/json", output);
+    sendJson(doc);
   });
 
   // API: Hostname Config
@@ -277,9 +275,7 @@ void ConnectivityManager::setup() {
       obj["name"] = CV_DEFS[i].name;
       obj["desc"] = CV_DEFS[i].desc;
     }
-    String output;
-    serializeJson(doc, output);
-    _server.send(200, "application/json", output);
+    sendJson(doc);
   });
 
   // OTA Updater
@@ -503,9 +499,7 @@ void ConnectivityManager::handleWifiScan() {
     obj["enc"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
   }
 
-  String output;
-  serializeJson(doc, output);
-  _server.send(200, "application/json", output);
+  sendJson(doc);
 }
 
 void ConnectivityManager::handleControl() {
@@ -601,9 +595,7 @@ void ConnectivityManager::handleCvAll() {
       obj[String(id)] = dcc.getCV(id);
     }
 
-    String output;
-    serializeJson(doc, output);
-    _server.send(200, "application/json", output);
+    sendJson(doc);
   } else if (_server.method() == HTTP_POST) {
     if (!_server.hasArg("plain")) {
       _server.send(400, "text/plain", "Body missing");
@@ -639,6 +631,12 @@ void ConnectivityManager::handleAudioPlay() {
 
   AudioController::getInstance().playFile(file.c_str());
   _server.send(200, "text/plain", "Playing");
+}
+
+void ConnectivityManager::sendJson(const JsonDocument &doc) {
+  String output;
+  serializeJson(doc, output);
+  _server.send(200, "application/json", output);
 }
 
 bool ConnectivityManager::isAuthenticated() {

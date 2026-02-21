@@ -74,11 +74,29 @@ TEST_CASE(test_handleCV_read) {
   assert(cm._server.lastCode == 200);
 }
 
+TEST_CASE(test_sendJson) {
+  ConnectivityManager cm;
+  JsonDocument doc;
+  doc["status"] = "ok";
+  doc["value"] = 123;
+
+  cm.sendJson(doc);
+
+  assert(cm._server.lastCode == 200);
+  assert(cm._server.lastContentType == "application/json");
+
+  // Simple check for content (JSON serialization order might vary, but for simple object it's usually consistent in ArduinoJson)
+  // Or checking if it contains the keys/values
+  // In the mock environment, serializeJson returns fixed string "{\"mock\":true}"
+  assert(cm._server.lastContent == "{\"mock\":true}");
+}
+
 int main() {
   RUN_TEST(test_handleControl_stop);
   RUN_TEST(test_handleControl_set_speed);
   RUN_TEST(test_handleFileList);
   RUN_TEST(test_handleCV_read);
+  RUN_TEST(test_sendJson);
   std::cout << "All tests passed!" << std::endl;
   return 0;
 }
