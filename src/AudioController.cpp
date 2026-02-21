@@ -169,6 +169,11 @@ const SoundAsset *AudioController::getAsset(uint8_t id) {
 }
 
 void AudioController::playFile(const char *filename) {
+  if (filename == nullptr) {
+    Log.println("Audio: Invalid filename (null)");
+    return;
+  }
+
   // Stop and clean up existing playback
   if (_generator) {
     if (_generator->isRunning())
