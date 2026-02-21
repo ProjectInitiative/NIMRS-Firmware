@@ -5,10 +5,10 @@
 
 class MotorController {
 public:
-  static MotorController &getInstance();
-  MotorController();
-  void startTest();
-  String getTestJSON();
+    static MotorController &getInstance();
+    MotorController();
+    void startTest();
+    String getTestJSON();
 };
 
 #endif
