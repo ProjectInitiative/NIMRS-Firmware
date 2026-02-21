@@ -63,9 +63,7 @@
               pkgs.gcc
               pkgs.python3
             ];
-            buildPhase = ''
-              python3 tools/test_runner.py
-            '';
+            buildPhase = import ./test-command.nix { };
             installPhase = ''
               mkdir -p $out
               # Copy all test executables to output from tests/bin
@@ -243,7 +241,7 @@
             echo "Running NIMRS Firmware Unit Tests..."
             # Clean up old tests if any
             rm -rf tests/bin
-            python3 tools/test_runner.py
+            ${import ./test-command.nix { }}
           '';
 
           # Script to verify CI readiness
