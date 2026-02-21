@@ -6,7 +6,6 @@
 #include <driver/mcpwm.h>
 #include <esp_err.h>
 #include <esp_log.h>
-#include <soc/adc_caps.h>
 
 #ifndef SOC_ADC_DIGI_MAX_BITWIDTH
 #define SOC_ADC_DIGI_MAX_BITWIDTH 12
