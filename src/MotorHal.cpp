@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <driver/mcpwm.h>
 #include <driver/adc.h>
-#include <hal/adc_types.h>
 #include <soc/adc_caps.h>
 #include <esp_err.h>
 #include <esp_log.h>
@@ -58,6 +57,10 @@ void MotorHal::init() {
         .adc2_chan_mask = 0,
     };
 
+    #ifndef ADC_DIGI_OUTPUT_FORMAT_TYPE2
+    #define ADC_DIGI_OUTPUT_FORMAT_TYPE2 (adc_digi_output_format_t)2
+    #endif
+
     adc_digi_configuration_t dig_cfg = {
         .conv_limit_en = 0,
         .conv_limit_num = 250,
@@ -71,8 +74,8 @@ void MotorHal::init() {
     adc_digi_pattern_config_t adc_pattern[1] = {0};
     adc_pattern[0].atten = ADC_ATTEN_DB_11;
     adc_pattern[0].channel = (uint8_t)ADC_CHAN;
-    adc_pattern[0].unit = (adc_unit_t)ADC_UNIT;
-    adc_pattern[0].bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
+    adc_pattern[0].unit = (uint8_t)ADC_UNIT;
+    adc_pattern[0].bit_width = (uint8_t)SOC_ADC_DIGI_MAX_BITWIDTH;
 
     dig_cfg.adc_pattern = adc_pattern;
 
