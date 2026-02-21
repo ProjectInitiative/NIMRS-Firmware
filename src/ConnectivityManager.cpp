@@ -1,7 +1,11 @@
 #include "ConnectivityManager.h"
 #include "AudioController.h"
 #include "CvRegistry.h"
+#ifdef UNIT_TEST
+#include <DccController.h>
+#else
 #include "DccController.h"
+#endif
 #include "LameJs.h"
 #include "MotorController.h"
 #include "WebAssets.h"
@@ -576,8 +580,8 @@ void ConnectivityManager::handleCV() {
   if (cmd == "read") {
     int cv = doc["cv"];
     int val = DccController::getInstance().getDcc().getCV(cv);
-    char buf[32];
-    sprintf(buf, "{\"cv\":%d,\"value\":%d}", cv, val);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "{\"cv\":%d,\"value\":%d}", cv, val);
     _server.send(200, "application/json", buf);
   } else if (cmd == "write") {
     int cv = doc["cv"];

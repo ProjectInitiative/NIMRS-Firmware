@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Itests/mocks -Itests/mocks/freertos -Isrc -Wall
+CXXFLAGS = -std=c++17 -Itests/mocks -Itests/mocks/freertos -Isrc -Wall -DUNIT_TEST
 
 # Targets
 TARGET_CONN = tests/test_ConnectivityManager

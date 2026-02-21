@@ -74,11 +74,26 @@ TEST_CASE(test_handleCV_read) {
   assert(cm._server.lastCode == 200);
 }
 
+TEST_CASE(test_handleCV_read_large_values) {
+  ConnectivityManager cm;
+  // Set CV 2147483647 to 2147483647
+  DccController::getInstance().getDcc().setCV(2147483647, 2147483647);
+
+  cm._server.args["plain"] = "{\"cmd\":\"read\",\"cv\":2147483647}";
+
+  cm.handleCV();
+
+  assert(cm._server.lastCode == 200);
+  std::string expected = "{\"cv\":2147483647,\"value\":2147483647}";
+  assert(cm._server.lastContent == expected);
+}
+
 int main() {
   RUN_TEST(test_handleControl_stop);
   RUN_TEST(test_handleControl_set_speed);
   RUN_TEST(test_handleFileList);
   RUN_TEST(test_handleCV_read);
+  RUN_TEST(test_handleCV_read_large_values);
   std::cout << "All tests passed!" << std::endl;
   return 0;
 }

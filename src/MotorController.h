@@ -1,7 +1,11 @@
 #ifndef MOTOR_CONTROLLER_H
 #define MOTOR_CONTROLLER_H
 
+#ifdef UNIT_TEST
+#include <DccController.h>
+#else
 #include "DccController.h"
+#endif
 #include "SystemContext.h"
 #include "nimrs-pinout.h"
 #include <Arduino.h>
