@@ -164,15 +164,19 @@ void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp,
   SystemContext &ctx = SystemContext::getInstance();
 
   uint8_t baseIndex = 0;
+  uint8_t count = 8;
+
   switch (FuncGrp) {
   case FN_0_4:
     baseIndex = 0;
     break;
   case FN_5_8:
     baseIndex = 5;
+    count = 4;
     break;
   case FN_9_12:
     baseIndex = 9;
+    count = 4;
     break;
   case FN_13_20:
     baseIndex = 13;
@@ -194,7 +198,7 @@ void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp,
       state.functions[3] = (FuncState & FN_BIT_03) ? true : false;
       state.functions[4] = (FuncState & FN_BIT_04) ? true : false;
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < count; i++) {
         state.functions[baseIndex + i] =
             ((FuncState >> i) & 0x01) ? true : false;
       }

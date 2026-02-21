@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "MotorController.h"
 #include "WiFi.h"
+#include "EEPROM.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -12,6 +13,7 @@ MockSerial Serial;
 WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
+EEPROMClass EEPROM;
 
 // Logger methods not inline in header
 size_t Logger::printf(const char *format, ...) {
@@ -36,6 +38,7 @@ AudioController::AudioController() {}
 void AudioController::loadAssets() {}
 void AudioController::playFile(const char *file) {}
 
+#ifndef NO_DCC_MOCK
 DccController &DccController::getInstance() {
   static DccController instance;
   return instance;
@@ -46,6 +49,7 @@ NmraDcc &DccController::getDcc() {
   return dcc;
 }
 bool DccController::isPacketValid() { return true; }
+#endif
 
 MotorController &MotorController::getInstance() {
   static MotorController instance;

@@ -15,6 +15,7 @@ tests/test_ConnectivityManager
 tests/run_tests
 tests/test_main
 tests/test_logic
+tests/test_DccController
 
 # Local config (keep example tracked)
 config.h
