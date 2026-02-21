@@ -228,6 +228,22 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     </label>
                     <p><small>Changes require restart.</small></p>
                 </div>
+
+                <div class="card">
+                    <h3>Web Authentication</h3>
+                    <p>Update web interface credentials. <b>Leave blank to disable security.</b></p>
+                    <form id="auth-form" onsubmit="saveAuth(event)">
+                        <label>Username: <input type="text" id="web-user" placeholder="admin" style="width:100%"></label><br><br>
+                        <label>Password:
+                            <div style="display:flex; gap:5px;">
+                                <input type="password" id="web-pass" placeholder="admin" style="flex-grow:1;">
+                                <button type="button" class="btn small" onclick="togglePass(this, 'web-pass')">Show</button>
+                            </div>
+                        </label><br><br>
+                        <button type="submit" class="btn primary">Save Credentials</button>
+                    </form>
+                    <p><small>Changes require restart. Disabling security is recommended ONLY on isolated networks.</small></p>
+                </div>
             </section>
         </main>
     </div>
@@ -949,8 +965,8 @@ function formatUptime(s) {
 
 // --- WiFi Management ---
 
-function togglePass(btn) {
-    const el = document.getElementById('wifi-pass');
+function togglePass(btn, id = 'wifi-pass') {
+    const el = document.getElementById(id);
     if (el.type === "password") {
         el.type = "text";
         btn.innerText = "Hide";
@@ -1000,6 +1016,30 @@ function saveWifi(e) {
         body: `ssid=${encodeURIComponent(ssid)}&pass=${encodeURIComponent(pass)}`
     })
     .then(() => alert("Saved! Restarting..."))
+    .catch(e => alert("Error: " + e));
+}
+
+function saveAuth(e) {
+    e.preventDefault();
+    const user = document.getElementById('web-user').value;
+    const pass = document.getElementById('web-pass').value;
+    const isDisabling = (user === "");
+    const confirmMsg = isDisabling
+        ? "Disable web authentication? This will allow anyone on your network to control the device."
+        : "Update web credentials? You will be prompted to log in again after restart.";
+
+    if (!confirm(confirmMsg)) return;
+
+    fetch('/api/config/webauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`
+    })
+    .then(r => r.text())
+    .then(msg => {
+        alert(msg);
+        location.reload();
+    })
     .catch(e => alert("Error: " + e));
 }
 
