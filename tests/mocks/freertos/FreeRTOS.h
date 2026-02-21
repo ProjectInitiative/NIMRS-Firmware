@@ -7,7 +7,5 @@ typedef void *TaskHandle_t;
 typedef uint32_t TickType_t;
 #define pdMS_TO_TICKS(ms) (ms)
 #define portMAX_DELAY 0xFFFFFFFF
-#define pdTRUE 1
-#define pdFALSE 0
 
 #endif

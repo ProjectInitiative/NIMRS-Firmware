@@ -27,15 +27,15 @@ public:
     return this->compare(0, s.length(), s) == 0;
   }
   bool endsWith(const String &s) const {
-    if (this->length() < s.length())
+    if (s.length() < s.length())
       return false;
     return this->compare(this->length() - s.length(), s.length(), s) == 0;
   }
   int indexOf(const String &s) const {
-    size_t found = this->find(s);
-    if (found == std::string::npos)
+    size_t pos = this->find(s);
+    if (pos == std::string::npos)
       return -1;
-    return (int)found;
+    return (int)pos;
   }
   int toInt() const {
     if (this->empty())
@@ -48,10 +48,6 @@ public:
   }
   unsigned int length() const { return std::string::length(); }
   const char *c_str() const { return std::string::c_str(); }
-  unsigned char concat(const char *cstr, unsigned int length) {
-    this->append(cstr, length);
-    return 1;
-  }
 };
 
 #define PROGMEM
@@ -99,7 +95,6 @@ class MockSerial : public Print {
 public:
   void begin(unsigned long baud) {}
   virtual size_t write(uint8_t c) override { return putchar(c); }
-  using Print::write;
 };
 
 extern MockSerial Serial;

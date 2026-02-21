@@ -18,28 +18,14 @@ size_t Logger::write(const uint8_t *buffer, size_t size) {
   if (_serialEnabled)
     Serial.write(buffer, size);
 
-  const char *buf = (const char *)buffer;
-  size_t start = 0;
-
   for (size_t i = 0; i < size; i++) {
-    char c = buf[i];
+    char c = (char)buffer[i];
     if (c == '\n') {
-      if (i > start) {
-        _currentLine.concat(buf + start, i - start);
-      }
       _addToBuffer(_currentLine);
       _currentLine = "";
-      start = i + 1;
-    } else if (c == '\r') {
-      if (i > start) {
-        _currentLine.concat(buf + start, i - start);
-      }
-      start = i + 1;
+    } else if (c != '\r') {
+      _currentLine += c;
     }
-  }
-
-  if (start < size) {
-    _currentLine.concat(buf + start, size - start);
   }
   return size;
 }
