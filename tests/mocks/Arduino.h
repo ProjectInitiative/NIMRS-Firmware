@@ -48,8 +48,9 @@ public:
 #define PSTR(s) s
 #define F(s) s
 
-inline unsigned long millis() { return 1000; }
-inline void delay(unsigned long ms) {}
+extern unsigned long _mock_millis;
+inline unsigned long millis() { return _mock_millis; }
+inline void delay(unsigned long ms) { _mock_millis += ms; }
 
 class IPAddress {
 public:

@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+unsigned long _mock_millis = 1000;
 MockSerial Serial;
 WiFiClass WiFi;
 LittleFSClass LittleFS;
