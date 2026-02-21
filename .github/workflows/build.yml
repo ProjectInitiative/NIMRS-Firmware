@@ -17,13 +17,9 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      # Formatting Check
-      - name: Check Formatting (treefmt)
-        run: nix develop --command treefmt --fail-on-change
-
-      # Unit Tests
-      - name: Run Unit Tests (run-tests)
-        run: nix develop --command run-tests
+      # Flake Check (Formatting & Tests)
+      - name: Nix Flake Check
+        run: nix flake check
 
   build:
     needs: check

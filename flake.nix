@@ -77,6 +77,37 @@
         }
       );
 
+      # Checks (Formatting & Tests)
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          formatting =
+            pkgs.runCommand "check-formatting"
+              {
+                nativeBuildInputs = with pkgs; [
+                  treefmt
+                  clang-tools
+                  nodePackages.prettier
+                  nixfmt
+                  black
+                  git
+                ];
+                src = ./.;
+              }
+              ''
+                cp -r $src/. .
+                export XDG_CACHE_HOME=$TMPDIR
+                treefmt --fail-on-change
+                touch $out
+              '';
+
+          tests = self.packages.${system}.tests;
+        }
+      );
+
       # Development shells
       devShells = forAllSystems (
         system:
@@ -226,14 +257,11 @@
               exit 1
             fi
 
-            echo "2. Verifying Formatting..."
-            ${pkgs.treefmt}/bin/treefmt --fail-on-change
+            echo "2. Verifying Formatting & Tests..."
+            nix flake check
 
-            echo "3. Running Unit Tests..."
-            ${runTests}/bin/run-tests
-
-            echo "4. Verifying Firmware Build..."
-            ${buildFirmware}/bin/build-firmware
+            echo "3. Verifying Firmware Build..."
+            nix build
 
             echo "--------------------------------"
             echo "All checks passed! Ready for CI."
