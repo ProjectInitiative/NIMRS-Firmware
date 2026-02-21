@@ -227,6 +227,11 @@
             echo "All checks passed! Ready for CI."
           '';
 
+          # Script to sync platformio.ini libs
+          syncLibs = pkgs.writeShellScriptBin "sync-libs" ''
+            python3 tools/sync_libs.py
+          '';
+
         in
         {
           default = pkgs.mkShell {
@@ -256,6 +261,7 @@
               nimrsLogs
               runTests
               ciReady
+              syncLibs
             ];
 
             shellHook = ''
@@ -297,6 +303,7 @@
                             echo "  run-tests                 : Run host-side unit tests"
                             echo "  ci-ready                  : Run formatting, tests, and build to verify CI readiness"
                             echo "  treefmt                   : Format all code (C++, JSON, MD)"
+                            echo "  sync-libs                 : Sync libs from common-libs.nix to platformio.ini"
                             echo "  nix build                 : Clean build of the firmware"
                             echo "  nix build .#tests         : Build and run tests in a sandbox"
             '';
