@@ -17,13 +17,7 @@ typedef uint8_t FN_GROUP;
 #define DCC_DIR_REV 0
 
 // Function Groups (simplified mock values)
-enum {
-  FN_0_4,
-  FN_5_8,
-  FN_9_12,
-  FN_13_20,
-  FN_21_28
-};
+enum { FN_0_4, FN_5_8, FN_9_12, FN_13_20, FN_21_28 };
 
 // Function Bits
 #define FN_BIT_00 0x01
