@@ -214,13 +214,21 @@
           # Script to verify CI readiness
           ciReady = pkgs.writeShellScriptBin "ci-ready" ''
             set -e # Exit on error
-            echo "1. Checking/Fixing Formatting..."
-            ${pkgs.treefmt}/bin/treefmt
 
-            echo "2. Running Unit Tests..."
+            echo "1. Checking Git Status..."
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Error: Working directory is dirty. Please commit all changes before running ci-ready."
+              git status
+              exit 1
+            fi
+
+            echo "2. Verifying Formatting..."
+            ${pkgs.treefmt}/bin/treefmt --fail-on-change
+
+            echo "3. Running Unit Tests..."
             ${runTests}/bin/run-tests
 
-            echo "3. Verifying Firmware Build..."
+            echo "4. Verifying Firmware Build..."
             ${buildFirmware}/bin/build-firmware
 
             echo "--------------------------------"
