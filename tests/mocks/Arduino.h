@@ -113,4 +113,19 @@ extern ESPClass ESP;
 #define map(x, in_min, in_max, out_min, out_max)                               \
   ((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min)
 
+#define constrain(amt, low, high)                                              \
+  ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
+
+#define OUTPUT 1
+#define INPUT 0
+#define ADC_0db 0
+
+inline void pinMode(int pin, int mode) {}
+inline void analogReadResolution(int bits) {}
+inline void analogSetPinAttenuation(int pin, int attenuation) {}
+inline void ledcSetup(int channel, int freq, int resolution) {}
+inline void ledcAttachPin(int pin, int channel) {}
+inline void ledcWrite(int channel, int duty) {}
+inline int analogRead(int pin) { return 0; }
+
 #endif

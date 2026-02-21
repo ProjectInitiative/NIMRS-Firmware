@@ -6,12 +6,6 @@ The repository history was rewritten to remove large binaries, which orphaned se
 
 ## 🚨 Category 1: Security (Highest Priority)
 
-### 1. Fix Buffer Overflows
-
-- **Source Branch**: `security/fix-buffer-overflow-sprintf`
-- **Task**: Replace all instances of `sprintf` with `snprintf` in `ConnectivityManager.cpp` and `MotorController.cpp`.
-- **Goal**: Prevent potential memory corruption during string generation for API responses and telemetry.
-
 ### 2. Mask WiFi Credentials
 
 - **Source Branch**: `security-fix-wifi-cleartext`

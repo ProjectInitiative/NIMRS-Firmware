@@ -3,7 +3,9 @@
 #include "DccController.h"
 #include "LittleFS.h"
 #include "Logger.h"
+#ifndef SKIP_MOCK_MOTOR_CONTROLLER
 #include "MotorController.h"
+#endif
 #include "WiFi.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -47,6 +49,7 @@ NmraDcc &DccController::getDcc() {
 }
 bool DccController::isPacketValid() { return true; }
 
+#ifndef SKIP_MOCK_MOTOR_CONTROLLER
 MotorController &MotorController::getInstance() {
   static MotorController instance;
   return instance;
@@ -54,6 +57,7 @@ MotorController &MotorController::getInstance() {
 MotorController::MotorController() {}
 void MotorController::startTest() {}
 String MotorController::getTestJSON() { return "{}"; }
+#endif
 
 File File::openNextFile() {
   if (_name == "/" && _nextIdx < LittleFS.mockFiles.size()) {
