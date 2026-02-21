@@ -73,7 +73,6 @@ public:
   void sendContent(const String &content) {}
   void sendContent(const char *content, size_t length) {}
   void setContentLength(size_t length) {}
-
   bool hasArg(const String &name) {
     return args.find((std::string)name) != args.end();
   }
