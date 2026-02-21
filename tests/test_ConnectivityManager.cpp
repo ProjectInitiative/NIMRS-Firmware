@@ -85,9 +85,10 @@ TEST_CASE(test_sendJson) {
   assert(cm._server.lastCode == 200);
   assert(cm._server.lastContentType == "application/json");
 
-  // Simple check for content (JSON serialization order might vary, but for simple object it's usually consistent in ArduinoJson)
-  // Or checking if it contains the keys/values
-  // In the mock environment, serializeJson returns fixed string "{\"mock\":true}"
+  // Simple check for content (JSON serialization order might vary, but for
+  // simple object it's usually consistent in ArduinoJson) Or checking if it
+  // contains the keys/values In the mock environment, serializeJson returns
+  // fixed string "{\"mock\":true}"
   assert(cm._server.lastContent == "{\"mock\":true}");
 }
 
