@@ -9,13 +9,13 @@
 #include "ConnectivityManager.h"
 #undef private
 
+#include "Arduino.h"
 #include "DccController.h"
 #include "LittleFS.h"
 #include "SystemContext.h"
-#include "Arduino.h"
 
 // Simple test framework
-void run_test(const char* name, void (*test_func)()) {
+void run_test(const char *name, void (*test_func)()) {
   std::cout << "Running " << name << "... ";
   mockLogBuffer.clear();
   test_func();
@@ -25,7 +25,8 @@ void run_test(const char* name, void (*test_func)()) {
 void test_handleStatus_no_credentials() {
   ConnectivityManager cm;
   // Initialize context with some values
-  // Note: SystemContext is a singleton, so it persists across tests if not reset
+  // Note: SystemContext is a singleton, so it persists across tests if not
+  // reset
   SystemContext::getInstance().getState().wifiConnected = true;
 
   // Simulate call
@@ -37,8 +38,8 @@ void test_handleStatus_no_credentials() {
   std::cout << "Response: " << response << std::endl;
 
   // Check that sensitive keys are NOT present
-  // "pass" is substring of "password", so checking "pass" might be too broad if we have "compass" or something
-  // But checking "\"pass\"" (JSON key) is safer.
+  // "pass" is substring of "password", so checking "pass" might be too broad if
+  // we have "compass" or something But checking "\"pass\"" (JSON key) is safer.
   assert(response.find("\"pass\"") == std::string::npos);
   assert(response.find("\"password\"") == std::string::npos);
   assert(response.find("\"web_pass\"") == std::string::npos);
@@ -77,8 +78,10 @@ void test_handleWifiSave_no_credentials_log() {
 }
 
 int main() {
-  run_test("test_handleStatus_no_credentials", test_handleStatus_no_credentials);
-  run_test("test_handleWifiSave_no_credentials_log", test_handleWifiSave_no_credentials_log);
+  run_test("test_handleStatus_no_credentials",
+           test_handleStatus_no_credentials);
+  run_test("test_handleWifiSave_no_credentials_log",
+           test_handleWifiSave_no_credentials_log);
   std::cout << "Security Credentials tests passed!" << std::endl;
   return 0;
 }
