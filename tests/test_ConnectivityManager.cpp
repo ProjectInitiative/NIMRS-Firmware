@@ -1,5 +1,5 @@
 // clang-format off
-// TEST_SOURCES: src/ConnectivityManager.cpp tests/mocks/mocks.cpp
+// TEST_SOURCES: src/ConnectivityManager.cpp src/BootLoopDetector.cpp tests/mocks/mocks.cpp
 // clang-format on
 #include <cassert>
 #include <iostream>

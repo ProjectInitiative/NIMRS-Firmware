@@ -32,6 +32,15 @@ public:
 
   void putInt(const char *key, int val) { _storage[key] = std::to_string(val); }
 
+  bool getBool(const char *key, bool def) {
+    if (_storage.count(key)) {
+      return _storage[key] == "1";
+    }
+    return def;
+  }
+
+  void putBool(const char *key, bool val) { _storage[key] = val ? "1" : "0"; }
+
   void clear() { _storage.clear(); }
 
   static void reset() { _storage.clear(); }

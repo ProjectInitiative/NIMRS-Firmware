@@ -39,10 +39,28 @@ public:
     return (int)found;
   }
   int indexOf(char c) const {
-    size_t found = this->find(c);
+    const char *p = strchr(this->c_str(), c);
+    if (p)
+      return p - this->c_str();
+    return -1;
+  }
+  int lastIndexOf(char c) const {
+    size_t found = this->rfind(c);
     if (found == std::string::npos)
       return -1;
     return (int)found;
+  }
+  String substring(unsigned int beginIndex,
+                   unsigned int endIndex = (unsigned int)-1) const {
+    if (beginIndex >= this->length())
+      return String("");
+    if (endIndex == (unsigned int)-1)
+      endIndex = this->length();
+    if (endIndex > this->length())
+      endIndex = this->length();
+    if (beginIndex > endIndex)
+      return String("");
+    return String(this->substr(beginIndex, endIndex - beginIndex));
   }
   int toInt() const {
     if (this->empty())

@@ -1002,7 +1002,8 @@ async function handleUpload(e) {
 
     if(!input.files.length) return;
 
-    for (let file of input.files) {
+    for (let i = 0; i < input.files.length; i++) {
+        let file = input.files[i];
         let name = file.name;
         status.innerText = `Uploading ${name}...`;
 
@@ -1013,12 +1014,23 @@ async function handleUpload(e) {
                 status.innerText = `Compressed to ${name}. Uploading...`;
              } catch(err) {
                  console.error(err);
+                 status.innerText = `Compression failed: ${err}`;
              }
         }
 
         const fd = new FormData();
         fd.append("file", file, name);
-        await fetch('/api/files/upload', { method: 'POST', body: fd });
+        try {
+            const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
+            if (!res.ok) {
+                const txt = await res.text();
+                status.innerText = `Error: ${txt}`;
+                console.error(txt);
+            }
+        } catch (e) {
+            status.innerText = "Network Error";
+            console.error(e);
+        }
     }
     status.innerText = "Done!";
     input.value = '';

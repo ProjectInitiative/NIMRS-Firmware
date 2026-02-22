@@ -62,6 +62,10 @@ void test_crash_loop() {
   const esp_partition_t *boot = getMockBootPartition();
   assert(boot != NULL);
   assert(std::string(boot->label) == "ota_1");
+
+  // Should have set rollback flag
+  assert(BootLoopDetector::didRollback() == true);
+
   std::cout << "Passed." << std::endl;
 }
 
