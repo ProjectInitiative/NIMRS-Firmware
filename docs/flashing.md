@@ -22,7 +22,7 @@ Go to the [GitHub Releases](../../releases) page and download the following file
 
 Connect the decoder to your USB Serial Adapter:
 
-- **VCC** -> 3.3V (Do NOT use 5V)
+- **VCC** -> 5V
 - **GND** -> GND
 - **TX** -> RX
 - **RX** -> TX

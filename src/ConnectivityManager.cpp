@@ -89,38 +89,7 @@ void ConnectivityManager::setup() {
   // API: System Status
   _server.on("/api/status", HTTP_GET, [this]() {
     AUTH_CHECK();
-    SystemContext &ctx = SystemContext::getInstance();
-    ScopedLock lock(ctx);
-    SystemState &state = ctx.getState();
-    JsonDocument doc;
-
-    // Use the configured address from NmraDcc, not just the last packet address
-    doc["address"] = DccController::getInstance().getDcc().getAddr();
-
-    // Map internal 0-255 speed to DCC 0-126 steps for UI display
-    uint8_t dccSpeed = map(state.speed, 0, 255, 0, 126);
-    doc["speed"] = dccSpeed;
-
-    doc["direction"] = state.direction ? "forward" : "reverse";
-    doc["wifi"] = state.wifiConnected;
-    doc["uptime"] = millis() / 1000;
-    doc["version"] = BUILD_VERSION;
-    doc["hash"] = GIT_HASH;
-
-    // Retrieve hostname dynamically (in case it changed)
-    Preferences prefs;
-    prefs.begin("config", true);
-    doc["hostname"] = prefs.getString("hostname", "NIMRS-Decoder");
-    prefs.end();
-
-    doc["fs_total"] = LittleFS.totalBytes();
-    doc["fs_used"] = LittleFS.usedBytes();
-
-    JsonArray funcs = doc["functions"].to<JsonArray>();
-    for (int i = 0; i < 29; i++)
-      funcs.add(state.functions[i]);
-
-    sendJson(doc);
+    handleStatus();
   });
 
   // API: Hostname Config
@@ -411,12 +380,22 @@ void ConnectivityManager::handleFileUpload() {
       return;
     }
 
+    // Security Check: Null Byte Injection
+    if (filename.indexOf('\0') >= 0) {
+      Log.printf("Upload Blocked: Null byte detected in %s\n",
+                 filename.c_str());
+      fsUploadFile = File(); // Ensure invalid
+      return;
+    }
+
     // Security Check: Whitelist Extensions
     // Only allow specific asset types to prevent uploading malicious scripts
     // (HTML/JS) or overwriting system files.
     bool allowed = false;
-    if (filename.endsWith(".json") || filename.endsWith(".wav") ||
-        filename.endsWith(".mp3")) {
+    String lowerName = filename;
+    lowerName.toLowerCase();
+    if (lowerName.endsWith(".json") || lowerName.endsWith(".wav") ||
+        lowerName.endsWith(".mp3")) {
       allowed = true;
     }
 
@@ -610,7 +589,6 @@ void ConnectivityManager::handleCV() {
 void ConnectivityManager::handleCvAll() {
   if (_server.method() == HTTP_GET) {
     JsonDocument doc;
-    JsonObject obj = doc.to<JsonObject>();
     NmraDcc &dcc = DccController::getInstance().getDcc();
 
     // Loop through ALL defined CVs in our Registry
@@ -618,7 +596,7 @@ void ConnectivityManager::handleCvAll() {
       uint16_t id = CV_DEFS[i].id;
       char buf[12];
       snprintf(buf, sizeof(buf), "%d", id);
-      obj[buf] = dcc.getCV(id);
+      doc[buf] = dcc.getCV(id);
     }
 
     sendJson(doc);
@@ -657,6 +635,41 @@ void ConnectivityManager::handleAudioPlay() {
 
   AudioController::getInstance().playFile(file.c_str());
   _server.send(200, "text/plain", "Playing");
+}
+
+void ConnectivityManager::handleStatus() {
+  SystemContext &ctx = SystemContext::getInstance();
+  ScopedLock lock(ctx);
+  SystemState &state = ctx.getState();
+  JsonDocument doc;
+
+  // Use the configured address from NmraDcc, not just the last packet address
+  doc["address"] = DccController::getInstance().getDcc().getAddr();
+
+  // Map internal 0-255 speed to DCC 0-126 steps for UI display
+  uint8_t dccSpeed = map(state.speed, 0, 255, 0, 126);
+  doc["speed"] = dccSpeed;
+
+  doc["direction"] = state.direction ? "forward" : "reverse";
+  doc["wifi"] = state.wifiConnected;
+  doc["uptime"] = millis() / 1000;
+  doc["version"] = BUILD_VERSION;
+  doc["hash"] = GIT_HASH;
+
+  // Retrieve hostname dynamically (in case it changed)
+  Preferences prefs;
+  prefs.begin("config", true);
+  doc["hostname"] = prefs.getString("hostname", "NIMRS-Decoder");
+  prefs.end();
+
+  doc["fs_total"] = LittleFS.totalBytes();
+  doc["fs_used"] = LittleFS.usedBytes();
+
+  JsonArray funcs = doc["functions"].to<JsonArray>();
+  for (int i = 0; i < 29; i++)
+    funcs.add(state.functions[i]);
+
+  sendJson(doc);
 }
 
 void ConnectivityManager::sendJson(const JsonDocument &doc) {

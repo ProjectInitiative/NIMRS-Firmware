@@ -17,6 +17,14 @@ def main():
     # Ensure output directory exists
     os.makedirs("tests/bin", exist_ok=True)
 
+    # Ensure config.h exists (copy from config.example.h if missing)
+    if not os.path.exists("config.h") and os.path.exists("config.example.h"):
+        print("Creating config.h from config.example.h for testing...")
+        with open("config.example.h", "r") as src:
+            content = src.read()
+        with open("config.h", "w") as dst:
+            dst.write(content)
+
     # Locate tests
     test_files = glob.glob("tests/test_*.cpp")
     if not test_files:
@@ -90,6 +98,14 @@ def main():
                     sources.append("tests/mocks/mocks.cpp")
 
                 print(f"  Heuristics resolved: {sources}")
+
+            # Check for flags
+            match_flags = re.search(r"//\s*TEST_FLAGS:\s*(.*)", content)
+            if match_flags:
+                flags_str = match_flags.group(1).strip()
+                if flags_str:
+                    extra_flags = flags_str.split()
+                print(f"  Flags found: {extra_flags}")
 
         # Compile
         output_bin = os.path.join("tests/bin", test_name)

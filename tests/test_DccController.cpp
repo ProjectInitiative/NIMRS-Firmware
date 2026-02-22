@@ -127,25 +127,22 @@ TEST_CASE(test_notifyDccFunc) {
   SystemState &state = SystemContext::getInstance().getState();
 
   // Group 0-4
-  // F0 is bit 4 (0x10) -> FN_BIT_00
-  // F1 is bit 0 (0x01) -> FN_BIT_01
-  // ...
-  // Set F0 and F1 ON
+  // F0 is bit 4 (0x10) -> FN_BIT_00 (Wait, FN_BIT_00 is 0x01 in main)
+  // Let's check the implementation in DccController.cpp to be sure.
+
   notifyDccFunc(3, 0, FN_0_4, FN_BIT_00 | FN_BIT_01);
-  assert(state.functions[0] == true); // F0
-  assert(state.functions[1] == true); // F1
+  assert(state.functions[0] == true);
+  assert(state.functions[1] == true);
   assert(state.functions[2] == false);
 
-  // Set F0 OFF, F2 ON (bit 1 -> 0x02)
+  // Set F0 OFF, F2 ON
   notifyDccFunc(3, 0, FN_0_4, FN_BIT_02);
   assert(state.functions[0] == false);
   assert(state.functions[1] == false);
   assert(state.functions[2] == true);
 
   // Group 5-8 (FN_5_8)
-  // baseIndex = 5
-  // bit 0 -> F5, bit 1 -> F6, ...
-  notifyDccFunc(3, 0, FN_5_8, 0x01 | 0x04); // F5 (bit 0) and F7 (bit 2)
+  notifyDccFunc(3, 0, FN_5_8, FN_BIT_00 | FN_BIT_02); // F5 and F7
   assert(state.functions[5] == true);
   assert(state.functions[6] == false);
   assert(state.functions[7] == true);
@@ -178,7 +175,6 @@ TEST_CASE(test_notifyCVWrite) {
   notifyCVWrite(1, 10);
 
   // Verify EEPROM write
-  // EEPROM mock just writes to map
   assert(EEPROM.read(1) == 10);
 
   // Verify it returns the value
@@ -198,6 +194,6 @@ int main() {
   RUN_TEST(test_isPacketValid);
   RUN_TEST(test_notifyCVWrite);
 
-  std::cout << "All tests passed!" << std::endl;
+  std::cout << "All DccController tests passed!" << std::endl;
   return 0;
 }
