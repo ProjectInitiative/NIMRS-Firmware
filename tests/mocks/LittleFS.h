@@ -37,6 +37,11 @@ public:
         return f;
     }
 
+    // If writing, return a new valid file
+    if (strchr(mode, 'w') || strchr(mode, 'a') || strchr(mode, '+')) {
+      return File(path, 0);
+    }
+
     return File();
   }
 

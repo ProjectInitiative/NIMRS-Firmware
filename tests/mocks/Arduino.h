@@ -87,6 +87,19 @@ public:
       return 0;
     return (*this)[index];
   }
+  String substring(unsigned int beginIndex, unsigned int endIndex) const {
+    if (beginIndex > this->length())
+      return "";
+    unsigned int len = endIndex - beginIndex;
+    if (beginIndex + len > this->length())
+      len = this->length() - beginIndex;
+    return this->substr(beginIndex, len);
+  }
+  String substring(unsigned int beginIndex) const {
+    if (beginIndex > this->length())
+      return "";
+    return this->substr(beginIndex);
+  }
   void remove(unsigned int index, unsigned int count = (unsigned int)-1) {
     if (index >= this->length())
       return;

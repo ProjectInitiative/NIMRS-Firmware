@@ -47,6 +47,7 @@ public:
 
   int scanNetworks() { return 0; }
   String SSID(int i) { return ""; }
+  String SSID() { return "TestSSID"; }
   int RSSI(int i) { return 0; }
   int encryptionType(int i) { return 0; }
 

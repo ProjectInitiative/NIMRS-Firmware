@@ -1,5 +1,6 @@
 #include "ConnectivityManager.h"
 #include "AudioController.h"
+#include "BackupManager.h"
 #include "CvRegistry.h"
 #include "DccController.h"
 #include "LameJs.h"
@@ -20,6 +21,41 @@
 #define AUTH_CHECK()                                                           \
   if (!isAuthenticated())                                                      \
   return
+
+/**
+ * Helper to bridge ArduinoJson serialization and WebServer chunked streaming.
+ */
+class ChunkedPrint : public Print {
+public:
+  ChunkedPrint(WebServer &server) : _server(server), _pos(0) {}
+  ~ChunkedPrint() { flush(); }
+
+  size_t write(uint8_t c) override {
+    if (_pos >= sizeof(_buffer)) {
+      flush();
+    }
+    _buffer[_pos++] = c;
+    return 1;
+  }
+
+  size_t write(const uint8_t *buffer, size_t size) override {
+    flush();
+    _server.sendContent((const char *)buffer, size);
+    return size;
+  }
+
+  void flush() {
+    if (_pos > 0) {
+      _server.sendContent((const char *)_buffer, _pos);
+      _pos = 0;
+    }
+  }
+
+private:
+  WebServer &_server;
+  uint8_t _buffer[128];
+  size_t _pos;
+};
 
 ConnectivityManager::ConnectivityManager() : _server(80) {}
 
@@ -269,6 +305,49 @@ void ConnectivityManager::setup() {
         handleFileUpload();
       });
 
+  // API: Backup & Restore
+  _server.on("/api/backup", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    _server.sendHeader("Content-Disposition",
+                       "attachment; filename=nimrs_backup.tar");
+    _server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    _server.send(200, "application/x-tar", "");
+
+    ChunkedPrint writer(_server);
+    BackupManager::getInstance().generateBackup(&writer);
+    writer.flush();
+    _server.sendContent(""); // End chunked transfer
+  });
+
+  static String restoreError;
+  _server.on(
+      "/api/restore", HTTP_POST,
+      [this]() {
+        AUTH_CHECK();
+        if (restoreError.length() > 0) {
+          _server.send(500, "text/plain", "Restore Failed: " + restoreError);
+        } else {
+          _server.send(200, "text/plain", "Restore OK. Rebooting...");
+          _shouldRestart = true;
+          _restartTimer = millis();
+        }
+      },
+      [this]() {
+        AUTH_CHECK();
+        HTTPUpload &upload = _server.upload();
+        if (upload.status == UPLOAD_FILE_START) {
+          restoreError = ""; // Clear previous error
+          BackupManager::getInstance().beginRestore();
+        } else if (upload.status == UPLOAD_FILE_WRITE) {
+          BackupManager::getInstance().writeChunk(upload.buf,
+                                                  upload.currentSize);
+        } else if (upload.status == UPLOAD_FILE_END) {
+          if (!BackupManager::getInstance().endRestore(restoreError)) {
+            Log.println("Restore Failed: " + restoreError);
+          }
+        }
+      });
+
   // API: WiFi Management
   /**
    * @api {POST} /api/wifi/save Save WiFi Config
@@ -503,41 +582,6 @@ void ConnectivityManager::loop() {
 }
 
 // --- File Management Implementation ---
-
-/**
- * Helper to bridge ArduinoJson serialization and WebServer chunked streaming.
- */
-class ChunkedPrint : public Print {
-public:
-  ChunkedPrint(WebServer &server) : _server(server), _pos(0) {}
-  ~ChunkedPrint() { flush(); }
-
-  size_t write(uint8_t c) override {
-    if (_pos >= sizeof(_buffer)) {
-      flush();
-    }
-    _buffer[_pos++] = c;
-    return 1;
-  }
-
-  size_t write(const uint8_t *buffer, size_t size) override {
-    flush();
-    _server.sendContent((const char *)buffer, size);
-    return size;
-  }
-
-  void flush() {
-    if (_pos > 0) {
-      _server.sendContent((const char *)_buffer, _pos);
-      _pos = 0;
-    }
-  }
-
-private:
-  WebServer &_server;
-  uint8_t _buffer[128];
-  size_t _pos;
-};
 
 void ConnectivityManager::handleFileList() {
   File root = LittleFS.open("/");
