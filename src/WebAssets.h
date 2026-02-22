@@ -200,6 +200,15 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         <button class="btn warning" onclick="measureResistance()">Measure Resistance</button>
                         <div id="res-status" style="font-weight: bold;"></div>
                     </div>
+
+                    <div style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                        <h4>Manual Measurement</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            Alternatively, measure resistance directly across Motor pins (18 & 19) or commutator with decoder removed.
+                            <br>
+                            Enter result in <b>CV 149</b> (1 unit = 0.01 Ohms). E.g., 10.5 Ohms = 1050.
+                        </p>
+                    </div>
                 </div>
             </section>
 
