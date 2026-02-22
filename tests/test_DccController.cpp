@@ -17,6 +17,8 @@
 #include "NmraDcc.h"
 #include "SystemContext.h"
 
+extern std::string mockLogBuffer;
+
 // Simple test framework
 #define TEST_CASE(name) void name()
 #define RUN_TEST(name)                                                         \
@@ -184,6 +186,27 @@ TEST_CASE(test_notifyCVWrite) {
   assert(EEPROM.read(2) == 20);
 }
 
+TEST_CASE(test_dcc_logging) {
+  resetState();
+  mockLogBuffer = ""; // Reset log buffer
+
+  // Test Speed Logging
+  notifyDccSpeed(1234, 0, 50, DCC_DIR_FWD, 0);
+  // Check if log buffer contains "DCC: Speed 50"
+  // Log message: "DCC: Speed %d (Dir %d) Addr %d"
+  // With 50, true, 1234 -> "DCC: Speed 50 (Dir 1) Addr 1234"
+  assert(mockLogBuffer.find("DCC: Speed 50") != std::string::npos);
+  assert(mockLogBuffer.find("Addr 1234") != std::string::npos);
+
+  mockLogBuffer = "";
+  // Test Func Logging
+  notifyDccFunc(1234, 0, FN_0_4, FN_BIT_00);
+  // Log message: "DCC: Func Grp %d State %x Addr %d"
+  // With FN_0_4 (0), FN_BIT_00 (0x01), 1234 -> "DCC: Func Grp 0 State 1 Addr 1234"
+  assert(mockLogBuffer.find("DCC: Func Grp 0") != std::string::npos);
+  assert(mockLogBuffer.find("Addr 1234") != std::string::npos);
+}
+
 int main() {
   RUN_TEST(test_getInstance);
   RUN_TEST(test_setup);
@@ -195,6 +218,7 @@ int main() {
   RUN_TEST(test_notifyDccFunc);
   RUN_TEST(test_isPacketValid);
   RUN_TEST(test_notifyCVWrite);
+  RUN_TEST(test_dcc_logging);
 
   std::cout << "All DccController tests passed!" << std::endl;
   return 0;
