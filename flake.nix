@@ -306,6 +306,32 @@
             echo "=== Agent Check Complete: READY FOR REVIEW ==="
           '';
 
+          # Script to analyze core dump
+          analyzeCoredump = pkgs.writeShellScriptBin "analyze-coredump" ''
+            # Ensure virtualenv exists
+            VENV_DIR=".venv-coredump"
+            if [ ! -d "$VENV_DIR" ]; then
+                echo "Creating virtualenv for esp-coredump in $VENV_DIR..."
+                python3 -m venv "$VENV_DIR"
+                source "$VENV_DIR/bin/activate"
+                echo "Installing esp-coredump..."
+                pip install esp-coredump
+            else
+                source "$VENV_DIR/bin/activate"
+            fi
+
+            if [ $# -eq 0 ]; then
+                echo "Usage: analyze-coredump <args>"
+                echo "Example: analyze-coredump info_corefile -t b64 -c coredump.txt build/NIMRS-Firmware.ino.elf"
+                echo "Running esp-coredump --help..."
+                esp-coredump --help
+                exit 0
+            fi
+
+            echo "Running esp-coredump $@"
+            esp-coredump "$@"
+          '';
+
           # Script to sync platformio.ini libs
           syncLibs = pkgs.writeShellScriptBin "sync-libs" ''
             export ARDUINO_LIBRARY_INDEX="${arduino-indexes}/index/library_index.json"
@@ -338,6 +364,7 @@
                 ciReady
                 agentCheck
                 syncLibs
+                analyzeCoredump
               ];
 
             shellHook = ''
@@ -379,6 +406,7 @@
                             echo "  run-tests                 : Run host-side unit tests"
                             echo "  ci-ready                  : Run formatting, tests, and build to verify CI readiness"
                             echo "  agent-check               : Run ci-ready + check for merge conflicts (REQUIRED for Agents)"
+                            echo "  analyze-coredump <args>   : Analyze core dump (installs esp-coredump in venv)"
                             echo "  treefmt                   : Format all code (C++, JSON, MD)"
                             echo "  sync-libs                 : Sync libs from common-libs.nix to platformio.ini"
                             echo "  nix build                 : Clean build of the firmware"
