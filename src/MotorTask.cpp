@@ -165,9 +165,8 @@ void MotorTask::_loop() {
         if (++decimate >= 2) {
           decimate = 0;
           if (_testDataIdx < MAX_TEST_POINTS) {
-            _testData[_testDataIdx++] = {
-                (uint32_t)t, _targetSpeedStep, _currentDuty, avgCurrent,
-                actualRpm};
+            _testData[_testDataIdx++] = {(uint32_t)t, _targetSpeedStep,
+                                         _currentDuty, avgCurrent, actualRpm};
           }
         }
       }
