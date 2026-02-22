@@ -168,10 +168,12 @@ void ConnectivityManager::setup() {
   _server.on(
       "/api/files/upload", HTTP_POST,
       [this]() {
-        // We check auth in the response phase too, but rely on _uploadAuthPassed/Error for status
+        // We check auth in the response phase too, but rely on
+        // _uploadAuthPassed/Error for status
         if (_uploadError == "Unauthorized") {
-           // Auth failed during upload start
-           return; // requestAuthentication() was likely called inside handleFileUpload
+          // Auth failed during upload start
+          return; // requestAuthentication() was likely called inside
+                  // handleFileUpload
         }
         AUTH_CHECK();
         if (_uploadError.length() > 0) {
@@ -181,7 +183,8 @@ void ConnectivityManager::setup() {
         }
       },
       [this]() {
-        // AUTH_CHECK removed here to prevent repeated auth calls during streaming
+        // AUTH_CHECK removed here to prevent repeated auth calls during
+        // streaming
         handleFileUpload();
       });
 
