@@ -121,11 +121,8 @@ inline void serializeJson(const JsonDocument &doc, String &out) {
         out += val;
       } else {
         // Check if number (simple check)
-        bool isNum = !val.empty() &&
-                     val.find_first_not_of("0123456789.-") == std::string::npos;
-        // Also handle potential issues with version strings like "1.0.0" being
-        // treated as number? "dev" is not number. "1.2.3" is number? No,
-        // multiple dots.
+        bool isNum = !val.empty() && val.find_first_not_of("0123456789.- ") ==
+                                         std::string::npos;
         if (std::count(val.begin(), val.end(), '.') > 1)
           isNum = false;
 
@@ -144,8 +141,9 @@ inline void serializeJson(const JsonDocument &doc, String &out) {
 inline void serializeJson(const JsonDocument &doc, Print &out) {
   String s;
   serializeJson(doc, s);
-  out.print(s);
+  out.print(s.c_str());
 }
+
 inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }
 
