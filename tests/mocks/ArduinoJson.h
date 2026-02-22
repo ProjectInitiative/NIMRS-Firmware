@@ -140,6 +140,11 @@ public:
   template <typename T> T to() { return T(); }
   template <typename T> T add() { return T(); }
   template <typename T> T as() { return (T) * this; }
+
+  bool containsKey(const char* key) const {
+    if (!_dataPtr) return false;
+    return _dataPtr->count((std::string)key) > 0;
+  }
 };
 
 // Implement conversions
@@ -162,6 +167,10 @@ public:
 
   template <typename T> T to() { return T(); }
   template <typename T> T as() { return T(); }
+
+  bool containsKey(const char* key) const {
+    return _data.count((std::string)key) > 0;
+  }
 
   void clear() {
     _data.clear();

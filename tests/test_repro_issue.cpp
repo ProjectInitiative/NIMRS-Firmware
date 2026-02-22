@@ -1,5 +1,5 @@
 // clang-format off
-// TEST_SOURCES: src/ConnectivityManager.cpp tests/mocks/mocks.cpp
+// TEST_SOURCES: src/ConnectivityManager.cpp tests/mocks/mocks.cpp tests/mocks/BackupManager_mock.cpp
 // TEST_FLAGS: -DSKIP_MOCK_CONNECTIVITY_MANAGER
 // clang-format on
 #include <cassert>

@@ -285,6 +285,26 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 </details>
 
                 <details class="settings-group">
+                    <summary>Backup & Restore</summary>
+                    <div class="settings-content">
+                        <div style="margin-bottom: 20px;">
+                            <h4>Backup Configuration</h4>
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Download all settings, CVs, and files.</p>
+                            <button class="btn primary" onclick="downloadBackup()">Download Backup (.tar)</button>
+                        </div>
+                        <div>
+                            <h4>Restore Configuration</h4>
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Upload a .tar backup file. The device will restart.</p>
+                            <form id="restore-form" onsubmit="handleRestore(event)">
+                                <input type="file" id="restore-file" required class="file-input-btn" accept=".tar">
+                                <button type="submit" class="btn warning">Restore & Restart</button>
+                            </form>
+                            <div id="restore-status" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="settings-group">
                     <summary>Firmware Update</summary>
                     <div class="settings-content">
                         <form method="POST" action="/update" enctype="multipart/form-data">
@@ -1196,6 +1216,46 @@ function measureResistance() {
         status.innerText = "Request Failed";
         status.style.color = 'var(--danger-color)';
     });
+}
+
+// --- Backup & Restore ---
+function downloadBackup() {
+    window.location.href = '/api/backup';
+}
+
+async function handleRestore(e) {
+    e.preventDefault();
+    const input = document.getElementById('restore-file');
+    if (!input.files.length) return;
+    if (!confirm("Restore backup? This will overwrite settings and files.")) return;
+
+    const file = input.files[0];
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const status = document.getElementById('restore-status');
+    status.innerText = "Restoring... Do not power off.";
+    status.style.color = "var(--warning-color)";
+
+    try {
+        const res = await fetch('/api/restore', {
+            method: 'POST',
+            body: fd
+        });
+
+        if (res.ok) {
+            status.innerText = "Restore Complete. Restarting...";
+            status.style.color = "var(--success-color)";
+            setTimeout(() => location.reload(), 5000);
+        } else {
+            const txt = await res.text();
+            status.innerText = "Error: " + txt;
+            status.style.color = "var(--danger-color)";
+        }
+    } catch (err) {
+        status.innerText = "Network Error";
+        status.style.color = "var(--danger-color)";
+    }
 }
 )rawliteral";
 
