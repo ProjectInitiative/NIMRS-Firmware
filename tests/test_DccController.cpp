@@ -1,5 +1,5 @@
-// TEST_FLAGS: -DSKIP_MOCK_DCC_CONTROLLER
 // clang-format off
+// TEST_FLAGS: -DSKIP_MOCK_DCC_CONTROLLER
 // TEST_SOURCES: src/DccController.cpp tests/mocks/mocks.cpp
 // clang-format on
 #include <cassert>

@@ -1,7 +1,7 @@
 // clang-format off
 // TEST_SOURCES: src/Logger.cpp tests/mocks/mocks.cpp
-// clang-format on
 // TEST_FLAGS: -DSKIP_MOCK_LOGGER
+// clang-format on
 #include "../src/Logger.h"
 #include <cassert>
 #include <iostream>
