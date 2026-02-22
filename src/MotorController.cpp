@@ -313,7 +313,8 @@ void MotorController::startTest() {
 
 String MotorController::getTestJSON() {
   String out;
-  out.reserve(MAX_TEST_POINTS * 64); // Pre-allocate ~3.8KB to avoid reallocations
+  out.reserve(MAX_TEST_POINTS *
+              64); // Pre-allocate ~3.8KB to avoid reallocations
   out += "[";
   for (int i = 0; i < _testDataIdx; i++) {
     char buf[128];

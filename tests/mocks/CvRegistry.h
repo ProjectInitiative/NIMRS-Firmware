@@ -10,7 +10,7 @@ static constexpr uint16_t LOAD_GAIN_SCALAR = 146;
 static constexpr uint16_t LEARN_THRESHOLD = 147;
 static constexpr uint16_t TRACK_VOLTAGE = 145;
 static constexpr uint16_t MOTOR_R_ARM = 149;
-}
+} // namespace CV
 
 struct CvDef {
   uint16_t id;

@@ -29,7 +29,8 @@ int main() {
   // Verify we have data
   String initialJson = mc.getTestJSON();
   if (initialJson.length() < 100) { // Should be > 3000
-    std::cerr << "Error: Test data not populated correctly. Length: " << initialJson.length() << std::endl;
+    std::cerr << "Error: Test data not populated correctly. Length: "
+              << initialJson.length() << std::endl;
     std::cout << "JSON: " << initialJson.c_str() << std::endl;
     return 1;
   }
@@ -39,7 +40,8 @@ int main() {
     std::cerr << "Error: Invalid JSON format (brackets missing)." << std::endl;
     return 1;
   }
-  if (initialJson.indexOf("\"t\":") == -1 || initialJson.indexOf("\"spd\":") == -1) {
+  if (initialJson.indexOf("\"t\":") == -1 ||
+      initialJson.indexOf("\"spd\":") == -1) {
     std::cerr << "Error: JSON missing keys." << std::endl;
     return 1;
   }
@@ -56,7 +58,8 @@ int main() {
   std::chrono::duration<double> diff = end - start;
 
   std::cout << "Time: " << diff.count() << " s" << std::endl;
-  std::cout << "Average time per call: " << (diff.count() / iterations) * 1e6 << " us" << std::endl;
+  std::cout << "Average time per call: " << (diff.count() / iterations) * 1e6
+            << " us" << std::endl;
 
   return 0;
 }
