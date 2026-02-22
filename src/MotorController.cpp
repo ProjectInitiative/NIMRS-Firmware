@@ -115,7 +115,8 @@ void MotorController::loop() {
       float vTrack = (cvTv > 0) ? (cvTv * 0.1f) : 14.0f;
 
       // V_applied = V_track * (PWM / MaxPWM)
-      float duty = (float)testPwm / _maxPwm;
+      // Re-calculate duty used in the measurement phase (_maxPwm / 5)
+      float duty = ((float)(_maxPwm / 5)) / _maxPwm;
       float vApplied = vTrack * duty;
 
       if (_avgCurrent > 0.05f) { // Ensure some current is flowing
