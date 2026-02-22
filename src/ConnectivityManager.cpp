@@ -411,12 +411,22 @@ void ConnectivityManager::handleFileUpload() {
       return;
     }
 
+    // Security Check: Null Byte Injection
+    if (filename.indexOf('\0') >= 0) {
+      Log.printf("Upload Blocked: Null byte detected in %s\n",
+                 filename.c_str());
+      fsUploadFile = File(); // Ensure invalid
+      return;
+    }
+
     // Security Check: Whitelist Extensions
     // Only allow specific asset types to prevent uploading malicious scripts
     // (HTML/JS) or overwriting system files.
     bool allowed = false;
-    if (filename.endsWith(".json") || filename.endsWith(".wav") ||
-        filename.endsWith(".mp3")) {
+    String lowerName = filename;
+    lowerName.toLowerCase();
+    if (lowerName.endsWith(".json") || lowerName.endsWith(".wav") ||
+        lowerName.endsWith(".mp3")) {
       allowed = true;
     }
 

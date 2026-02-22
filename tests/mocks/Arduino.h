@@ -2,6 +2,7 @@
 #define ARDUINO_MOCK_H
 
 #include <cstring>
+#include <cctype>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -37,6 +38,12 @@ public:
       return -1;
     return (int)found;
   }
+  int indexOf(char c) const {
+    size_t found = this->find(c);
+    if (found == std::string::npos)
+      return -1;
+    return (int)found;
+  }
   int toInt() const {
     if (this->empty())
       return 0;
@@ -51,6 +58,11 @@ public:
   unsigned char concat(const char *cstr, unsigned int length) {
     this->append(cstr, length);
     return 1;
+  }
+  void toLowerCase() {
+    for (size_t i = 0; i < this->length(); i++) {
+      (*this)[i] = std::tolower((unsigned char)(*this)[i]);
+    }
   }
 };
 
