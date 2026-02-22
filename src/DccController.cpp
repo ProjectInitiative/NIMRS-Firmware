@@ -106,6 +106,10 @@ void notifyCVResetFactoryDefault() {
 
   // Automate reset using Registry
   for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
+    // Break the infinite loop: Do not write to CV 8 during a reset
+    if (CV_DEFS[i].id == 8) {
+      continue;
+    }
     dcc.setCV(CV_DEFS[i].id, CV_DEFS[i].defaultValue);
   }
 
@@ -115,6 +119,14 @@ void notifyCVResetFactoryDefault() {
 uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
   // Intercept CV8 for Factory Reset
   if (CV == 8) {
+    // Prevent infinite boot loop: If the library is saving the Manufacturer ID
+    // during startup initialization, save it and do NOT reboot.
+    if (millis() < 3000) {
+      EEPROM.write(CV, Value);
+      EEPROM.commit();
+      return Value;
+    }
+
     Log.println("DCC: Factory Reset Triggered (CV8)");
     notifyCVResetFactoryDefault();
 
