@@ -168,6 +168,11 @@ void ConnectivityManager::setup() {
   _server.on(
       "/api/files/upload", HTTP_POST,
       [this]() {
+        // We check auth in the response phase too, but rely on _uploadAuthPassed/Error for status
+        if (_uploadError == "Unauthorized") {
+           // Auth failed during upload start
+           return; // requestAuthentication() was likely called inside handleFileUpload
+        }
         AUTH_CHECK();
         if (_uploadError.length() > 0) {
           _server.send(500, "text/plain", _uploadError);
@@ -176,7 +181,7 @@ void ConnectivityManager::setup() {
         }
       },
       [this]() {
-        AUTH_CHECK();
+        // AUTH_CHECK removed here to prevent repeated auth calls during streaming
         handleFileUpload();
       });
 
@@ -419,6 +424,12 @@ void ConnectivityManager::handleFileUpload() {
 
   if (upload.status == UPLOAD_FILE_START) {
     _uploadError = "";
+    _uploadAuthPassed = isAuthenticated();
+    if (!_uploadAuthPassed) {
+      _uploadError = "Unauthorized";
+      return;
+    }
+
     String filename = upload.filename;
     if (!filename.startsWith("/"))
       filename = "/" + filename;
@@ -511,11 +522,11 @@ void ConnectivityManager::handleFileUpload() {
     }
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (fsUploadFile) {
+    if (_uploadAuthPassed && fsUploadFile) {
       fsUploadFile.write(upload.buf, upload.currentSize);
     }
   } else if (upload.status == UPLOAD_FILE_END) {
-    if (fsUploadFile) {
+    if (_uploadAuthPassed && fsUploadFile) {
       fsUploadFile.close();
       Log.printf("Upload End: %lu bytes\n", (unsigned long)upload.totalSize);
 
