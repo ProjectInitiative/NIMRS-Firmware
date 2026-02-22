@@ -1,4 +1,6 @@
+// clang-format off
 // TEST_SOURCES: src/BemfEstimator.cpp src/DspFilters.cpp src/RippleDetector.cpp
+// clang-format on
 #include "../src/BemfEstimator.h"
 #include "../src/DspFilters.h"
 #include "../src/RippleDetector.h"

@@ -1,4 +1,6 @@
+// clang-format off
 // TEST_SOURCES: tests/mocks/mocks.cpp
+// clang-format on
 #include "Arduino.h"
 #include "SystemContext.h"
 #include <assert.h>
