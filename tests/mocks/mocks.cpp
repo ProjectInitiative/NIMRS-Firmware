@@ -18,6 +18,7 @@ WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
 EEPROMClass EEPROM;
+unsigned long _mockMillis = 0;
 
 std::string mockLogBuffer;
 
