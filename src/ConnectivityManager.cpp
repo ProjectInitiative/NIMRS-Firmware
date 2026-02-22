@@ -168,11 +168,23 @@ void ConnectivityManager::setup() {
   _server.on(
       "/api/files/upload", HTTP_POST,
       [this]() {
+        // We check auth in the response phase too, but rely on
+        // _uploadAuthPassed/Error for status
+        if (_uploadError == "Unauthorized") {
+          // Auth failed during upload start
+          return; // requestAuthentication() was likely called inside
+                  // handleFileUpload
+        }
         AUTH_CHECK();
-        _server.send(200, "text/plain", "Upload OK");
+        if (_uploadError.length() > 0) {
+          _server.send(500, "text/plain", _uploadError);
+        } else {
+          _server.send(200, "text/plain", "Upload OK");
+        }
       },
       [this]() {
-        AUTH_CHECK();
+        // AUTH_CHECK removed here to prevent repeated auth calls during
+        // streaming
         handleFileUpload();
       });
 
@@ -414,6 +426,13 @@ void ConnectivityManager::handleFileUpload() {
   HTTPUpload &upload = _server.upload();
 
   if (upload.status == UPLOAD_FILE_START) {
+    _uploadError = "";
+    _uploadAuthPassed = isAuthenticated();
+    if (!_uploadAuthPassed) {
+      _uploadError = "Unauthorized";
+      return;
+    }
+
     String filename = upload.filename;
     if (!filename.startsWith("/"))
       filename = "/" + filename;
@@ -430,6 +449,7 @@ void ConnectivityManager::handleFileUpload() {
       Log.printf("Upload Blocked: Path traversal detected in %s\n",
                  filename.c_str());
       fsUploadFile = File(); // Ensure invalid
+      _uploadError = "Invalid filename (path traversal)";
       return;
     }
 
@@ -441,7 +461,51 @@ void ConnectivityManager::handleFileUpload() {
       Log.printf("Upload Blocked: Null byte detected in %s\n",
                  filename.c_str());
       fsUploadFile = File(); // Ensure invalid
+      _uploadError = "Invalid filename (null byte)";
       return;
+    }
+
+    // Smart Truncation for LittleFS (Limit ~31 chars)
+    // LittleFS on ESP32 typically has a 32-byte limit (31 chars + null).
+    // Note: This limit applies to the filename component.
+    String namePart =
+        filename.startsWith("/") ? filename.substring(1) : filename;
+    if (namePart.length() > 31) {
+      int dotIndex = namePart.lastIndexOf('.');
+      String ext = "";
+      String base = namePart;
+      if (dotIndex > 0) {
+        ext = namePart.substring(dotIndex);
+        base = namePart.substring(0, dotIndex);
+      }
+
+      // We need to fit into 31 chars.
+      int maxBase = 31 - ext.length();
+      if (base.length() > (unsigned int)maxBase) {
+        // Calculate a simple hash of the full original name to ensure uniqueness
+        // even if prefixes/suffixes match.
+        uint16_t hash = 0;
+        for (unsigned int i = 0; i < namePart.length(); i++) {
+          hash = (hash * 31) + namePart.charAt(i);
+        }
+        char hashStr[6];
+        snprintf(hashStr, sizeof(hashStr), "%04X", hash);
+
+        // Reserved for "~HASH" -> 5 chars
+        int reserved = 5;
+        int available = maxBase - reserved;
+        if (available < 2) available = 2; // Min chars from name
+
+        int keepStart = available / 2;
+        int keepEnd = available - keepStart;
+
+        String newBase = base.substring(0, keepStart) + "~" + String(hashStr) +
+                         base.substring(base.length() - keepEnd);
+        String newName = newBase + ext;
+        Log.printf("Renaming %s to %s (Length limit)\n", namePart.c_str(),
+                   newName.c_str());
+        filename = "/" + newName;
+      }
     }
 
     // Security Check: Whitelist Extensions
@@ -459,18 +523,23 @@ void ConnectivityManager::handleFileUpload() {
       Log.printf("Upload Blocked: Invalid extension for %s\n",
                  filename.c_str());
       fsUploadFile = File(); // Ensure invalid
+      _uploadError = "Invalid file extension";
       return;
     }
 
     Log.printf("Upload Start: %s\n", filename.c_str());
     fsUploadFile = LittleFS.open(filename, "w");
+    if (!fsUploadFile) {
+      Log.println("Upload Error: File open failed (FS full or invalid name?)");
+      _uploadError = "File open failed";
+    }
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (fsUploadFile) {
+    if (_uploadAuthPassed && fsUploadFile) {
       fsUploadFile.write(upload.buf, upload.currentSize);
     }
   } else if (upload.status == UPLOAD_FILE_END) {
-    if (fsUploadFile) {
+    if (_uploadAuthPassed && fsUploadFile) {
       fsUploadFile.close();
       Log.printf("Upload End: %lu bytes\n", (unsigned long)upload.totalSize);
 
