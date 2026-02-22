@@ -187,6 +187,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         <button class="btn small" onclick="copyTestResults()">Copy JSON</button>
                     </div>
                 </div>
+
+                <div class="card">
+                    <h3>Motor Calibration</h3>
+                    <p>Measure Armature Resistance (R).</p>
+                    <ol style="padding-left: 20px; color: var(--text-muted);">
+                        <li>Ensure loco is on powered track.</li>
+                        <li><b>HOLD THE WHEELS FIRMLY</b> to prevent rotation (STALL).</li>
+                        <li>Press Measure. The motor will hum for 1 second.</li>
+                    </ol>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <button class="btn warning" onclick="measureResistance()">Measure Resistance</button>
+                        <div id="res-status" style="font-weight: bold;"></div>
+                    </div>
+                </div>
             </section>
 
             <!-- System Tab -->
@@ -1139,6 +1153,40 @@ function copyTestResults() {
     document.getElementById('test-results').select();
     document.execCommand('copy');
     showToast("Copied");
+}
+
+function measureResistance() {
+    const status = document.getElementById('res-status');
+    status.innerText = "Starting...";
+
+    fetch('/api/motor/calibrate', { method: 'POST' })
+    .then(r => r.json())
+    .then(() => {
+        status.innerText = "Measuring...";
+        const poll = setInterval(() => {
+            fetch('/api/motor/calibrate')
+            .then(r => r.json())
+            .then(d => {
+                if (d.state === 'DONE') {
+                    clearInterval(poll);
+                    status.innerText = `R = ${d.resistance.toFixed(2)} Ohms (Saved)`;
+                    status.style.color = 'var(--success-color)';
+                } else if (d.state === 'ERROR') {
+                    clearInterval(poll);
+                    status.innerText = "Error: Low Current / Disconnected";
+                    status.style.color = 'var(--danger-color)';
+                } else if (d.state === 'IDLE') {
+                    // Timeout or reset
+                    clearInterval(poll);
+                    status.innerText = "Timed out or Aborted";
+                }
+            });
+        }, 500);
+    })
+    .catch(() => {
+        status.innerText = "Request Failed";
+        status.style.color = 'var(--danger-color)';
+    });
 }
 )rawliteral";
 

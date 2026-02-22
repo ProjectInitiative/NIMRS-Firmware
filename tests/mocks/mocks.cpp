@@ -23,6 +23,7 @@ unsigned long _mockMillis = 0;
 std::string mockLogBuffer;
 
 // Logger methods not inline in header
+#ifndef SKIP_MOCK_LOGGER
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
@@ -44,6 +45,7 @@ size_t Logger::write(const uint8_t *buffer, size_t size) {
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
 String Logger::getLogsHTML() { return ""; }
 void Logger::_addToBuffer(const String &line) {}
+#endif
 
 AudioController &AudioController::getInstance() {
   static AudioController instance;
@@ -74,6 +76,11 @@ MotorController &MotorController::getInstance() {
 MotorController::MotorController() {}
 void MotorController::startTest() {}
 String MotorController::getTestJSON() { return "{}"; }
+void MotorController::measureResistance() {}
+MotorController::ResistanceState MotorController::getResistanceState() const {
+  return ResistanceState::IDLE;
+}
+float MotorController::getMeasuredResistance() const { return 0.0f; }
 #endif
 
 File File::openNextFile() {
