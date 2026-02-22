@@ -51,7 +51,7 @@ static constexpr uint16_t HARDWARE_GAIN = 148;    // 0=Low, 1=High
 static constexpr uint16_t MOTOR_POLES = 143;   // Number of poles
 static constexpr uint16_t TRACK_VOLTAGE = 145; // Track Voltage (100mV units)
 static constexpr uint16_t MOTOR_R_ARM =
-    149; // Armature Resistance (10mOhm units)
+    149;                                  // Armature Resistance (10mOhm units)
 static constexpr uint16_t MOTOR_KE = 150; // Back-EMF Constant (mV/RPM)
 
 // Function Mapping
