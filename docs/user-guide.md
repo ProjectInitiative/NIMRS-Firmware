@@ -36,7 +36,7 @@ If automatic measurement fails or is not possible, you can measure the resistanc
 1.  **Power Off:** Ensure the locomotive is powered off and remove the decoder from the socket.
 2.  **Measure:** Using a multimeter, measure the resistance (in Ohms) between **Pin 18** (Motor 2) and **Pin 19** (Motor 1) on the 21-pin socket, or directly across the motor tabs.
 3.  **Calculate:** Convert the resistance to CV units by multiplying by 100 (1 unit = 0.01 Ohms).
-    - Example: 12.5 Ohms * 100 = **1250**
+    - Example: 12.5 Ohms \* 100 = **1250**
 4.  **Write:** Enter the calculated value into **CV 149**.
 
 ## Firmware Updates (OTA)
