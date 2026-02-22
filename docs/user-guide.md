@@ -13,6 +13,34 @@
 
 Navigate to `http://<decoder-ip>/` (e.g., `http://192.168.1.50`).
 
+### Authentication
+
+By default, the web interface is protected with:
+
+- **Username:** `admin`
+- **Password:** `admin`
+
+**Changing Credentials:**
+
+1. Navigate to the **System** tab.
+2. Expand the **Security** section.
+3. Enter new credentials and click **Update Credentials**.
+
+**Disabling Authentication:**
+To disable authentication entirely, leave the **Username** field blank and click **Update Credentials**.
+
+**Authentication API:**
+You can also manage authentication programmatically via the API:
+
+- **Endpoint:** `POST /api/config/webauth`
+- **Parameters:** `user`, `pass`
+- **Example:** To disable auth, send `user=` (empty) and `pass=` (empty).
+  ```bash
+  curl -u admin:admin -X POST http://<ip>/api/config/webauth -d "user=&pass="
+  ```
+
+### Dashboard Features
+
 - **Status:** Shows basic health (Speed, Direction, WiFi).
 - **Live Logs:** Click **Live Logs** to see real-time debug information (DCC packets, Motor logic).
 - **Firmware Update:** Click **Firmware Update** to upload a new version.
