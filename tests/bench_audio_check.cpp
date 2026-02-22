@@ -1,3 +1,4 @@
+#include "../src/AudioUtils.h"
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -36,9 +37,7 @@ void run_benchmark() {
   auto start2 = std::chrono::high_resolution_clock::now();
   volatile int matches2 = 0;
   for (int i = 0; i < iterations; ++i) {
-    size_t len = strlen(filename);
-    bool isMp3 = (len >= 4 && strcasecmp(filename + len - 4, ".mp3") == 0);
-    if (isMp3) {
+    if (isMp3File(filename)) {
       matches2++;
     }
   }
@@ -46,7 +45,7 @@ void run_benchmark() {
   std::chrono::duration<double> diff2 = end2 - start2;
 
   std::cout << "Unoptimized (String allocation): " << diff1.count() << " s\n";
-  std::cout << "Optimized (strcasecmp): " << diff2.count() << " s\n";
+  std::cout << "Optimized (AudioUtils::isMp3File): " << diff2.count() << " s\n";
   std::cout << "Speedup: " << diff1.count() / diff2.count() << "x\n";
 }
 
