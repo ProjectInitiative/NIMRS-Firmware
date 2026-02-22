@@ -46,21 +46,21 @@ Updates the device hostname. Requires a restart.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name | Type   | Description                  |
+| ---- | ------ | ---------------------------- |
 | name | String | New hostname (max 31 chars). |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Hostname saved. Restart required." |
+| Type   | Field | Description                         |
+| ------ | ----- | ----------------------------------- |
+| String | text  | "Hostname saved. Restart required." |
 
 #### Error Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Missing name" or "Invalid name length". |
+| Type   | Field | Description                              |
+| ------ | ----- | ---------------------------------------- |
+| String | text  | "Missing name" or "Invalid name length". |
 
 ---
 
@@ -72,22 +72,22 @@ Updates web interface credentials. Empty strings disable
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name | Type   | Description              |
+| ---- | ------ | ------------------------ |
 | user | String | Username (max 31 chars). |
 | pass | String | Password (max 31 chars). |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Web credentials saved. Restart required." |
+| Type   | Field | Description                                |
+| ------ | ----- | ------------------------------------------ |
+| String | text  | "Web credentials saved. Restart required." |
 
 #### Error Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Missing user or pass" or "Invalid length". |
+| Type   | Field | Description                                 |
+| ------ | ----- | ------------------------------------------- |
+| String | text  | "Missing user or pass" or "Invalid length". |
 
 ---
 
@@ -101,15 +101,15 @@ Plays a specific audio file.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name | Type   | Description      |
+| ---- | ------ | ---------------- |
 | file | String | Filename (path). |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Playing" |
+| Type   | Field | Description |
+| ------ | ----- | ----------- |
+| String | text  | "Playing"   |
 
 ---
 
@@ -121,17 +121,17 @@ Controls speed, direction, functions, etc.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
-| plain | JSON | JSON payload. |
-| action | String | Action to perform ("stop", |
-| [value] | Mixed | Value for the action. |
+| Name    | Type   | Description                        |
+| ------- | ------ | ---------------------------------- |
+| plain   | JSON   | JSON payload.                      |
+| action  | String | Action to perform ("stop",         |
+| [value] | Mixed  | Value for the action.              |
 | [index] | Number | Function index for "set_function". |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
+| Type | Field  | Description      |
+| ---- | ------ | ---------------- |
 | JSON | status | {"status": "ok"} |
 
 ---
@@ -144,11 +144,11 @@ Reads or writes a single CV.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
-| plain | JSON | JSON payload. |
-| cmd | String | "read" or "write". |
-| cv | Number | CV number. |
+| Name    | Type   | Description                   |
+| ------- | ------ | ----------------------------- |
+| plain   | JSON   | JSON payload.                 |
+| cmd     | String | "read" or "write".            |
+| cv      | Number | CV number.                    |
 | [value] | Number | Value to write (for "write"). |
 
 ---
@@ -161,9 +161,9 @@ Reads all known CVs.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| JSON | cvs | Key-value map of CV ID to value. |
+| Type | Field | Description                      |
+| ---- | ----- | -------------------------------- |
+| JSON | cvs   | Key-value map of CV ID to value. |
 
 ---
 
@@ -175,14 +175,14 @@ Writes multiple CVs.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name  | Type | Description                                      |
+| ----- | ---- | ------------------------------------------------ |
 | plain | JSON | JSON object where keys are CV IDs and values are |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
+| Type | Field  | Description      |
+| ---- | ------ | ---------------- |
 | JSON | status | {"status": "ok"} |
 
 ---
@@ -195,9 +195,9 @@ Retrieves definition of all supported CVs.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| Array | cvs | Array of {cv, name, desc}. |
+| Type  | Field | Description                |
+| ----- | ----- | -------------------------- |
+| Array | cvs   | Array of {cv, name, desc}. |
 
 ---
 
@@ -211,21 +211,21 @@ Deletes a file.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name | Type   | Description       |
+| ---- | ------ | ----------------- |
 | path | String | Path to the file. |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Deleted" |
+| Type   | Field | Description |
+| ------ | ----- | ----------- |
+| String | text  | "Deleted"   |
 
 #### Error Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "File not found" or "Missing path argument" |
+| Type   | Field | Description                                 |
+| ------ | ----- | ------------------------------------------- |
+| String | text  | "File not found" or "Missing path argument" |
 
 ---
 
@@ -237,21 +237,21 @@ Deletes a file.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name | Type   | Description       |
+| ---- | ------ | ----------------- |
 | path | String | Path to the file. |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Deleted" |
+| Type   | Field | Description |
+| ------ | ----- | ----------- |
+| String | text  | "Deleted"   |
 
 #### Error Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "File not found" or "Missing path argument" |
+| Type   | Field | Description                                 |
+| ------ | ----- | ------------------------------------------- |
+| String | text  | "File not found" or "Missing path argument" |
 
 ---
 
@@ -263,8 +263,8 @@ Lists all files in LittleFS.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
+| Type  | Field | Description                    |
+| ----- | ----- | ------------------------------ |
 | Array | files | Array of objects {name, size}. |
 
 ---
@@ -277,15 +277,15 @@ Uploads a file (multipart/form-data).
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name | Type | Description         |
+| ---- | ---- | ------------------- |
 | file | File | The file to upload. |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "Upload OK" |
+| Type   | Field | Description |
+| ------ | ----- | ----------- |
+| String | text  | "Upload OK" |
 
 ---
 
@@ -299,15 +299,15 @@ Retrieves system logs.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name   | Type   | Description                        |
+| ------ | ------ | ---------------------------------- |
 | [type] | String | Filter by type: "data" or "debug". |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| Array | logs | Array of log strings. |
+| Type  | Field | Description           |
+| ----- | ----- | --------------------- |
+| Array | logs  | Array of log strings. |
 
 ---
 
@@ -321,8 +321,8 @@ Starts motor resistance measurement.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
+| Type | Field  | Description           |
+| ---- | ------ | --------------------- |
 | JSON | status | {"status": "started"} |
 
 ---
@@ -335,10 +335,10 @@ Gets current calibration state.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | state | "IDLE", "MEASURING", "DONE", or "ERROR". |
-| Number | resistance | Measured resistance in 10mOhm units. |
+| Type   | Field      | Description                              |
+| ------ | ---------- | ---------------------------------------- |
+| String | state      | "IDLE", "MEASURING", "DONE", or "ERROR". |
+| Number | resistance | Measured resistance in 10mOhm units.     |
 
 ---
 
@@ -350,8 +350,8 @@ Starts the motor test profile.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
+| Type | Field  | Description           |
+| ---- | ------ | --------------------- |
 | JSON | status | {"status": "started"} |
 
 ---
@@ -364,9 +364,9 @@ Retrieves motor test telemetry data.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| JSON | data | Telemetry JSON. |
+| Type | Field | Description     |
+| ---- | ----- | --------------- |
+| JSON | data  | Telemetry JSON. |
 
 ---
 
@@ -380,19 +380,19 @@ Retrieves the current system status.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| Number | address | Current DCC address. |
-| Number | speed | Current speed (0-126). |
-| String | direction | "forward" or "reverse". |
-| Boolean | wifi | WiFi connection status. |
-| Number | uptime | System uptime in seconds. |
-| String | version | Firmware build version. |
-| String | hash | Git commit hash. |
-| String | hostname | Device hostname. |
-| Number | fs_total | Total filesystem size. |
-| Number | fs_used | Used filesystem size. |
-| Array | functions | Array of 29 booleans (F0-F28). |
+| Type    | Field     | Description                    |
+| ------- | --------- | ------------------------------ |
+| Number  | address   | Current DCC address.           |
+| Number  | speed     | Current speed (0-126).         |
+| String  | direction | "forward" or "reverse".        |
+| Boolean | wifi      | WiFi connection status.        |
+| Number  | uptime    | System uptime in seconds.      |
+| String  | version   | Firmware build version.        |
+| String  | hash      | Git commit hash.               |
+| String  | hostname  | Device hostname.               |
+| Number  | fs_total  | Total filesystem size.         |
+| Number  | fs_used   | Used filesystem size.          |
+| Array   | functions | Array of 29 booleans (F0-F28). |
 
 ---
 
@@ -424,9 +424,9 @@ Clears WiFi credentials and restarts.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "WiFi settings reset. Restarting..." |
+| Type   | Field | Description                          |
+| ------ | ----- | ------------------------------------ |
+| String | text  | "WiFi settings reset. Restarting..." |
 
 ---
 
@@ -438,16 +438,16 @@ Saves WiFi credentials and restarts.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
-| ssid | String | SSID. |
-| pass | String | Password. |
+| Name | Type   | Description |
+| ---- | ------ | ----------- |
+| ssid | String | SSID.       |
+| pass | String | Password.   |
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
-| String | text | "WiFi credentials saved. Restarting..." |
+| Type   | Field | Description                             |
+| ------ | ----- | --------------------------------------- |
+| String | text  | "WiFi credentials saved. Restarting..." |
 
 ---
 
@@ -459,8 +459,8 @@ Scans for available networks.
 
 #### Success Response
 
-| Type | Field | Description |
-| --- | --- | --- |
+| Type  | Field    | Description                 |
+| ----- | -------- | --------------------------- |
 | Array | networks | Array of {ssid, rssi, enc}. |
 
 ---

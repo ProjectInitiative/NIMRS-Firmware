@@ -111,13 +111,15 @@
           api-docs =
             pkgs.runCommand "check-api-docs"
               {
-                nativeBuildInputs = [ pkgs.python3 ];
+                nativeBuildInputs = [ pkgs.python3 ] ++ mkFormattingTools pkgs;
                 src = ./.;
               }
               ''
                 cp -r $src/. .
                 chmod -R +w .
+                export XDG_CACHE_HOME=$TMPDIR
                 python3 tools/generate_api_docs.py
+                treefmt docs/API.md
                 diff -u $src/docs/API.md docs/API.md
                 touch $out
               '';
