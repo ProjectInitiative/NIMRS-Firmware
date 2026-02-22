@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <deque>
 #include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 // Max log lines to keep in RAM
