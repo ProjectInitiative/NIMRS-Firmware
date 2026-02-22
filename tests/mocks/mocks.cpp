@@ -1,5 +1,7 @@
 #include "Arduino.h"
+#ifndef SKIP_MOCK_AUDIO_CONTROLLER
 #include "AudioController.h"
+#endif
 #ifndef SKIP_MOCK_DCC_CONTROLLER
 #include "DccController.h"
 #endif
@@ -51,6 +53,7 @@ String Logger::getLogsHTML() { return ""; }
 void Logger::_addToBuffer(const String &line) {}
 #endif
 
+#ifndef SKIP_MOCK_AUDIO_CONTROLLER
 AudioController &AudioController::getInstance() {
   static AudioController instance;
   return instance;
@@ -58,6 +61,7 @@ AudioController &AudioController::getInstance() {
 AudioController::AudioController() {}
 void AudioController::loadAssets() {}
 void AudioController::playFile(const char *file) {}
+#endif
 
 #ifndef SKIP_MOCK_DCC_CONTROLLER
 DccController &DccController::getInstance() {

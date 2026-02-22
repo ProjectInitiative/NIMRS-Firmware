@@ -7,6 +7,10 @@
 #include <string>
 #include <vector>
 
+// Forward declarations
+class JsonArray;
+class JsonObject;
+
 struct JsonVariant {
   String val;
   JsonVariant() : val("") {}
@@ -19,56 +23,133 @@ struct JsonVariant {
   JsonVariant(double v) : val(std::to_string(v)) {}
   JsonVariant(bool v) : val(v ? "true" : "false") {}
 
-  template <typename T> T as() const { return (T) * this; }
-
-  template <typename T> void operator=(T v) { val = JsonVariant(v).val; }
-
-  template <typename T> T to() { return T(); }
-
+  // Basic conversions
   operator String() const { return val; }
   operator int() const { return val.toInt(); }
   operator uint8_t() const { return (uint8_t)val.toInt(); }
   operator bool() const { return val == "true" || val == "1"; }
+
+  template <typename T> T as() const;
+  template <typename T> bool is() const { return true; }
+  template <typename T> T to() { return T(); }
+
+  // Conversions to Array/Object
+  operator JsonArray() const;
+  operator JsonObject() const;
+
+  template <typename T> void operator=(T v) { val = JsonVariant(v).val; }
 };
 
+// JsonPair
+struct JsonPair {
+  String _k;
+  JsonVariant _v;
+  String key() const { return _k; }
+  JsonVariant value() const { return _v; }
+};
+
+// JsonArray Mock
 class JsonArray {
 public:
   std::vector<JsonVariant> *_dataPtr;
+
   JsonArray() : _dataPtr(nullptr) {}
   JsonArray(std::vector<JsonVariant> *ptr) : _dataPtr(ptr) {}
 
-  template <typename T> T add() { return T(); }
-  void add(JsonVariant v) {
-    if (_dataPtr)
-      _dataPtr->push_back(v);
+  typedef std::vector<JsonVariant>::iterator iterator;
+  typedef std::vector<JsonVariant>::const_iterator const_iterator;
+
+  iterator begin() { return _dataPtr ? _dataPtr->begin() : iterator(); }
+  iterator end() { return _dataPtr ? _dataPtr->end() : iterator(); }
+  const_iterator begin() const {
+    return _dataPtr ? _dataPtr->begin() : const_iterator();
   }
+  const_iterator end() const {
+    return _dataPtr ? _dataPtr->end() : const_iterator();
+  }
+
+  template <typename T> void add(T v) {
+    if (_dataPtr)
+      _dataPtr->push_back(JsonVariant(v));
+  }
+  template <typename T> T add() { return T(); }
+
   template <typename T> T to() { return T(); }
 };
 
+// JsonObject Mock
 class JsonObject {
 public:
-  struct Pair {
-    String _k;
-    JsonVariant _v;
-    String key() const { return _k; }
-    JsonVariant value() const { return _v; }
+  std::map<std::string, JsonVariant> *_dataPtr;
+
+  JsonObject() : _dataPtr(nullptr) {}
+  JsonObject(std::map<std::string, JsonVariant> *ptr) : _dataPtr(ptr) {}
+
+  JsonVariant &operator[](String key) {
+    if (!_dataPtr) {
+      static JsonVariant dummy;
+      return dummy;
+    }
+    return (*_dataPtr)[(std::string)key];
+  }
+  JsonVariant &operator[](const char *key) { return (*this)[String(key)]; }
+
+  // Iterator yielding JsonPair
+  struct iterator {
+    std::map<std::string, JsonVariant>::iterator _it;
+    bool operator!=(const iterator &other) const { return _it != other._it; }
+    iterator &operator++() {
+      ++_it;
+      return *this;
+    }
+    JsonPair operator*() const { return {_it->first.c_str(), _it->second}; }
+  };
+  struct const_iterator {
+    std::map<std::string, JsonVariant>::const_iterator _it;
+    bool operator!=(const const_iterator &other) const {
+      return _it != other._it;
+    }
+    const_iterator &operator++() {
+      ++_it;
+      return *this;
+    }
+    JsonPair operator*() const { return {_it->first.c_str(), _it->second}; }
   };
 
-  std::map<std::string, JsonVariant> _data;
-  std::vector<Pair> _pairs;
-
-  JsonVariant &operator[](String key) { return _data[(std::string)key]; }
-
-  typedef std::vector<Pair>::iterator iterator;
-  iterator begin() { return _pairs.begin(); }
-  iterator end() { return _pairs.end(); }
+  iterator begin() {
+    if (!_dataPtr)
+      return iterator();
+    return {_dataPtr->begin()};
+  }
+  iterator end() {
+    if (!_dataPtr)
+      return iterator();
+    return {_dataPtr->end()};
+  }
+  const_iterator begin() const {
+    if (!_dataPtr)
+      return const_iterator();
+    return {_dataPtr->begin()};
+  }
+  const_iterator end() const {
+    if (!_dataPtr)
+      return const_iterator();
+    return {_dataPtr->end()};
+  }
 
   template <typename T> T to() { return T(); }
   template <typename T> T add() { return T(); }
   template <typename T> T as() { return (T) * this; }
 };
 
-typedef JsonObject::Pair JsonPair;
+// Implement conversions
+inline JsonVariant::operator JsonArray() const { return JsonArray(); }
+inline JsonVariant::operator JsonObject() const { return JsonObject(); }
+
+// Implement as<T> specializations
+template <> inline String JsonVariant::as<String>() const { return val; }
+template <> inline int JsonVariant::as<int>() const { return val.toInt(); }
+template <typename T> T JsonVariant::as() const { return T(); }
 
 class JsonDocument {
 public:
@@ -77,24 +158,26 @@ public:
   bool _isArray = false;
 
   JsonVariant &operator[](String key) { return _data[(std::string)key]; }
+  JsonVariant &operator[](const char *key) { return _data[(std::string)key]; }
 
   template <typename T> T to() { return T(); }
+  template <typename T> T as() { return T(); }
 
-  template <typename T> T as() {
-    JsonObject obj;
-    for (auto const &[k, v] : _data) {
-      obj._data[k] = v;
-      obj._pairs.push_back({String(k.c_str()), v});
-    }
-    return obj;
+  void clear() {
+    _data.clear();
+    _arrayData.clear();
   }
-  void clear() { _data.clear(); }
 };
 
 template <> inline JsonArray JsonDocument::to<JsonArray>() {
   _isArray = true;
   _arrayData.clear();
   return JsonArray(&_arrayData);
+}
+template <> inline JsonObject JsonDocument::to<JsonObject>() {
+  _isArray = false;
+  _data.clear();
+  return JsonObject(&_data);
 }
 
 inline void serializeJson(const JsonDocument &doc, String &out) {
@@ -103,9 +186,20 @@ inline void serializeJson(const JsonDocument &doc, String &out) {
     for (size_t i = 0; i < doc._arrayData.size(); ++i) {
       if (i > 0)
         out += ",";
-      String valStr = doc._arrayData[i].val;
-      // Simple escaping if needed, but for logs usually safe
-      out += "\"" + valStr + "\"";
+      String val = doc._arrayData[i].val;
+      bool quote = true;
+      if (val == "true" || val == "false")
+        quote = false;
+      else if (val.find_first_not_of("0123456789.-") == std::string::npos &&
+               !val.empty())
+        quote = false;
+      else if (val.startsWith("{") || val.startsWith("["))
+        quote = false;
+
+      if (quote)
+        out += "\"" + val + "\"";
+      else
+        out += val;
     }
     out += "]";
   } else {
@@ -116,25 +210,20 @@ inline void serializeJson(const JsonDocument &doc, String &out) {
         out += ",";
       first = false;
       out += "\"" + String(pair.first.c_str()) + "\":";
-
       String val = pair.second.val;
-      // Heuristic for types: bool, number, string
-      if (val == "true" || val == "false") {
-        out += val;
-      } else {
-        // Check if number (simple check)
-        bool isNum = !val.empty() && val.find_first_not_of("0123456789.- ") ==
-                                         std::string::npos;
-        if (std::count(val.begin(), val.end(), '.') > 1)
-          isNum = false;
+      bool quote = true;
+      if (val == "true" || val == "false")
+        quote = false;
+      else if (val.find_first_not_of("0123456789.-") == std::string::npos &&
+               !val.empty())
+        quote = false;
+      else if (val.startsWith("{") || val.startsWith("["))
+        quote = false;
 
-        if (isNum) {
-          out += val;
-        } else {
-          // String
-          out += "\"" + val + "\"";
-        }
-      }
+      if (quote)
+        out += "\"" + val + "\"";
+      else
+        out += val;
     }
     out += "}";
   }
@@ -167,6 +256,7 @@ inline String trim(const String &s) {
 
 inline DeserializationError deserializeJson(JsonDocument &doc,
                                             const String &in) {
+  doc.clear();
   std::string s = (std::string)in;
   size_t pos = s.find('{');
   if (pos == std::string::npos)
@@ -187,8 +277,6 @@ inline DeserializationError deserializeJson(JsonDocument &doc,
     if (pos == std::string::npos)
       break;
     pos++;
-
-    // Skip whitespace
     pos = s.find_first_not_of(" \t\n\r", pos);
     if (pos == std::string::npos)
       break;
@@ -215,7 +303,11 @@ inline DeserializationError deserializeJson(JsonDocument &doc,
       break;
     pos++;
   }
+  return DeserializationError::Ok;
+}
 
+class File;
+inline DeserializationError deserializeJson(JsonDocument &doc, File &file) {
   return DeserializationError::Ok;
 }
 
