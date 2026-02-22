@@ -2,14 +2,14 @@
 #define WEBSERVER_MOCK_H
 
 #include "Arduino.h"
-#include <functional>
-#include <map>
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <cstddef>
-#include <stdint.h>
 #include <cstring>
+#include <functional>
+#include <map>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 enum HTTPMethod {
   HTTP_GET,

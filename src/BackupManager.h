@@ -4,9 +4,9 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <Preferences.h>
-#include <vector>
 #include <cstddef>
 #include <stdint.h>
+#include <vector>
 
 class BackupManager {
 public:
