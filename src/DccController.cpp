@@ -157,6 +157,8 @@ void notifyDccSpeed(uint16_t Addr, DCC_ADDR_TYPE AddrType, uint8_t Speed,
     targetSpeed = Speed;
   }
 
+  Log.debug("DCC: Speed %d (Dir %d) Addr %d", targetSpeed, direction, Addr);
+
   {
     ScopedLock lock(ctx);
     SystemState &state = ctx.getState();
@@ -223,6 +225,8 @@ void notifyDccFunc(uint16_t Addr, DCC_ADDR_TYPE AddrType, FN_GROUP FuncGrp,
   default:
     return;
   }
+
+  Log.debug("DCC: Func Grp %d State %x Addr %d", FuncGrp, FuncState, Addr);
 
   {
     ScopedLock lock(ctx);
