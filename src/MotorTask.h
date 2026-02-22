@@ -5,6 +5,7 @@
 #include "DspFilters.h"
 #include "MotorHal.h"
 #include "RippleDetector.h"
+#include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -32,6 +33,16 @@ public:
   };
   Status getStatus() const;
 
+  // Resistance Measurement
+  enum class ResistanceState { IDLE, MEASURING, DONE, ERROR };
+  void measureResistance();
+  ResistanceState getResistanceState() const;
+  float getMeasuredResistance() const;
+
+  // Test Mode
+  void startTest();
+  String getTestJSON() const;
+
 private:
   MotorTask();
 
@@ -58,9 +69,28 @@ private:
   float _ki;
   float _trackVoltage;
   float _maxRpm; // Calculated from CVs? Or hardcoded limit?
+  uint8_t _cvPwmDither;
 
   // Telemetry
   Status _status;
+
+  // Resistance Measurement State
+  ResistanceState _resistanceState;
+  unsigned long _resistanceStartTime;
+  float _measuredResistance;
+
+  // Test Mode State
+  bool _testMode;
+  unsigned long _testStartTime;
+  static const int MAX_TEST_POINTS = 100;
+  struct TestPoint {
+    uint32_t t;
+    uint8_t target;
+    float duty;
+    float current;
+    float rpm;
+  } _testData[MAX_TEST_POINTS];
+  int _testDataIdx;
 };
 
 #endif

@@ -7,6 +7,15 @@
 
 DccController::DccController() {}
 
+#ifdef UNIT_TEST
+DccController &DccController::getInstance() {
+  static DccController instance;
+  return instance;
+}
+
+NmraDcc &DccController::getDcc() { return _dcc; }
+#endif
+
 // Forward declaration
 void notifyCVResetFactoryDefault();
 
