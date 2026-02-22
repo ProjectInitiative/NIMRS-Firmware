@@ -1,8 +1,8 @@
 #ifndef ARDUINO_MOCK_H
 #define ARDUINO_MOCK_H
 
-#include <cstring>
 #include <cctype>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <map>
