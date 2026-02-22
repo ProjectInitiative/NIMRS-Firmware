@@ -58,10 +58,21 @@ void ConnectivityManager::setup() {
   // 3. Web Server Handlers
 
   // Embedded UI
+  /**
+   * @api {GET} / Root Index
+   * @apiGroup System
+   * @apiDescription Serves the main web interface.
+   */
   _server.on("/", HTTP_GET, [this]() {
     AUTH_CHECK();
     _server.send(200, "text/html", INDEX_HTML);
   });
+
+  /**
+   * @api {GET} /index.html Index HTML
+   * @apiGroup System
+   * @apiDescription Serves the main web interface (alias).
+   */
   _server.on("/index.html", HTTP_GET, [this]() {
     AUTH_CHECK();
     _server.send(200, "text/html", INDEX_HTML);
@@ -80,12 +91,36 @@ void ConnectivityManager::setup() {
   });
 
   // API: System Status
+  /**
+   * @api {GET} /api/status System Status
+   * @apiGroup Status
+   * @apiDescription Retrieves the current system status.
+   * @apiSuccess {Number} address Current DCC address.
+   * @apiSuccess {Number} speed Current speed (0-126).
+   * @apiSuccess {String} direction "forward" or "reverse".
+   * @apiSuccess {Boolean} wifi WiFi connection status.
+   * @apiSuccess {Number} uptime System uptime in seconds.
+   * @apiSuccess {String} version Firmware build version.
+   * @apiSuccess {String} hash Git commit hash.
+   * @apiSuccess {String} hostname Device hostname.
+   * @apiSuccess {Number} fs_total Total filesystem size.
+   * @apiSuccess {Number} fs_used Used filesystem size.
+   * @apiSuccess {Array} functions Array of 29 booleans (F0-F28).
+   */
   _server.on("/api/status", HTTP_GET, [this]() {
     AUTH_CHECK();
     handleStatus();
   });
 
   // API: Hostname Config
+  /**
+   * @api {POST} /api/config/hostname Set Hostname
+   * @apiGroup Config
+   * @apiDescription Updates the device hostname. Requires a restart.
+   * @apiParam {String} name New hostname (max 31 chars).
+   * @apiSuccess {String} text "Hostname saved. Restart required."
+   * @apiError {String} text "Missing name" or "Invalid name length".
+   */
   _server.on("/api/config/hostname", HTTP_POST, [this]() {
     AUTH_CHECK();
     if (!_server.hasArg("name")) {
@@ -107,6 +142,16 @@ void ConnectivityManager::setup() {
   });
 
   // API: Web Authentication Config
+  /**
+   * @api {POST} /api/config/webauth Set Web Credentials
+   * @apiGroup Config
+   * @apiDescription Updates web interface credentials. Empty strings disable
+   * auth.
+   * @apiParam {String} user Username (max 31 chars).
+   * @apiParam {String} pass Password (max 31 chars).
+   * @apiSuccess {String} text "Web credentials saved. Restart required."
+   * @apiError {String} text "Missing user or pass" or "Invalid length".
+   */
   _server.on("/api/config/webauth", HTTP_POST, [this]() {
     AUTH_CHECK();
     if (!_server.hasArg("user") || !_server.hasArg("pass")) {
@@ -135,6 +180,13 @@ void ConnectivityManager::setup() {
   });
 
   // API: Logs
+  /**
+   * @api {GET} /api/logs Get Logs
+   * @apiGroup Logs
+   * @apiDescription Retrieves system logs.
+   * @apiParam {String} [type] Filter by type: "data" or "debug".
+   * @apiSuccess {Array} logs Array of log strings.
+   */
   _server.on("/api/logs", HTTP_GET, [this]() {
     AUTH_CHECK();
     String filter = "";
@@ -149,22 +201,51 @@ void ConnectivityManager::setup() {
   });
 
   // API: File List
+  /**
+   * @api {GET} /api/files/list List Files
+   * @apiGroup Files
+   * @apiDescription Lists all files in LittleFS.
+   * @apiSuccess {Array} files Array of objects {name, size}.
+   */
   _server.on("/api/files/list", HTTP_GET, [this]() {
     AUTH_CHECK();
     handleFileList();
   });
 
   // API: File Delete
+  /**
+   * @api {POST} /api/files/delete Delete File
+   * @apiGroup Files
+   * @apiDescription Deletes a file.
+   * @apiParam {String} path Path to the file.
+   * @apiSuccess {String} text "Deleted"
+   * @apiError {String} text "File not found" or "Missing path argument"
+   */
   _server.on("/api/files/delete", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleFileDelete();
   });
+  /**
+   * @api {DELETE} /api/files/delete Delete File (Method)
+   * @apiGroup Files
+   * @apiDescription Deletes a file.
+   * @apiParam {String} path Path to the file.
+   * @apiSuccess {String} text "Deleted"
+   * @apiError {String} text "File not found" or "Missing path argument"
+   */
   _server.on("/api/files/delete", HTTP_DELETE, [this]() {
     AUTH_CHECK();
     handleFileDelete();
   });
 
   // API: File Upload
+  /**
+   * @api {POST} /api/files/upload Upload File
+   * @apiGroup Files
+   * @apiDescription Uploads a file (multipart/form-data).
+   * @apiParam {File} file The file to upload.
+   * @apiSuccess {String} text "Upload OK"
+   */
   _server.on(
       "/api/files/upload", HTTP_POST,
       [this]() {
@@ -189,42 +270,118 @@ void ConnectivityManager::setup() {
       });
 
   // API: WiFi Management
+  /**
+   * @api {POST} /api/wifi/save Save WiFi Config
+   * @apiGroup WiFi
+   * @apiDescription Saves WiFi credentials and restarts.
+   * @apiParam {String} ssid SSID.
+   * @apiParam {String} pass Password.
+   * @apiSuccess {String} text "WiFi credentials saved. Restarting..."
+   */
   _server.on("/api/wifi/save", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleWifiSave();
   });
+  /**
+   * @api {POST} /api/wifi/reset Reset WiFi
+   * @apiGroup WiFi
+   * @apiDescription Clears WiFi credentials and restarts.
+   * @apiSuccess {String} text "WiFi settings reset. Restarting..."
+   */
   _server.on("/api/wifi/reset", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleWifiReset();
   });
+  /**
+   * @api {GET} /api/wifi/scan Scan WiFi
+   * @apiGroup WiFi
+   * @apiDescription Scans for available networks.
+   * @apiSuccess {Array} networks Array of {ssid, rssi, enc}.
+   */
   _server.on("/api/wifi/scan", HTTP_GET, [this]() {
     AUTH_CHECK();
     handleWifiScan();
   });
 
   // API: Control
+  /**
+   * @api {POST} /api/control Control Decoder
+   * @apiGroup Control
+   * @apiDescription Controls speed, direction, functions, etc.
+   * @apiParam {JSON} plain JSON payload.
+   * @apiParam (Payload) {String} action Action to perform ("stop",
+   * "toggle_lights", "set_function", "set_speed", "set_direction",
+   * "set_log_level").
+   * @apiParam (Payload) {Mixed} [value] Value for the action.
+   * @apiParam (Payload) {Number} [index] Function index for "set_function".
+   * @apiSuccess {JSON} status {"status": "ok"}
+   */
   _server.on("/api/control", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleControl();
   });
+  /**
+   * @api {POST} /api/cv Read/Write CV
+   * @apiGroup Control
+   * @apiDescription Reads or writes a single CV.
+   * @apiParam {JSON} plain JSON payload.
+   * @apiParam (Payload) {String} cmd "read" or "write".
+   * @apiParam (Payload) {Number} cv CV number.
+   * @apiParam (Payload) {Number} [value] Value to write (for "write").
+   * @apiSuccess (Read) {JSON} cv {"cv": number, "value": number}
+   * @apiSuccess (Write) {JSON} status {"status": "ok"}
+   */
   _server.on("/api/cv", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleCV();
   });
+  /**
+   * @api {GET} /api/cv/all Read All CVs
+   * @apiGroup Control
+   * @apiDescription Reads all known CVs.
+   * @apiSuccess {JSON} cvs Key-value map of CV ID to value.
+   */
   _server.on("/api/cv/all", HTTP_GET, [this]() {
     AUTH_CHECK();
     handleCvAll();
   });
+  /**
+   * @api {POST} /api/cv/all Bulk Write CVs
+   * @apiGroup Control
+   * @apiDescription Writes multiple CVs.
+   * @apiParam {JSON} plain JSON object where keys are CV IDs and values are
+   * values.
+   * @apiSuccess {JSON} status {"status": "ok"}
+   */
   _server.on("/api/cv/all", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleCvAll();
   });
+  /**
+   * @api {POST} /api/audio/play Play Audio
+   * @apiGroup Control
+   * @apiDescription Plays a specific audio file.
+   * @apiParam {String} file Filename (path).
+   * @apiSuccess {String} text "Playing"
+   */
   _server.on("/api/audio/play", HTTP_POST, [this]() {
     AUTH_CHECK();
     handleAudioPlay();
   });
 
   // API: Motor Test
+  /**
+   * @api {POST} /api/motor/test Start Motor Test
+   * @apiGroup Motor
+   * @apiDescription Starts the motor test profile.
+   * @apiSuccess {JSON} status {"status": "started"}
+   */
+  /**
+   * @api {GET} /api/motor/test Get Motor Test Data
+   * @apiGroup Motor
+   * @apiDescription Retrieves motor test telemetry data.
+   * @apiSuccess {JSON} data Telemetry JSON.
+   */
   _server.on("/api/motor/test", [this]() {
     AUTH_CHECK();
     if (_server.method() == HTTP_POST) {
@@ -239,6 +396,19 @@ void ConnectivityManager::setup() {
   });
 
   // API: Motor Calibration
+  /**
+   * @api {POST} /api/motor/calibrate Start Calibration
+   * @apiGroup Motor
+   * @apiDescription Starts motor resistance measurement.
+   * @apiSuccess {JSON} status {"status": "started"}
+   */
+  /**
+   * @api {GET} /api/motor/calibrate Get Calibration Status
+   * @apiGroup Motor
+   * @apiDescription Gets current calibration state.
+   * @apiSuccess {String} state "IDLE", "MEASURING", "DONE", or "ERROR".
+   * @apiSuccess {Number} resistance Measured resistance in 10mOhm units.
+   */
   _server.on("/api/motor/calibrate", [this]() {
     AUTH_CHECK();
     if (_server.method() == HTTP_POST) {
@@ -272,6 +442,12 @@ void ConnectivityManager::setup() {
   });
 
   // API: CV Definitions
+  /**
+   * @api {GET} /api/cv/defs Get CV Definitions
+   * @apiGroup Control
+   * @apiDescription Retrieves definition of all supported CVs.
+   * @apiSuccess {Array} cvs Array of {cv, name, desc}.
+   */
   _server.on("/api/cv/defs", HTTP_GET, [this]() {
     AUTH_CHECK();
     JsonDocument doc;
@@ -463,6 +639,39 @@ void ConnectivityManager::handleFileUpload() {
       fsUploadFile = File(); // Ensure invalid
       _uploadError = "Invalid filename (null byte)";
       return;
+    }
+
+    // Smart Truncation for LittleFS (Limit ~31 chars)
+    // LittleFS on ESP32 typically has a 32-byte limit (31 chars + null).
+    // Note: This limit applies to the filename component.
+    String namePart =
+        filename.startsWith("/") ? filename.substring(1) : filename;
+    if (namePart.length() > 31) {
+      int dotIndex = namePart.lastIndexOf('.');
+      String ext = "";
+      String base = namePart;
+      if (dotIndex > 0) {
+        ext = namePart.substring(dotIndex);
+        base = namePart.substring(0, dotIndex);
+      }
+
+      // We need to fit into 31 chars.
+      int maxBase = 31 - ext.length();
+      if (base.length() > (unsigned int)maxBase) {
+        int keepStart = (maxBase - 1) / 2;
+        int keepEnd = maxBase - 1 - keepStart;
+        if (keepStart < 1)
+          keepStart = 1; // Sanity check
+        if (keepEnd < 0)
+          keepEnd = 0;
+
+        String newBase = base.substring(0, keepStart) + "~" +
+                         base.substring(base.length() - keepEnd);
+        String newName = newBase + ext;
+        Log.printf("Renaming %s to %s (Length limit)\n", namePart.c_str(),
+                   newName.c_str());
+        filename = "/" + newName;
+      }
     }
 
     // Security Check: Whitelist Extensions
