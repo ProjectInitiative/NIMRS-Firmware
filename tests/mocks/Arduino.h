@@ -39,10 +39,10 @@ public:
     return (int)found;
   }
   int indexOf(char c) const {
-    size_t found = this->find(c);
-    if (found == std::string::npos)
-      return -1;
-    return (int)found;
+    const char *p = strchr(this->c_str(), c);
+    if (p)
+      return p - this->c_str();
+    return -1;
   }
   int toInt() const {
     if (this->empty())
