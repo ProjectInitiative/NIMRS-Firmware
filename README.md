@@ -83,8 +83,4 @@ To enable accurate speed control, you must configure the following CVs:
   - Example: 14.0V = Value `140`.
 - **CV 143 (Motor Poles):** Number of motor poles (usually 3 or 5). Default is 5.
 
-## API Reference
-
-A full API reference is available in [docs/API.md](docs/API.md).
-
 See [DESIGN.md](DESIGN.md) for detailed architecture.
