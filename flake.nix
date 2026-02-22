@@ -293,25 +293,14 @@
                 exit 0
             fi
 
-            echo "Attempting dry-run merge of origin/main into $CURRENT_BRANCH..."
+            echo "Attempting to merge origin/main into $CURRENT_BRANCH..."
 
-            # Temporarily disable exit on error to capture merge result
-            set +e
-            git merge --no-commit --no-ff origin/main > /dev/null 2>&1
-            MERGE_RESULT=$?
-            set -e
+            # Perform a real merge. 
+            # If successful, it creates a merge commit.
+            # If it fails, it leaves conflict markers and exits due to 'set -e'.
+            git merge origin/main --no-edit
 
-            if [ $MERGE_RESULT -eq 0 ]; then
-                # Merge successful, abort the temporary state if needed
-                git merge --abort > /dev/null 2>&1 || true
-                echo "✔ Merge check passed: No conflicts with origin/main."
-            else
-                # Merge failed
-                git merge --abort > /dev/null 2>&1 || true
-                echo "❌ MERGE CONFLICT DETECTED!"
-                echo "Please resolve conflicts with 'git merge origin/main' before submitting."
-                exit 1
-            fi
+            echo "✔ Merge check passed: Successfully merged origin/main."
 
             echo "--------------------------------"
             echo "=== Agent Check Complete: READY FOR REVIEW ==="
