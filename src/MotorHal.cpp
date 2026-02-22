@@ -67,7 +67,7 @@ void MotorHal::init() {
   adc_digi_pattern_config_t adc_pattern[1] = {0};
   adc_pattern[0].atten = ADC_ATTEN_DB_0;
   adc_pattern[0].channel = (uint8_t)ADC_CHAN;
-  adc_pattern[0].unit = 0; // Explicitly ADC1 (S3 DMA requirement)
+  adc_pattern[0].unit = ADC_UNIT_1; // Explicitly ADC1 (S3 DMA requirement)
   adc_pattern[0].bit_width = (uint8_t)SOC_ADC_DIGI_MAX_BITWIDTH;
 
   adc_digi_configuration_t dig_cfg = {0};
