@@ -302,8 +302,8 @@
             set -e
 
             if [ $MERGE_RESULT -eq 0 ]; then
-                # Merge successful, abort the temporary state
-                git merge --abort
+                # Merge successful, abort the temporary state if needed
+                git merge --abort > /dev/null 2>&1 || true
                 echo "✔ Merge check passed: No conflicts with origin/main."
             else
                 # Merge failed

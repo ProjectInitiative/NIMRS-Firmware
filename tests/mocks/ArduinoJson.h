@@ -81,10 +81,42 @@ public:
 };
 
 inline void serializeJson(const JsonDocument &doc, String &out) {
-  out = "{\"mock\":true}";
+  out = "{";
+  bool first = true;
+  for (auto const &pair : doc._data) {
+    if (!first)
+      out += ",";
+    first = false;
+    out += "\"" + String(pair.first.c_str()) + "\":";
+
+    String val = pair.second.val;
+    // Heuristic for types: bool, number, string
+    if (val == "true" || val == "false") {
+      out += val;
+    } else {
+      // Check if number (simple check)
+      bool isNum = !val.empty() &&
+                   val.find_first_not_of("0123456789.-") == std::string::npos;
+      // Also handle potential issues with version strings like "1.0.0" being
+      // treated as number? "dev" is not number. "1.2.3" is number? No, multiple
+      // dots.
+      if (std::count(val.begin(), val.end(), '.') > 1)
+        isNum = false;
+
+      if (isNum) {
+        out += val;
+      } else {
+        // String
+        out += "\"" + val + "\"";
+      }
+    }
+  }
+  out += "}";
 }
 inline void serializeJson(const JsonDocument &doc, Print &out) {
-  out.print("{\"mock\":true}");
+  String s;
+  serializeJson(doc, s);
+  out.print(s);
 }
 inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }

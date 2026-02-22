@@ -120,6 +120,8 @@ extern ESPClass ESP;
 #define INPUT 0
 #define ADC_0db 0
 
+extern std::string mockLogBuffer;
+
 inline void pinMode(int pin, int mode) {}
 inline void analogReadResolution(int bits) {}
 inline void analogSetPinAttenuation(int pin, int attenuation) {}
