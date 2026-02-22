@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "nimrs-pinout.h"
 #include <EEPROM.h>
+#include <WiFi.h>
 
 DccController::DccController() {}
 
@@ -110,6 +111,22 @@ void notifyCVResetFactoryDefault() {
 }
 
 uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
+  // Intercept CV8 for Factory Reset
+  if (CV == 8) {
+    Log.println("DCC: Factory Reset Triggered (CV8)");
+    notifyCVResetFactoryDefault();
+
+    // Reset WiFi Credentials (erasing NVS config for WiFi)
+    Log.println("DCC: Resetting WiFi Credentials...");
+    WiFi.disconnect(true, true);
+
+    // Restart to apply clean state
+    Log.println("Rebooting in 1s...");
+    delay(1000);
+    ESP.restart();
+    return Value;
+  }
+
   Log.printf("DCC: Write CV%d = %d\n", CV, Value);
   EEPROM.write(CV, Value);
   EEPROM.commit();
