@@ -105,8 +105,8 @@ File File::openNextFile() {
   return File();
 }
 // BackupManager Test Helpers
-#include "WebServer.h"
 #include "Preferences.h"
+#include "WebServer.h"
 std::map<std::string, std::string> File::writtenFiles;
 std::map<std::string, std::string> File::fileContent;
 std::map<std::string, String> Preferences::storage;
