@@ -276,42 +276,31 @@
             set -e
             echo "=== Running Agent Pre-Submission Check ==="
 
-            # 1. Run CI Readiness (Builds, Tests, Formatting check, Dirty check)
-            ${ciReady}/bin/ci-ready
-
-            # 2. Check for Merge Conflicts
+            # 1. Check for Merge Conflicts / Update from main
             echo "--------------------------------"
-            echo "5. Checking for Merge Conflicts with origin/main..."
+            echo "1. Merging with origin/main..."
 
             # Ensure we have the latest remote refs
             git fetch origin main
 
             # Check if we are on a branch
             CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
-            if [ "$CURRENT_BRANCH" == "main" ]; then
-                echo "On main branch. Skipping conflict check."
-                exit 0
-            fi
-
-            echo "Attempting dry-run merge of origin/main into $CURRENT_BRANCH..."
-
-            # Temporarily disable exit on error to capture merge result
-            set +e
-            git merge --no-commit --no-ff origin/main > /dev/null 2>&1
-            MERGE_RESULT=$?
-            set -e
-
-            if [ $MERGE_RESULT -eq 0 ]; then
-                # Merge successful, abort the temporary state if needed
-                git merge --abort > /dev/null 2>&1 || true
-                echo "✔ Merge check passed: No conflicts with origin/main."
+            if [ "$CURRENT_BRANCH" != "main" ]; then
+                echo "Attempting to merge origin/main into $CURRENT_BRANCH..."
+                # Perform a real merge. 
+                # If successful, it creates a merge commit.
+                # If it fails, it leaves conflict markers and exits due to 'set -e'.
+                git merge origin/main --no-edit
+                echo "✔ Merge check passed: Successfully merged origin/main."
             else
-                # Merge failed
-                git merge --abort > /dev/null 2>&1 || true
-                echo "❌ MERGE CONFLICT DETECTED!"
-                echo "Please resolve conflicts with 'git merge origin/main' before submitting."
-                exit 1
+                echo "On main branch. Skipping conflict check."
             fi
+
+            # 2. Run CI Readiness (Builds, Tests, Formatting check, Dirty check)
+            # This now runs ON the merged result.
+            echo "--------------------------------"
+            echo "2. Verifying CI Readiness on merged result..."
+            ${ciReady}/bin/ci-ready
 
             echo "--------------------------------"
             echo "=== Agent Check Complete: READY FOR REVIEW ==="

@@ -15,8 +15,6 @@ struct JsonVariant {
   JsonVariant(int v) : val(std::to_string(v)) {}
   JsonVariant(unsigned int v) : val(std::to_string(v)) {}
   JsonVariant(long unsigned int v) : val(std::to_string(v)) {}
-  JsonVariant(float v) : val(std::to_string(v)) {}
-  JsonVariant(double v) : val(std::to_string(v)) {}
   JsonVariant(bool v) : val(v ? "true" : "false") {}
 
   template <typename T> T as() const { return (T) * this; }
@@ -33,15 +31,9 @@ struct JsonVariant {
 
 class JsonArray {
 public:
-  std::vector<JsonVariant> *_dataPtr;
-  JsonArray() : _dataPtr(nullptr) {}
-  JsonArray(std::vector<JsonVariant> *ptr) : _dataPtr(ptr) {}
-
+  std::vector<JsonVariant> _data;
   template <typename T> T add() { return T(); }
-  void add(JsonVariant v) {
-    if (_dataPtr)
-      _dataPtr->push_back(v);
-  }
+  void add(JsonVariant v) { _data.push_back(v); }
   template <typename T> T to() { return T(); }
 };
 
@@ -73,9 +65,6 @@ typedef JsonObject::Pair JsonPair;
 class JsonDocument {
 public:
   std::map<std::string, JsonVariant> _data;
-  std::vector<JsonVariant> _arrayData;
-  bool _isArray = false;
-
   JsonVariant &operator[](String key) { return _data[(std::string)key]; }
 
   template <typename T> T to() { return T(); }
@@ -91,61 +80,44 @@ public:
   void clear() { _data.clear(); }
 };
 
-template <> inline JsonArray JsonDocument::to<JsonArray>() {
-  _isArray = true;
-  _arrayData.clear();
-  return JsonArray(&_arrayData);
-}
-
 inline void serializeJson(const JsonDocument &doc, String &out) {
-  if (doc._isArray) {
-    out = "[";
-    for (size_t i = 0; i < doc._arrayData.size(); ++i) {
-      if (i > 0)
-        out += ",";
-      String valStr = doc._arrayData[i].val;
-      // Simple escaping if needed, but for logs usually safe
-      out += "\"" + valStr + "\"";
-    }
-    out += "]";
-  } else {
-    out = "{";
-    bool first = true;
-    for (auto const &pair : doc._data) {
-      if (!first)
-        out += ",";
-      first = false;
-      out += "\"" + String(pair.first.c_str()) + "\":";
+  out = "{";
+  bool first = true;
+  for (auto const &pair : doc._data) {
+    if (!first)
+      out += ",";
+    first = false;
+    out += "\"" + String(pair.first.c_str()) + "\":";
 
-      String val = pair.second.val;
-      // Heuristic for types: bool, number, string
-      if (val == "true" || val == "false") {
+    String val = pair.second.val;
+    // Heuristic for types: bool, number, string
+    if (val == "true" || val == "false") {
+      out += val;
+    } else {
+      // Check if number (simple check)
+      bool isNum = !val.empty() &&
+                   val.find_first_not_of("0123456789.-") == std::string::npos;
+      // Also handle potential issues with version strings like "1.0.0" being
+      // treated as number? "dev" is not number. "1.2.3" is number? No, multiple
+      // dots.
+      if (std::count(val.begin(), val.end(), '.') > 1)
+        isNum = false;
+
+      if (isNum) {
         out += val;
       } else {
-        // Check if number (simple check)
-        bool isNum = !val.empty() && val.find_first_not_of("0123456789.- ") ==
-                                         std::string::npos;
-        if (std::count(val.begin(), val.end(), '.') > 1)
-          isNum = false;
-
-        if (isNum) {
-          out += val;
-        } else {
-          // String
-          out += "\"" + val + "\"";
-        }
+        // String
+        out += "\"" + val + "\"";
       }
     }
-    out += "}";
   }
+  out += "}";
 }
-
 inline void serializeJson(const JsonDocument &doc, Print &out) {
   String s;
   serializeJson(doc, s);
-  out.print(s.c_str());
+  out.print(s);
 }
-
 inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }
 
