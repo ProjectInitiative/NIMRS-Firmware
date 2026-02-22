@@ -17,6 +17,18 @@ Navigate to `http://<decoder-ip>/` (e.g., `http://192.168.1.50`).
 - **Live Logs:** Click **Live Logs** to see real-time debug information (DCC packets, Motor logic).
 - **Firmware Update:** Click **Firmware Update** to upload a new version.
 
+## Motor Calibration
+
+To ensure optimal low-speed performance, the decoder needs to know the Armature Resistance ($R_a$) of the motor. You can measure this automatically via the web interface.
+
+1.  Place the locomotive on a powered track.
+2.  Navigate to the **Debug** tab on the web dashboard.
+3.  Locate the **Motor Calibration** card.
+4.  **Important:** Firmly hold the locomotive wheels or flywheel to prevent rotation (STALL condition). This ensures the Back-EMF is zero.
+5.  Click **Measure Resistance**.
+6.  The motor will hum for about 1 second.
+7.  The measured resistance will be displayed and automatically saved to **CV 149**.
+
 ## Firmware Updates (OTA)
 
 You can update the decoder wirelessly:

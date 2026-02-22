@@ -48,12 +48,13 @@ $$ \omega*{est} = \frac{V - I \cdot R*{est}}{K\_{est}} $$
 
 ## Implementation Stages
 
-### Stage 1: Basic Motor Model & Speed PI [NEXT]
+### Stage 1: Basic Motor Model & Speed PI [IN PROGRESS]
 
 Implement the core physics engine to replace the current "Kick Start" logic.
 
 - **Tasks:**
-  - Add CVs for `MOTOR_R` (Resistance) and `MOTOR_KE` (EMF Constant).
+  - [x] Add CVs for `MOTOR_R` (Resistance) and `MOTOR_KE` (EMF Constant).
+  - [x] Implement automated Resistance measurement (`/api/motor/calibrate`).
   - Implement `estimateSpeed()` function using the $V - IR$ formula.
   - Implement **PI Speed Controller**:
     - Calculates `Error = TargetSpeed - EstSpeed`.

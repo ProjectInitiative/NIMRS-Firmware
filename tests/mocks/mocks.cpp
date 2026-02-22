@@ -73,6 +73,11 @@ MotorController &MotorController::getInstance() {
 MotorController::MotorController() {}
 void MotorController::startTest() {}
 String MotorController::getTestJSON() { return "{}"; }
+void MotorController::measureResistance() {}
+MotorController::ResistanceState MotorController::getResistanceState() const {
+  return ResistanceState::IDLE;
+}
+float MotorController::getMeasuredResistance() const { return 0.0f; }
 #endif
 
 File File::openNextFile() {

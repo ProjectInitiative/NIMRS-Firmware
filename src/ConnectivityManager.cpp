@@ -233,6 +233,39 @@ void ConnectivityManager::setup() {
     }
   });
 
+  // API: Motor Calibration
+  _server.on("/api/motor/calibrate", [this]() {
+    AUTH_CHECK();
+    if (_server.method() == HTTP_POST) {
+      MotorController::getInstance().measureResistance();
+      _server.send(200, "application/json", "{\"status\":\"started\"}");
+    } else if (_server.method() == HTTP_GET) {
+      JsonDocument doc;
+      auto state = MotorController::getInstance().getResistanceState();
+      switch (state) {
+      case MotorController::ResistanceState::IDLE:
+        doc["state"] = "IDLE";
+        break;
+      case MotorController::ResistanceState::MEASURING:
+        doc["state"] = "MEASURING";
+        break;
+      case MotorController::ResistanceState::DONE:
+        doc["state"] = "DONE";
+        break;
+      case MotorController::ResistanceState::ERROR:
+        doc["state"] = "ERROR";
+        break;
+      }
+      doc["resistance"] =
+          MotorController::getInstance().getMeasuredResistance();
+      String output;
+      serializeJson(doc, output);
+      _server.send(200, "application/json", output);
+    } else {
+      _server.send(405, "text/plain", "Method Not Allowed");
+    }
+  });
+
   // API: CV Definitions
   _server.on("/api/cv/defs", HTTP_GET, [this]() {
     AUTH_CHECK();

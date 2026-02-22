@@ -9,6 +9,11 @@ public:
   MotorController();
   void startTest();
   String getTestJSON();
+
+  enum class ResistanceState { IDLE, MEASURING, DONE, ERROR };
+  void measureResistance();
+  ResistanceState getResistanceState() const;
+  float getMeasuredResistance() const;
 };
 
 #endif

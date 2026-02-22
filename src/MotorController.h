@@ -83,5 +83,17 @@ private:
     float speed;
   } _testData[MAX_TEST_POINTS];
   int _testDataIdx = 0;
+
+public:
+  // Resistance Measurement
+  enum class ResistanceState { IDLE, MEASURING, DONE, ERROR };
+  void measureResistance();
+  ResistanceState getResistanceState() const { return _resistanceState; }
+  float getMeasuredResistance() const { return _measuredResistance; }
+
+private:
+  ResistanceState _resistanceState = ResistanceState::IDLE;
+  unsigned long _resistanceStartTime = 0;
+  float _measuredResistance = 0.0f;
 };
 #endif
