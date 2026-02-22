@@ -8,7 +8,6 @@
 #include <LittleFS.h>
 #include <WebServer.h>
 #include <WiFi.h>
-#include <WiFiManager.h>
 
 class ConnectivityManager {
 public:
@@ -19,7 +18,18 @@ public:
 private:
   WebServer _server;
   HTTPUpdateServer _httpUpdater;
-  WiFiManager _wifiManager;
+
+  // WiFi State
+  enum WifiState {
+    WIFI_INIT,
+    WIFI_CONNECTING,
+    WIFI_CONNECTED,
+    WIFI_AP_MODE,
+    WIFI_FAIL
+  };
+  WifiState _wifiState = WIFI_INIT;
+  uint32_t _connectStartTime = 0;
+  String _hostname;
 
   // File Manager Handlers
   void handleFileList();

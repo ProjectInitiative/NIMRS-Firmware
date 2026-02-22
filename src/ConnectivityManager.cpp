@@ -38,29 +38,22 @@ void ConnectivityManager::setup() {
   // 2. WiFi Setup
   Preferences prefs;
   prefs.begin("config", true); // Read-only mode
-  String hostname = prefs.getString("hostname", "NIMRS-Decoder");
+  _hostname = prefs.getString("hostname", "NIMRS-Decoder");
   _webUser = prefs.getString("web_user", "admin");
   _webPass = prefs.getString("web_pass", "admin");
   prefs.end();
 
-  Log.printf("ConnectivityManager: Hostname: %s\n", hostname.c_str());
-  WiFi.setHostname(hostname.c_str());
+  Log.printf("ConnectivityManager: Hostname: %s\n", _hostname.c_str());
+  WiFi.setHostname(_hostname.c_str());
 
-  _wifiManager.setConfigPortalTimeout(180);
-  _wifiManager.setAPCallback([](WiFiManager *wm) {
-    Log.println("ConnectivityManager: Entered Config Portal");
-  });
-  _wifiManager.setDebugOutput(true);
+  // Try to connect using stored credentials
+  WiFi.mode(WIFI_STA);
+  WiFi.begin();
 
-  if (!_wifiManager.autoConnect(hostname.c_str())) {
-    Log.println("ConnectivityManager: Failed to connect, restarting...");
-    delay(3000);
-    ESP.restart();
-  }
+  _connectStartTime = millis();
+  _wifiState = WIFI_CONNECTING;
 
-  Log.print("ConnectivityManager: Connected. IP: ");
-  Log.println(WiFi.localIP());
-  SystemContext::getInstance().getState().wifiConnected = true;
+  Log.println("ConnectivityManager: Attempting connection...");
 
   // 3. Web Server Handlers
 
@@ -295,6 +288,26 @@ void ConnectivityManager::setup() {
 
 void ConnectivityManager::loop() {
   _server.handleClient();
+
+  if (_wifiState == WIFI_CONNECTING) {
+    if (WiFi.status() == WL_CONNECTED) {
+      Log.print("ConnectivityManager: Connected. IP: ");
+      Log.println(WiFi.localIP());
+      SystemContext::getInstance().getState().wifiConnected = true;
+      _wifiState = WIFI_CONNECTED;
+    } else if (millis() - _connectStartTime > 10000 ||
+               WiFi.status() == WL_CONNECT_FAILED) {
+      // Timeout after 10 seconds or immediate failure
+      Log.println(
+          "ConnectivityManager: Connection failed/timeout. Starting AP...");
+      _wifiState = WIFI_AP_MODE;
+      WiFi.softAP(_hostname.c_str());
+
+      Log.print("ConnectivityManager: AP Started. IP: ");
+      Log.println(WiFi.softAPIP());
+    }
+  }
+
   if (_shouldRestart && millis() - _restartTimer > 1000) {
     Log.println("Rebooting...");
     ESP.restart();
@@ -513,9 +526,9 @@ void ConnectivityManager::handleWifiSave() {
 
 void ConnectivityManager::handleWifiReset() {
   Log.println("Resetting WiFi Settings...");
-  _wifiManager.resetSettings();
-  _server.send(200, "text/plain",
-               "WiFi settings reset. Restarting into AP mode...");
+  // Clear WiFi credentials from NVS
+  WiFi.disconnect(true, true);
+  _server.send(200, "text/plain", "WiFi settings reset. Restarting...");
 
   _shouldRestart = true;
   _restartTimer = millis();
