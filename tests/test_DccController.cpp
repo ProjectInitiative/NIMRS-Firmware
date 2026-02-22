@@ -202,7 +202,8 @@ TEST_CASE(test_dcc_logging) {
   // Test Func Logging
   notifyDccFunc(1234, 0, FN_0_4, FN_BIT_00);
   // Log message: "DCC: Func Grp %d State %x Addr %d"
-  // With FN_0_4 (0), FN_BIT_00 (0x01), 1234 -> "DCC: Func Grp 0 State 1 Addr 1234"
+  // With FN_0_4 (0), FN_BIT_00 (0x01), 1234 -> "DCC: Func Grp 0 State 1 Addr
+  // 1234"
   assert(mockLogBuffer.find("DCC: Func Grp 0") != std::string::npos);
   assert(mockLogBuffer.find("Addr 1234") != std::string::npos);
 }
