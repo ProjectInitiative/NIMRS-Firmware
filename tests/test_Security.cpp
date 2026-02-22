@@ -63,10 +63,50 @@ TEST_CASE(test_valid_upload) {
   assert(LittleFS.lastOpenedPath == "/sound.wav");
 }
 
+TEST_CASE(test_case_insensitive_upload) {
+  ConnectivityManager cm;
+  LittleFS.lastOpenedPath = "";
+
+  // Simulate UPLOAD_FILE_START with uppercase extension
+  cm._server._upload.status = UPLOAD_FILE_START;
+  cm._server._upload.filename = "sound.WAV";
+
+  cm.handleFileUpload();
+
+  // Should HAVE opened /sound.WAV
+  assert(LittleFS.lastOpenedPath == "/sound.WAV");
+}
+
+TEST_CASE(test_null_byte_injection) {
+  ConnectivityManager cm;
+  LittleFS.lastOpenedPath = "";
+
+  // Simulate UPLOAD_FILE_START with null byte injection
+  // "malicious.html" + '\0' + ".json"
+  std::string malicious = "malicious.html";
+  malicious += '\0';
+  malicious += ".json";
+
+  cm._server._upload.status = UPLOAD_FILE_START;
+  cm._server._upload.filename = String(malicious);
+
+  cm.handleFileUpload();
+
+  // The upload should be blocked because of the null byte.
+  // If it was allowed, lastOpenedPath would be set.
+  if (LittleFS.lastOpenedPath != "") {
+    std::cout << "FAILED: Expected blocked upload, but opened: "
+              << LittleFS.lastOpenedPath << std::endl;
+  }
+  assert(LittleFS.lastOpenedPath == "");
+}
+
 int main() {
   RUN_TEST(test_malicious_upload);
   RUN_TEST(test_path_traversal);
   RUN_TEST(test_valid_upload);
+  RUN_TEST(test_case_insensitive_upload);
+  RUN_TEST(test_null_byte_injection);
   std::cout << "Security tests passed!" << std::endl;
   return 0;
 }

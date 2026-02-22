@@ -1,8 +1,8 @@
 // TEST_SOURCES: src/Logger.cpp tests/mocks/mocks.cpp
 // TEST_FLAGS: -DSKIP_MOCK_LOGGER
 #include "../src/Logger.h"
-#include <iostream>
 #include <cassert>
+#include <iostream>
 #include <string>
 
 // Helper to check if string contains substring
@@ -52,27 +52,27 @@ void test_filter_logs() {
 }
 
 void test_data_logs() {
-    std::cout << "Testing data logs..." << std::endl;
-    // Data logs are separate buffer.
-    Log.println("[NIMRS_DATA] value=123");
-    Log.println("Normal log");
+  std::cout << "Testing data logs..." << std::endl;
+  // Data logs are separate buffer.
+  Log.println("[NIMRS_DATA] value=123");
+  Log.println("Normal log");
 
-    // Test data filter
-    String json = Log.getLogsJSON("[NIMRS_DATA]");
-    assert(contains(json, "[NIMRS_DATA] value=123"));
-    assert(!contains(json, "Normal log"));
+  // Test data filter
+  String json = Log.getLogsJSON("[NIMRS_DATA]");
+  assert(contains(json, "[NIMRS_DATA] value=123"));
+  assert(!contains(json, "Normal log"));
 
-    // Test that normal filter doesn't pick up data logs
-    String jsonNormal = Log.getLogsJSON("value=123");
-    assert(!contains(jsonNormal, "value=123"));
+  // Test that normal filter doesn't pick up data logs
+  String jsonNormal = Log.getLogsJSON("value=123");
+  assert(!contains(jsonNormal, "value=123"));
 
-    std::cout << "Passed." << std::endl;
+  std::cout << "Passed." << std::endl;
 }
 
 int main() {
-    test_initial_logs();
-    test_add_logs();
-    test_filter_logs();
-    test_data_logs();
-    return 0;
+  test_initial_logs();
+  test_add_logs();
+  test_filter_logs();
+  test_data_logs();
+  return 0;
 }
