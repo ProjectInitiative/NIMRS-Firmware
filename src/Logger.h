@@ -4,7 +4,9 @@
 #include <Arduino.h>
 #include <deque>
 #include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include <freertos/semphr.h>
+#include <freertos/task.h>
 
 // Max log lines to keep in RAM
 #define MAX_LOG_LINES 128
@@ -16,6 +18,10 @@ enum LogLevel {
   LOG_WARN = 2,
   LOG_ERROR = 3,
   LOG_DATA = 4
+};
+
+struct LogMessage {
+  char text[128];
 };
 
 class Logger : public Print {
@@ -31,6 +37,8 @@ public:
     _serialEnabled = true;
     println("Logger: Initialized");
   }
+
+  void startTask();
 
   void setLevel(LogLevel level) { _minLevel = level; }
 
@@ -50,15 +58,21 @@ public:
   String getLogsJSON(const String &filter = "");
 
 private:
-  Logger() { _mutex = xSemaphoreCreateMutex(); }
+  Logger();
   std::deque<String> _lines;     // System logs (INFO, WARN, ERROR)
   std::deque<String> _dataLines; // Telemetry logs ([NIMRS_DATA])
   String _currentLine;           // Buffer for partial writes (print vs println)
   LogLevel _minLevel = LOG_INFO; // Default to INFO to suppress debug noise
   bool _serialEnabled = false;
-  SemaphoreHandle_t _mutex;
+
+  SemaphoreHandle_t _historyMutex;
+  SemaphoreHandle_t _bufferMutex;
+  QueueHandle_t _logQueue;
+  TaskHandle_t _taskHandle;
 
   void _addToBuffer(const String &line);
+  static void _taskEntry(void *param);
+  void _processQueue();
 };
 
 // Global accessor helper
