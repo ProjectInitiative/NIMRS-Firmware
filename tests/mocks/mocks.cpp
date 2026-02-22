@@ -24,6 +24,10 @@ std::string mockLogBuffer;
 
 // Logger methods not inline in header
 #ifndef SKIP_MOCK_LOGGER
+Logger::Logger() {}
+void Logger::startTask() {}
+void Logger::_taskEntry(void *param) {}
+void Logger::_processQueue() {}
 size_t Logger::printf(const char *format, ...) {
   va_list arg;
   va_start(arg, format);
