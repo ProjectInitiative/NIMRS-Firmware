@@ -100,6 +100,52 @@ void MotorController::loop() {
   float alpha = std::min(0.95f, _cvLoadFilter / 255.0f);
   _avgCurrent = (alpha * _avgCurrent) + ((1.0f - alpha) * rawAmps);
 
+  // --- RESISTANCE MEASUREMENT OVERRIDE ---
+  if (_resistanceState == ResistanceState::MEASURING) {
+    if (millis() - _resistanceStartTime < 1000) {
+      // Apply fixed PWM (approx 20%)
+      uint16_t testPwm = _maxPwm / 5;
+      _drive(testPwm, true);
+    } else {
+      // Measurement complete
+      _drive(0, true);
+
+      NmraDcc &dcc = DccController::getInstance().getDcc();
+      uint16_t cvTv = dcc.getCV(CV::TRACK_VOLTAGE);
+      float vTrack = (cvTv > 0) ? (cvTv * 0.1f) : 14.0f;
+
+      // V_applied = V_track * (PWM / MaxPWM)
+      // Re-calculate duty used in the measurement phase (_maxPwm / 5)
+      float duty = ((float)(_maxPwm / 5)) / _maxPwm;
+      float vApplied = vTrack * duty;
+
+      if (_avgCurrent > 0.05f) { // Ensure some current is flowing
+        float r = vApplied / _avgCurrent;
+        _measuredResistance = r;
+
+        // Store in CV (10mOhm units)
+        uint16_t cvVal = (uint16_t)(r * 100.0f);
+        dcc.setCV(CV::MOTOR_R_ARM, cvVal);
+
+        Log.printf("Motor: Measured R=%.2f Ohm (CV=%d)\n", r, cvVal);
+        _resistanceState = ResistanceState::DONE;
+      } else {
+        Log.println("Motor: Resistance Measurement Failed (Low Current)");
+        _resistanceState = ResistanceState::ERROR;
+      }
+    }
+    return; // Skip normal control
+  } else if (_resistanceState == ResistanceState::DONE ||
+             _resistanceState == ResistanceState::ERROR) {
+    _drive(0, true);
+    // Auto-reset after 5 seconds
+    if (millis() - _resistanceStartTime > 6000) {
+      _resistanceState = ResistanceState::IDLE;
+    }
+    return;
+  }
+  // ---------------------------------------
+
   int32_t finalPwm = 0;
 
   if (_currentSpeed > 0.5f) {
@@ -279,4 +325,15 @@ String MotorController::getTestJSON() {
   }
   out += "]";
   return out;
+}
+
+void MotorController::measureResistance() {
+  if (_isMoving || _resistanceState == ResistanceState::MEASURING) {
+    return;
+  }
+  _resistanceState = ResistanceState::MEASURING;
+  _resistanceStartTime = millis();
+  _measuredResistance = 0.0f;
+  _avgCurrent = 0.0f; // Reset filter
+  Log.println("Motor: Starting Resistance Measurement...");
 }

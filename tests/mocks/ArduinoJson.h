@@ -15,6 +15,8 @@ struct JsonVariant {
   JsonVariant(int v) : val(std::to_string(v)) {}
   JsonVariant(unsigned int v) : val(std::to_string(v)) {}
   JsonVariant(long unsigned int v) : val(std::to_string(v)) {}
+  JsonVariant(float v) : val(std::to_string(v)) {}
+  JsonVariant(double v) : val(std::to_string(v)) {}
   JsonVariant(bool v) : val(v ? "true" : "false") {}
 
   template <typename T> T as() const { return (T) * this; }
