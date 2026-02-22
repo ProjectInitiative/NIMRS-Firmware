@@ -6,6 +6,10 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cstddef>
+#include <stdint.h>
+#include <cstring>
 
 enum HTTPMethod {
   HTTP_GET,

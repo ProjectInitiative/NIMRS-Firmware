@@ -5,6 +5,8 @@
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <vector>
+#include <cstddef>
+#include <stdint.h>
 
 class BackupManager {
 public:
