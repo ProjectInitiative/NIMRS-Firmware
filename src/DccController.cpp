@@ -106,6 +106,10 @@ void notifyCVResetFactoryDefault() {
 
   // Automate reset using Registry
   for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
+    // Break the infinite loop: Do not write to CV 8 during a reset
+    if (CV_DEFS[i].id == 8) {
+      continue;
+    }
     dcc.setCV(CV_DEFS[i].id, CV_DEFS[i].defaultValue);
   }
 
