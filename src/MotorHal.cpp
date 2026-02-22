@@ -60,7 +60,7 @@ void MotorHal::init() {
   // --- 2. ADC Continuous Setup (Legacy) ---
   adc_digi_init_config_t adc_dma_config = {0};
   adc_dma_config.max_store_buf_size = 4096;
-  adc_dma_config.conv_num_each_intr = ADC_READ_LEN;
+  adc_dma_config.conv_num_each_intr = 256;
   adc_dma_config.adc1_chan_mask = BIT(ADC_CHAN);
   adc_dma_config.adc2_chan_mask = 0; // Explicitly 0
 
@@ -146,7 +146,7 @@ size_t MotorHal::getAdcSamples(float *buffer, size_t maxLen) {
   // Drain buffer loop
   while (totalSamples < maxLen) {
     esp_err_t ret = adc_digi_read_bytes(result_data, ADC_READ_LEN, &ret_num,
-                                        0); // timeout 0
+                                        1); // timeout 1
 
     if (ret == ESP_OK || ret == ESP_ERR_INVALID_STATE) {
       if (ret_num == 0)
