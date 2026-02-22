@@ -67,7 +67,7 @@ void setup() {
   xTaskCreatePinnedToCore(
       controlPlaneTask, /* Task function. */
       "ControlPlane",   /* name of task. */
-      16384,            /* Stack size of task */
+      8192,             /* Stack size of task */
       NULL,             /* parameter of the task */
       5,                /* priority of the task (Higher than main loop) */
       &ControlPlaneTaskHandle, /* Task handle to keep track of created task */
