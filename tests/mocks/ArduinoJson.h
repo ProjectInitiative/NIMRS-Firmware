@@ -31,9 +31,15 @@ struct JsonVariant {
 
 class JsonArray {
 public:
-  std::vector<JsonVariant> _data;
+  std::vector<JsonVariant> *_dataPtr;
+  JsonArray() : _dataPtr(nullptr) {}
+  JsonArray(std::vector<JsonVariant> *ptr) : _dataPtr(ptr) {}
+
   template <typename T> T add() { return T(); }
-  void add(JsonVariant v) { _data.push_back(v); }
+  void add(JsonVariant v) {
+    if (_dataPtr)
+      _dataPtr->push_back(v);
+  }
   template <typename T> T to() { return T(); }
 };
 
@@ -65,6 +71,9 @@ typedef JsonObject::Pair JsonPair;
 class JsonDocument {
 public:
   std::map<std::string, JsonVariant> _data;
+  std::vector<JsonVariant> _arrayData;
+  bool _isArray = false;
+
   JsonVariant &operator[](String key) { return _data[(std::string)key]; }
 
   template <typename T> T to() { return T(); }
@@ -80,11 +89,36 @@ public:
   void clear() { _data.clear(); }
 };
 
-inline void serializeJson(const JsonDocument &doc, String &out) {
-  out = "{\"mock\":true}";
+template <> inline JsonArray JsonDocument::to<JsonArray>() {
+  _isArray = true;
+  _arrayData.clear();
+  return JsonArray(&_arrayData);
 }
+
+inline void serializeJson(const JsonDocument &doc, String &out) {
+  if (doc._isArray) {
+    out = "[";
+    for (size_t i = 0; i < doc._arrayData.size(); ++i) {
+      if (i > 0)
+        out += ",";
+      String valStr = doc._arrayData[i].val;
+      // Simple escaping if needed, but for logs usually safe
+      out += "\"" + valStr + "\"";
+    }
+    out += "]";
+  } else {
+    out = "{\"mock\":true}";
+  }
+}
+
 inline void serializeJson(const JsonDocument &doc, Print &out) {
-  out.print("{\"mock\":true}");
+  if (doc._isArray) {
+    String s;
+    serializeJson(doc, s);
+    out.print(s.c_str());
+  } else {
+    out.print("{\"mock\":true}");
+  }
 }
 inline void serializeJson(const JsonArray &arr, String &out) { out = "[]"; }
 inline void serializeJson(const JsonObject &obj, String &out) { out = "{}"; }
