@@ -1,6 +1,8 @@
 #include "Arduino.h"
 #include "AudioController.h"
+#ifndef SKIP_MOCK_DCC_CONTROLLER
 #include "DccController.h"
+#endif
 #include "EEPROM.h"
 #include "LittleFS.h"
 #include "Logger.h"

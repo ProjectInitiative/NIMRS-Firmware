@@ -109,6 +109,19 @@ TEST_CASE(test_notifyDccSpeed) {
   assert(state.speed == 0);
 }
 
+TEST_CASE(test_notifyDccSpeed_emergency_stop) {
+  resetState();
+  SystemState &state = SystemContext::getInstance().getState();
+
+  // Set initial speed
+  notifyDccSpeed(1234, 0, 100, DCC_DIR_FWD, 0);
+  assert(state.speed == 100);
+
+  // Speed 1 (Emergency Stop)
+  notifyDccSpeed(1234, 0, 1, DCC_DIR_FWD, 0);
+  assert(state.speed == 0);
+}
+
 TEST_CASE(test_notifyDccFunc) {
   resetState();
   SystemState &state = SystemContext::getInstance().getState();
@@ -180,6 +193,7 @@ int main() {
   RUN_TEST(test_updateSpeed);
   RUN_TEST(test_updateFunction);
   RUN_TEST(test_notifyDccSpeed);
+  RUN_TEST(test_notifyDccSpeed_emergency_stop);
   RUN_TEST(test_notifyDccFunc);
   RUN_TEST(test_isPacketValid);
   RUN_TEST(test_notifyCVWrite);

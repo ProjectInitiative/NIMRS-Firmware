@@ -1,4 +1,5 @@
 #include "AudioController.h"
+#include "AudioUtils.h"
 #include "CvRegistry.h"
 #include "DccController.h"
 #include "Logger.h"
@@ -190,12 +191,7 @@ void AudioController::playFile(const char *filename) {
 
   _file = new AudioFileSourceLittleFS(filename);
 
-  size_t len = strlen(filename);
-  // Optimization: Use strcasecmp instead of String allocation to avoid heap
-  // fragmentation and improve performance.
-  bool isMp3 = (len >= 4 && strcasecmp(filename + len - 4, ".mp3") == 0);
-
-  if (isMp3) {
+  if (isMp3File(filename)) {
     Log.println("Audio: Detected MP3");
     _generator = new AudioGeneratorMP3();
   } else {
