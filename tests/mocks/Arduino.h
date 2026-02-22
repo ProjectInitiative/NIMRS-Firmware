@@ -129,7 +129,9 @@ extern MockSerial Serial;
 
 class ESPClass {
 public:
-  void restart() {}
+  bool restartCalled = false;
+  void restart() { restartCalled = true; }
+  void reset() { restartCalled = false; }
 };
 extern ESPClass ESP;
 

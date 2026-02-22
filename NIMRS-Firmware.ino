@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "src/AudioController.h"
+#include "src/BootLoopDetector.h"
 #include "src/ConnectivityManager.h"
 #include "src/DccController.h"
 #include "src/LightingController.h"
@@ -45,6 +46,10 @@ void controlPlaneTask(void *pvParameters) {
 void setup() {
   // 1. Initialize Logging (Serial remains disabled to avoid Pin 1 conflict)
   Log.startTask();
+
+  // Check for bootloop early
+  BootLoopDetector::check();
+
   Log.println("\n\nNIMRS Decoder Starting...");
 
   // Initialize Storage (EEPROM) before any controller reads CVs
@@ -83,6 +88,14 @@ void loop() {
   // Core 1 handles Web Server, WiFi, Audio, and Logging
   connectivityManager.loop();
   AudioController::getInstance().loop();
+
+  // Verify boot stability after 30 seconds
+  static bool bootVerified = false;
+  if (!bootVerified && millis() > 30000) {
+    BootLoopDetector::markSuccessful();
+    bootVerified = true;
+    Log.println("System Stable: Boot verification passed.");
+  }
 
   static unsigned long lastHeartbeat = 0;
   if (millis() - lastHeartbeat > 1000) {

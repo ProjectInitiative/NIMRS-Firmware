@@ -418,8 +418,8 @@ void ConnectivityManager::handleFileUpload() {
     if (!filename.startsWith("/"))
       filename = "/" + filename;
 
-    // Workaround: Some clients/browsers may include a null terminator in the filename
-    // which triggers our security check. Strip trailing null bytes.
+    // Workaround: Some clients/browsers may include a null terminator in the
+    // filename which triggers our security check. Strip trailing null bytes.
     while (filename.length() > 0 &&
            filename.charAt(filename.length() - 1) == 0) {
       filename.remove(filename.length() - 1);

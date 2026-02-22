@@ -11,7 +11,9 @@
 #ifndef SKIP_MOCK_MOTOR_CONTROLLER
 #include "MotorController.h"
 #endif
+#include "Preferences.h"
 #include "WiFi.h"
+#include "esp_ota_ops.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -23,6 +25,7 @@ EEPROMClass EEPROM;
 unsigned long _mockMillis = 0;
 
 std::string mockLogBuffer;
+std::map<std::string, std::string> Preferences::_storage;
 
 // Logger methods not inline in header
 #ifndef SKIP_MOCK_LOGGER
@@ -104,3 +107,40 @@ File File::openNextFile() {
   }
   return File();
 }
+
+// OTA Mock Implementation
+esp_partition_t mock_ota_0 = {ESP_PARTITION_TYPE_APP,
+                              ESP_PARTITION_SUBTYPE_APP_OTA_0,
+                              0x10000,
+                              0x200000,
+                              "ota_0",
+                              false};
+esp_partition_t mock_ota_1 = {ESP_PARTITION_TYPE_APP,
+                              ESP_PARTITION_SUBTYPE_APP_OTA_1,
+                              0x210000,
+                              0x200000,
+                              "ota_1",
+                              false};
+
+static const esp_partition_t *mock_running = &mock_ota_0;
+static const esp_partition_t *mock_boot = &mock_ota_0;
+
+const esp_partition_t *esp_ota_get_running_partition(void) {
+  return mock_running;
+}
+
+const esp_partition_t *
+esp_ota_get_next_update_partition(const esp_partition_t *start_from) {
+  if (mock_running == &mock_ota_0)
+    return &mock_ota_1;
+  return &mock_ota_0;
+}
+
+esp_err_t esp_ota_set_boot_partition(const esp_partition_t *partition) {
+  mock_boot = partition;
+  return ESP_OK;
+}
+
+void setMockRunningPartition(const esp_partition_t *p) { mock_running = p; }
+
+const esp_partition_t *getMockBootPartition() { return mock_boot; }
