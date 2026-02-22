@@ -14,7 +14,7 @@
 
 // ADC Configuration (Legacy IDF 4.4 / Arduino 2.x)
 #define ADC_READ_LEN 1024
-#define ADC_UNIT ADC_UNIT_1
+#define ADC_UNIT 0
 #define ADC_CHAN ADC_CHANNEL_4 // GPIO 5 (Check pinout for S3)
 
 static uint32_t result_data_aligned[ADC_READ_LEN / 4]; // Static buffer aligned
@@ -56,14 +56,10 @@ void MotorHal::init() {
   adc_dma_config.adc1_chan_mask = BIT(ADC_CHAN);
   adc_dma_config.adc2_chan_mask = 0; // Explicitly 0
 
-#ifndef ADC_DIGI_OUTPUT_FORMAT_TYPE2
-#define ADC_DIGI_OUTPUT_FORMAT_TYPE2 (adc_digi_output_format_t)2
-#endif
-
   adc_digi_pattern_config_t adc_pattern[1] = {0};
   adc_pattern[0].atten = ADC_ATTEN_DB_11;
   adc_pattern[0].channel = (uint8_t)ADC_CHAN;
-  adc_pattern[0].unit = 0;
+  adc_pattern[0].unit = (uint8_t)ADC_UNIT;
   adc_pattern[0].bit_width = (uint8_t)SOC_ADC_DIGI_MAX_BITWIDTH;
 
   adc_digi_configuration_t dig_cfg = {0};
