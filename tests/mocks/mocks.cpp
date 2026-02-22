@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "AudioController.h"
 #include "DccController.h"
+#include "EEPROM.h"
 #include "LittleFS.h"
 #include "Logger.h"
 #ifndef SKIP_MOCK_MOTOR_CONTROLLER
@@ -14,6 +15,8 @@ MockSerial Serial;
 WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
+EEPROMClass EEPROM;
+unsigned long _mockMillis = 0;
 
 // Logger methods not inline in header
 size_t Logger::printf(const char *format, ...) {
@@ -38,6 +41,7 @@ AudioController::AudioController() {}
 void AudioController::loadAssets() {}
 void AudioController::playFile(const char *file) {}
 
+#ifndef SKIP_MOCK_DCC_CONTROLLER
 DccController &DccController::getInstance() {
   static DccController instance;
   return instance;
@@ -48,6 +52,7 @@ NmraDcc &DccController::getDcc() {
   return dcc;
 }
 bool DccController::isPacketValid() { return true; }
+#endif
 
 #ifndef SKIP_MOCK_MOTOR_CONTROLLER
 MotorController &MotorController::getInstance() {

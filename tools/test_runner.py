@@ -25,6 +25,14 @@ def main():
 
     print(f"Found {len(test_files)} tests.")
 
+    # Ensure config.h exists for tests
+    config_created = False
+    if not os.path.exists("config.h"):
+        print("Creating dummy config.h for tests...")
+        with open("config.h", "w") as f:
+            f.write("#ifndef CONFIG_H\n#define CONFIG_H\n\n#define HOSTNAME \"TestDecoder\"\n\n#endif\n")
+        config_created = True
+
     failed_tests = []
 
     for test_file in test_files:
@@ -33,6 +41,7 @@ def main():
 
         # Determine dependencies
         sources = []
+        extra_flags = []
         has_metadata = False
 
         with open(test_file, "r") as f:
@@ -45,7 +54,15 @@ def main():
                 if sources_str:
                     sources = sources_str.split()
                 print(f"  Metadata found: {sources}")
-            else:
+
+            match_flags = re.search(r"//\s*TEST_FLAGS:\s*(.*)", content)
+            if match_flags:
+                flags_str = match_flags.group(1).strip()
+                if flags_str:
+                    extra_flags = flags_str.split()
+                print(f"  Flags found: {extra_flags}")
+
+            if not has_metadata:
                 # Heuristic fallback
                 print(f"  No metadata found, using heuristics...")
                 # 1. Check for src/NAME.cpp (where NAME is test_NAME without test_ prefix)
@@ -75,7 +92,7 @@ def main():
         # Compile
         output_bin = os.path.join("tests/bin", test_name)
         # Split flags safely? Assumes space separation
-        cmd = [cxx] + cxxflags.split() + ["-o", output_bin, test_file] + sources
+        cmd = [cxx] + cxxflags.split() + extra_flags + ["-o", output_bin, test_file] + sources
 
         print(f"  Compiling: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -103,6 +120,11 @@ def main():
             print(f"  PASSED")
 
     print("\n" + "=" * 40)
+
+    if config_created:
+        print("Removing dummy config.h...")
+        os.remove("config.h")
+
     if failed_tests:
         print(f"FAILURES: {len(failed_tests)} tests failed.")
         for t in failed_tests:
