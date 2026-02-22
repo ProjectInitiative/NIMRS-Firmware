@@ -141,6 +141,8 @@ esp_err_t esp_ota_set_boot_partition(const esp_partition_t *partition) {
   return ESP_OK;
 }
 
+esp_err_t esp_ota_mark_app_valid_cancel_rollback(void) { return ESP_OK; }
+
 void setMockRunningPartition(const esp_partition_t *p) { mock_running = p; }
 
 const esp_partition_t *getMockBootPartition() { return mock_boot; }
