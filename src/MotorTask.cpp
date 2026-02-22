@@ -93,7 +93,7 @@ void MotorTask::_loop() {
           Log.printf("Motor: Measured R=%.2f Ohm\n", r);
           _resistanceState = ResistanceState::DONE;
         } else {
-          Log.printf("Motor: Measured current I=%.2f A. Resistance Measurement "
+          Log.printf("Motor: Measured current I=%.4f A. Resistance Measurement "
                      "Failed (Low Current)\n",
                      avgCurrent);
           _resistanceState = ResistanceState::ERROR;
