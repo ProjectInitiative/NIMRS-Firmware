@@ -6,6 +6,7 @@
 #include <driver/mcpwm.h>
 #include <esp_err.h>
 #include <esp_log.h>
+#include <string.h>
 
 #ifndef SOC_ADC_DIGI_MAX_BITWIDTH
 #define SOC_ADC_DIGI_MAX_BITWIDTH 12
@@ -49,26 +50,15 @@ void MotorHal::init() {
   mcpwm_set_signal_high(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B);
 
   // --- 2. ADC Continuous Setup (Legacy) ---
-  adc_digi_init_config_t adc_dma_config = {
-      .max_store_buf_size = 4096,
-      .conv_num_each_intr = ADC_READ_LEN,
-      .adc1_chan_mask = BIT(ADC_CHAN),
-      .adc2_chan_mask = 0,
-  };
+  adc_digi_init_config_t adc_dma_config = {0};
+  adc_dma_config.max_store_buf_size = 4096;
+  adc_dma_config.conv_num_each_intr = ADC_READ_LEN;
+  adc_dma_config.adc1_chan_mask = BIT(ADC_CHAN);
+  adc_dma_config.adc2_chan_mask = 0; // Explicitly 0
 
 #ifndef ADC_DIGI_OUTPUT_FORMAT_TYPE2
 #define ADC_DIGI_OUTPUT_FORMAT_TYPE2 (adc_digi_output_format_t)2
 #endif
-
-  adc_digi_configuration_t dig_cfg = {
-      .conv_limit_en = 0,
-      .conv_limit_num = 250,
-      .pattern_num = 1,
-      .adc_pattern = NULL, // Set below
-      .sample_freq_hz = 20000,
-      .conv_mode = ADC_CONV_SINGLE_UNIT_1,
-      .format = ADC_DIGI_OUTPUT_FORMAT_TYPE2, // S3
-  };
 
   adc_digi_pattern_config_t adc_pattern[1] = {0};
   adc_pattern[0].atten = ADC_ATTEN_DB_11;
@@ -76,7 +66,14 @@ void MotorHal::init() {
   adc_pattern[0].unit = (uint8_t)ADC_UNIT;
   adc_pattern[0].bit_width = (uint8_t)SOC_ADC_DIGI_MAX_BITWIDTH;
 
+  adc_digi_configuration_t dig_cfg = {0};
+  dig_cfg.conv_limit_en = 0;
+  dig_cfg.conv_limit_num = 250;
+  dig_cfg.pattern_num = 1;
   dig_cfg.adc_pattern = adc_pattern;
+  dig_cfg.sample_freq_hz = 20000;
+  dig_cfg.conv_mode = ADC_CONV_SINGLE_UNIT_1;
+  dig_cfg.format = ADC_DIGI_OUTPUT_FORMAT_TYPE2; // S3
 
   ESP_ERROR_CHECK(adc_digi_initialize(&adc_dma_config));
   ESP_ERROR_CHECK(adc_digi_controller_configure(&dig_cfg));
@@ -178,7 +175,7 @@ size_t MotorHal::getAdcSamples(float *buffer, size_t maxLen) {
         uint32_t channel = (raw >> 13) & 0xF;
         uint32_t unit = (raw >> 17) & 0x1;
 
-        if (unit == (ADC_UNIT - 1) && channel == ADC_CHAN) {
+        if (unit == 0 && channel == ADC_CHAN) { // ADC_UNIT_1 is 0
           buffer[totalSamples++] = (float)data;
         }
       }

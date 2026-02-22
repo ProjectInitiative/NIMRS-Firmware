@@ -20,15 +20,17 @@ NmraDcc &DccController::getDcc() { return _dcc; }
 // Forward declaration
 void notifyCVResetFactoryDefault();
 
-void DccController::setup() {
-  // 1. Setup Pin first so init() knows which interrupt to attach
-  _dcc.pin(Pinout::TRACK_LEFT_3V3, 1);
-
+void DccController::setupStorage() {
   if (!EEPROM.begin(512)) {
     Log.println("DccController: EEPROM Init Failed!");
   } else {
     Log.println("DccController: EEPROM Initialized");
   }
+}
+
+void DccController::setup() {
+  // 1. Setup Pin first so init() knows which interrupt to attach
+  _dcc.pin(Pinout::TRACK_LEFT_3V3, 1);
 
   // 2. Initialize library (attaches interrupt)
   // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT

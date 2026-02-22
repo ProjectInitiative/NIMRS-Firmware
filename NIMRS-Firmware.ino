@@ -47,6 +47,9 @@ void setup() {
   Log.startTask();
   Log.println("\n\nNIMRS Decoder Starting...");
 
+  // Initialize Storage (EEPROM) before any controller reads CVs
+  DccController::getInstance().setupStorage();
+
   // 2. Connectivity (WiFi, Web, Filesystem) - Core 1
   connectivityManager.setup();
 

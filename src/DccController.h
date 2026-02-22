@@ -25,6 +25,7 @@ public:
 
   DccController();
   void setup();
+  void setupStorage();
   void loop();
 
   // Helper to process callbacks
