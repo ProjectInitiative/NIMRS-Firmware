@@ -18,6 +18,7 @@ public:
 private:
   WebServer _server;
   HTTPUpdateServer _httpUpdater;
+  String _uploadError;
 
   // WiFi State
   enum WifiState {
