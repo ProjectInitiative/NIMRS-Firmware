@@ -487,18 +487,27 @@ void ConnectivityManager::handleFileUpload() {
     Log.printf("Upload Start: %s\n", filename.c_str());
     fsUploadFile = LittleFS.open(filename, "w");
     if (!fsUploadFile) {
-      Log.println("Upload Error: File open failed (FS full or invalid name?)");
+      Log.printf("Upload Error: Failed to open %s for writing. (FS Total: %lu, Used: %lu)\n",
+                 filename.c_str(), (unsigned long)LittleFS.totalBytes(), (unsigned long)LittleFS.usedBytes());
       _uploadError = "File open failed";
     }
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
     if (_uploadAuthPassed && fsUploadFile) {
-      fsUploadFile.write(upload.buf, upload.currentSize);
+      size_t written = fsUploadFile.write(upload.buf, upload.currentSize);
+      if (written != upload.currentSize) {
+          Log.printf("Upload Error: Write mismatch! Expected %u, wrote %u\n", upload.currentSize, written);
+      }
     }
   } else if (upload.status == UPLOAD_FILE_END) {
     if (_uploadAuthPassed && fsUploadFile) {
+      size_t finalSize = fsUploadFile.size();
       fsUploadFile.close();
-      Log.printf("Upload End: %lu bytes\n", (unsigned long)upload.totalSize);
+      Log.printf("Upload End: %lu bytes. Stored Size: %lu bytes.\n", (unsigned long)upload.totalSize, (unsigned long)finalSize);
+
+      if (finalSize != upload.totalSize) {
+          Log.println("Upload Error: File size mismatch on disk!");
+      }
 
       // Hot-reload sound assets if the config file was just uploaded
       if (upload.filename.endsWith("sound_assets.json")) {
