@@ -15,8 +15,10 @@ MotorTask::MotorTask()
     : _taskHandle(NULL), _currentFilter(0.1f), // Alpha for I_avg
       _targetSpeedStep(0), _targetDirection(true), _currentDuty(0.0f),
       _piErrorSum(0.0f), _kp(0.1f), _ki(0.01f), _trackVoltage(14.0f),
-      _maxRpm(6000.0f) // Can be tunable
-{}
+      _maxRpm(6000.0f), // Can be tunable
+      _cvPwmDither(0), _resistanceState(ResistanceState::IDLE),
+      _resistanceStartTime(0), _measuredResistance(0.0f), _testMode(false),
+      _testStartTime(0), _testDataIdx(0) {}
 
 void MotorTask::start() {
   // 1. Initialize Hardware
@@ -68,6 +70,59 @@ void MotorTask::_loop() {
     // Update Filters
     float avgCurrent = _currentFilter.update(currentAmps);
 
+    // Resistance Measurement Override
+    if (_resistanceState == ResistanceState::MEASURING) {
+      if (millis() - _resistanceStartTime < 1000) {
+        // Apply fixed PWM (approx 20%)
+        _currentDuty = 0.2f; // Fixed 20%
+        MotorHal::getInstance().setDuty(_currentDuty);
+      } else {
+        // Measurement complete
+        _currentDuty = 0.0f;
+        MotorHal::getInstance().setDuty(0.0f);
+
+        float vApplied = _trackVoltage * 0.2f;
+
+        if (avgCurrent > 0.05f) { // Ensure some current is flowing
+          float r = vApplied / avgCurrent;
+          _measuredResistance = r;
+
+          // Note: CV Write is delegated to MotorController (Core 0) to ensure
+          // thread safety
+
+          Log.printf("Motor: Measured R=%.2f Ohm\n", r);
+          _resistanceState = ResistanceState::DONE;
+        } else {
+          Log.println("Motor: Resistance Measurement Failed (Low Current)");
+          _resistanceState = ResistanceState::ERROR;
+        }
+      }
+
+      // Update Telemetry even in test mode
+      _status.appliedVoltage = _trackVoltage * 0.2f;
+      _status.current = avgCurrent;
+      _status.estimatedRpm = 0;
+      _status.rippleFreq = 0;
+      _status.stalled = false;
+      _status.duty = _currentDuty;
+
+      continue; // Skip normal control
+    } else if (_resistanceState == ResistanceState::DONE ||
+               _resistanceState == ResistanceState::ERROR) {
+      _currentDuty = 0.0f;
+      MotorHal::getInstance().setDuty(0.0f);
+
+      if (millis() - _resistanceStartTime > 6000) {
+        _resistanceState = ResistanceState::IDLE;
+      }
+
+      // Update Telemetry
+      _status.current = avgCurrent;
+      _status.duty = 0.0f;
+
+      continue;
+    }
+
     // Ripple Detector
     // Convert buffer to Amps for RippleDetector
     for (size_t i = 0; i < samples; i++) {
@@ -83,6 +138,40 @@ void MotorTask::_loop() {
     _estimator.calculateEstimate();
 
     float actualRpm = _estimator.getEstimatedRpm();
+
+    // Test Mode Override
+    if (_testMode) {
+      unsigned long t = millis() - _testStartTime;
+      if (t > 3000) {
+        _testMode = false;
+        _targetSpeedStep = 0;
+      } else {
+        if (t < 1000) {
+          _targetSpeedStep = map(t, 0, 1000, 0, 100);
+          _targetDirection = true;
+        } else if (t < 1500) {
+          _targetSpeedStep = 100;
+          _targetDirection = true;
+        } else if (t < 2500) {
+          _targetSpeedStep = map(t, 1500, 2500, 0, 100);
+          _targetDirection = false;
+        } else {
+          _targetSpeedStep = 100;
+          _targetDirection = false;
+        }
+
+        // Data Logging (Decimate to fit 3s into 100 points: every 2nd frame)
+        static uint8_t decimate = 0;
+        if (++decimate >= 2) {
+          decimate = 0;
+          if (_testDataIdx < MAX_TEST_POINTS) {
+            _testData[_testDataIdx++] = {
+                (uint32_t)t, _targetSpeedStep, _currentDuty, avgCurrent,
+                actualRpm};
+          }
+        }
+      }
+    }
 
     // 5. Control Loop
     if (_targetSpeedStep == 0) {
@@ -114,6 +203,27 @@ void MotorTask::_loop() {
 
       // Calculate Duty
       float duty = vControl / _trackVoltage;
+
+      // --- DITHER LOGIC ---
+      if (_targetSpeedStep > 0 && _targetSpeedStep < 15 && _cvPwmDither > 0) {
+        // 40ms period = 25Hz
+        unsigned long phase = (xTaskGetTickCount() * portTICK_PERIOD_MS) % 40;
+
+        // Base amplitude: CV 0-255 maps to 0-400 (out of 1023) -> 0-0.39 duty
+        float baseAmplitude = (_cvPwmDither / 255.0f) * 0.39f;
+
+        // Fade factor
+        float fadeFactor = 1.0f - (_targetSpeedStep / 15.0f);
+        float dither = baseAmplitude * fadeFactor;
+
+        if (phase < 20) {
+          duty += dither;
+        } else {
+          duty -= dither;
+        }
+      }
+      // ---------------------
+
       if (!_targetDirection)
         duty = -duty;
       _currentDuty = duty;
@@ -132,6 +242,8 @@ void MotorTask::_loop() {
 }
 
 void MotorTask::setTargetSpeed(uint8_t speedStep, bool forward) {
+  if (_testMode || _resistanceState != ResistanceState::IDLE)
+    return;
   _targetSpeedStep = speedStep;
   _targetDirection = forward;
 }
@@ -160,6 +272,50 @@ void MotorTask::reloadCvs() {
 
   _kp = kp * 0.01f;
   _ki = ki * 0.001f;
+
+  _cvPwmDither = dcc.getCV(CV::PWM_DITHER);
 }
 
 MotorTask::Status MotorTask::getStatus() const { return _status; }
+
+void MotorTask::measureResistance() {
+  if (_resistanceState == ResistanceState::IDLE) {
+    _resistanceState = ResistanceState::MEASURING;
+    _resistanceStartTime = millis();
+    _measuredResistance = 0.0f;
+    _currentFilter.reset(); // Reset filter
+    Log.println("MotorTask: Starting Resistance Measurement...");
+  }
+}
+
+MotorTask::ResistanceState MotorTask::getResistanceState() const {
+  return _resistanceState;
+}
+
+float MotorTask::getMeasuredResistance() const { return _measuredResistance; }
+
+void MotorTask::startTest() {
+  if (_testMode)
+    return;
+  _testMode = true;
+  _testStartTime = millis();
+  _testDataIdx = 0;
+  Log.println("MotorTask: Starting Self-Test...");
+}
+
+String MotorTask::getTestJSON() const {
+  String out = "[";
+  for (int i = 0; i < _testDataIdx; i++) {
+    char buf[128];
+    uint16_t pwm = (uint16_t)(fabs(_testData[i].duty) * 1023.0f);
+    snprintf(buf, sizeof(buf),
+             "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
+             _testData[i].t, _testData[i].target, pwm, _testData[i].current,
+             _testData[i].rpm);
+    out += buf;
+    if (i < _testDataIdx - 1)
+      out += ",";
+  }
+  out += "]";
+  return out;
+}

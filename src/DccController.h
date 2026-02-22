@@ -14,10 +14,14 @@ uint8_t notifyCVWrite(uint16_t CV, uint8_t Value);
 
 class DccController {
 public:
+#ifndef UNIT_TEST
   static DccController &getInstance() {
     static DccController instance;
     return instance;
   }
+#else
+  static DccController &getInstance();
+#endif
 
   DccController();
   void setup();
@@ -28,7 +32,11 @@ public:
   void updateFunction(uint8_t functionIndex, bool active);
 
   // Access to raw DCC object for CV reading
+#ifndef UNIT_TEST
   NmraDcc &getDcc() { return _dcc; }
+#else
+  NmraDcc &getDcc();
+#endif
 
   // Check if we have received a valid packet recently
   bool isPacketValid();
