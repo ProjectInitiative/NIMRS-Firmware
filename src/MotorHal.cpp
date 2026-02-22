@@ -168,12 +168,10 @@ size_t MotorHal::getAdcSamples(float *buffer, size_t maxLen) {
 
         // Decode S3 DMA format (Type 2)
         uint32_t data = raw & 0xFFF; // 12 bits
-        uint32_t channel = (raw >> 13) & 0xF;
-        uint32_t unit = (raw >> 17) & 0x1;
 
-        if (unit == 0 && channel == ADC_CHAN) { // ADC_UNIT_1 is 0
-          buffer[totalSamples++] = (float)data;
-        }
+        // Since we only configured one channel pattern, assume all data is for
+        // that channel. This avoids issues with potential channel bit mismatch.
+        buffer[totalSamples++] = (float)data;
       }
       if (ret_num < ADC_READ_LEN)
         break;

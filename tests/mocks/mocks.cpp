@@ -42,7 +42,14 @@ size_t Logger::printf(const char *format, ...) {
   mockLogBuffer += buf;
   return 0;
 }
-void Logger::debug(const char *format, ...) {}
+void Logger::debug(const char *format, ...) {
+  va_list arg;
+  va_start(arg, format);
+  char buf[256];
+  vsnprintf(buf, sizeof(buf), format, arg);
+  va_end(arg);
+  mockLogBuffer += buf;
+}
 size_t Logger::write(uint8_t c) {
   mockLogBuffer += (char)c;
   return 1;

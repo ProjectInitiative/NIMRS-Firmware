@@ -64,6 +64,16 @@ public:
       (*this)[i] = std::tolower((unsigned char)(*this)[i]);
     }
   }
+  char charAt(unsigned int index) const {
+    if (index >= this->length())
+      return 0;
+    return (*this)[index];
+  }
+  void remove(unsigned int index, unsigned int count = (unsigned int)-1) {
+    if (index >= this->length())
+      return;
+    this->erase(index, count);
+  }
 };
 
 #define PROGMEM
