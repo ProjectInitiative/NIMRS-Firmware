@@ -25,13 +25,7 @@ struct DCC_MSG {
 #define FN_BIT_03 0x08
 #define FN_BIT_04 0x10
 
-enum {
-  FN_0_4,
-  FN_5_8,
-  FN_9_12,
-  FN_13_20,
-  FN_21_28
-};
+enum { FN_0_4, FN_5_8, FN_9_12, FN_13_20, FN_21_28 };
 
 class NmraDcc {
 public:
@@ -40,8 +34,9 @@ public:
   void setCV(int cv, int val) {}
 
   // New methods
-  void pin(uint8_t extIntPin, uint8_t extIntNum, uint8_t pullup=1) {}
-  void init(uint8_t manId, uint8_t verId, uint8_t flags, uint8_t autoFactoryDefault) {}
+  void pin(uint8_t extIntPin, uint8_t extIntNum, uint8_t pullup = 1) {}
+  void init(uint8_t manId, uint8_t verId, uint8_t flags,
+            uint8_t autoFactoryDefault) {}
   void process() {}
 };
 

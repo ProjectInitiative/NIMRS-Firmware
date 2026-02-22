@@ -67,7 +67,6 @@ void test_notifyDccSpeed_valid_speed() {
   printf("test_notifyDccSpeed_valid_speed passed.\n");
 }
 
-
 int main() {
   test_notifyDccSpeed_emergency_stop();
   test_notifyDccSpeed_stop();

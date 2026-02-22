@@ -1,9 +1,9 @@
 #ifndef EEPROM_MOCK_H
 #define EEPROM_MOCK_H
 
+#include <map>
 #include <stddef.h>
 #include <stdint.h>
-#include <map>
 
 class EEPROMClass {
 public:

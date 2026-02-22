@@ -92,7 +92,13 @@ def main():
         # Compile
         output_bin = os.path.join("tests/bin", test_name)
         # Split flags safely? Assumes space separation
-        cmd = [cxx] + cxxflags.split() + extra_flags + ["-o", output_bin, test_file] + sources
+        cmd = (
+            [cxx]
+            + cxxflags.split()
+            + extra_flags
+            + ["-o", output_bin, test_file]
+            + sources
+        )
 
         print(f"  Compiling: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
