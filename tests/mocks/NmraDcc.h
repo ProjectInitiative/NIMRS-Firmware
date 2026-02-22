@@ -1,8 +1,8 @@
 #ifndef NMRADCC_MOCK_H
 #define NMRADCC_MOCK_H
 
-#include <stdint.h>
 #include <map>
+#include <stdint.h>
 
 typedef uint8_t DCC_ADDR_TYPE;
 typedef uint8_t DCC_DIRECTION;
@@ -44,45 +44,44 @@ public:
   std::map<int, uint8_t> _cvs;
 
   NmraDcc() {
-      // Default version for auto-reset check
-      _cvs[7] = 123; // Just a random version
+    // Default version for auto-reset check
+    _cvs[7] = 123; // Just a random version
   }
 
   void pin(uint8_t p, uint8_t isr) {
-      pinCalledCount++;
-      pinArg = p;
+    pinCalledCount++;
+    pinArg = p;
   }
 
   void init(uint8_t manufId, uint8_t version, uint8_t flags, uint8_t ops) {
-      initCalledCount++;
+    initCalledCount++;
   }
 
-  void process() {
-      processCalledCount++;
-  }
+  void process() { processCalledCount++; }
 
   uint16_t getAddr() { return 3; }
 
   int getCV(int cv) {
-      if (_cvs.find(cv) != _cvs.end()) return _cvs[cv];
-      return 0;
+    if (_cvs.find(cv) != _cvs.end())
+      return _cvs[cv];
+    return 0;
   }
 
   void setCV(int cv, int val) {
-      _cvs[cv] = val;
-      lastSetCvId = cv;
-      lastSetCvVal = val;
+    _cvs[cv] = val;
+    lastSetCvId = cv;
+    lastSetCvVal = val;
   }
 
   // Helper to verify calls
   void resetMock() {
-      initCalledCount = 0;
-      pinCalledCount = 0;
-      processCalledCount = 0;
-      lastSetCvId = -1;
-      lastSetCvVal = -1;
-      pinArg = 0;
-      _cvs.clear();
+    initCalledCount = 0;
+    pinCalledCount = 0;
+    processCalledCount = 0;
+    lastSetCvId = -1;
+    lastSetCvVal = -1;
+    pinArg = 0;
+    _cvs.clear();
   }
 };
 

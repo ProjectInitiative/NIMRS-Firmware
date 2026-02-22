@@ -30,7 +30,9 @@ def main():
     if not os.path.exists("config.h"):
         print("Creating dummy config.h for tests...")
         with open("config.h", "w") as f:
-            f.write("#ifndef CONFIG_H\n#define CONFIG_H\n\n#define HOSTNAME \"TestDecoder\"\n\n#endif\n")
+            f.write(
+                '#ifndef CONFIG_H\n#define CONFIG_H\n\n#define HOSTNAME "TestDecoder"\n\n#endif\n'
+            )
         config_created = True
 
     failed_tests = []
@@ -92,7 +94,13 @@ def main():
         # Compile
         output_bin = os.path.join("tests/bin", test_name)
         # Split flags safely? Assumes space separation
-        cmd = [cxx] + cxxflags.split() + extra_flags + ["-o", output_bin, test_file] + sources
+        cmd = (
+            [cxx]
+            + cxxflags.split()
+            + extra_flags
+            + ["-o", output_bin, test_file]
+            + sources
+        )
 
         print(f"  Compiling: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
