@@ -10,9 +10,7 @@ public:
 
   AudioFileSourceLittleFS() {}
 
-  AudioFileSourceLittleFS(const char *path) {
-    open(path);
-  }
+  AudioFileSourceLittleFS(const char *path) { open(path); }
 
   bool open(const char *path) {
     _file = LittleFS.open(path, "r");
