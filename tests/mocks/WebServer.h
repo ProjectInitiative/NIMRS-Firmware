@@ -2,8 +2,12 @@
 #define WEBSERVER_MOCK_H
 
 #include "Arduino.h"
+#include <algorithm>
+#include <cstddef>
+#include <cstring>
 #include <functional>
 #include <map>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -34,14 +38,46 @@ class File {
 public:
   operator bool() const { return _valid; }
   void close() {}
-  size_t write(const uint8_t *buf, size_t size) { return size; }
+
+  // Mock Write: Append to global storage for verification
+  static std::map<std::string, std::string> writtenFiles;
+  size_t write(const uint8_t *buf, size_t size) {
+    if (_valid)
+      writtenFiles[_name.c_str()].append((const char *)buf, size);
+    return size;
+  }
+  size_t write(uint8_t c) { return write(&c, 1); }
+
+  // Mock Read: Return dummy data or specific content
+  static std::map<std::string, std::string> fileContent;
+  size_t read(uint8_t *buf, size_t size) {
+    if (!_valid)
+      return 0;
+    std::string &content = fileContent[_name.c_str()];
+    size_t available = content.size() - _pos;
+    size_t toRead = std::min(size, available);
+    memcpy(buf, content.data() + _pos, toRead);
+    _pos += toRead;
+    return toRead;
+  }
+
+  int available() {
+    if (!_valid)
+      return 0;
+    std::string &content = fileContent[_name.c_str()];
+    return content.size() - _pos;
+  }
+
   const char *name() const { return _name.c_str(); }
   size_t size() const { return _size; }
   bool isDirectory() const { return _isDir; }
   File openNextFile(); // Defined in mocks.cpp
-  File() : _name(""), _size(0), _isDir(false), _valid(false), _nextIdx(0) {}
+  File()
+      : _name(""), _size(0), _isDir(false), _valid(false), _nextIdx(0),
+        _pos(0) {}
   File(String name, size_t size, bool isDir = false)
-      : _name(name), _size(size), _isDir(isDir), _valid(true), _nextIdx(0) {}
+      : _name(name), _size(size), _isDir(isDir), _valid(true), _nextIdx(0),
+        _pos(0) {}
 
 private:
   String _name;
@@ -49,6 +85,7 @@ private:
   bool _isDir;
   bool _valid;
   size_t _nextIdx;
+  size_t _pos;
 };
 
 class WebServer {
@@ -73,6 +110,8 @@ public:
   void sendContent(const String &content) {}
   void sendContent(const char *content, size_t length) {}
   void setContentLength(size_t length) {}
+  void sendHeader(const String &name, const String &value, bool first = false) {
+  }
   bool hasArg(const String &name) {
     return args.find((std::string)name) != args.end();
   }
