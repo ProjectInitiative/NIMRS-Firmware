@@ -108,6 +108,22 @@
                 touch $out
               '';
 
+          api-docs =
+            pkgs.runCommand "check-api-docs"
+              {
+                nativeBuildInputs = [ pkgs.python3 ] ++ mkFormattingTools pkgs;
+                src = ./.;
+              }
+              ''
+                cp -r $src/. .
+                chmod -R +w .
+                export XDG_CACHE_HOME=$TMPDIR
+                python3 tools/generate_api_docs.py
+                treefmt docs/API.md
+                diff -u $src/docs/API.md docs/API.md
+                touch $out
+              '';
+
           tests = self.packages.${system}.tests;
         }
       );
@@ -338,6 +354,11 @@
             python3 tools/sync_libs.py
           '';
 
+          # Script to generate API documentation
+          generateApiDocs = pkgs.writeShellScriptBin "generate-api-docs" ''
+            python3 tools/generate_api_docs.py
+          '';
+
         in
         {
           default = pkgs.mkShell {
@@ -364,6 +385,7 @@
                 ciReady
                 agentCheck
                 syncLibs
+                generateApiDocs
                 analyzeCoredump
               ];
 
@@ -409,6 +431,7 @@
                             echo "  analyze-coredump <args>   : Analyze core dump (installs esp-coredump in venv)"
                             echo "  treefmt                   : Format all code (C++, JSON, MD)"
                             echo "  sync-libs                 : Sync libs from common-libs.nix to platformio.ini"
+                            echo "  generate-api-docs         : Generate API documentation (docs/API.md)"
                             echo "  nix build                 : Clean build of the firmware"
                             echo "  nix build .#tests         : Build and run tests in a sandbox"
             '';
