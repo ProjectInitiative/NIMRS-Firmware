@@ -1174,8 +1174,24 @@ function pollLogs() {
 }
 
 function clearLogs() {
-    document.getElementById('log-viewer').innerText = '';
-    // Server clear not implemented in API, so just clear view
+    const type = document.getElementById('log-type-filter').value;
+    const markerKey = type || "";
+    
+    // Call backend to clear logs
+    fetch('/api/logs', { method: 'DELETE' })
+    .then(() => {
+        // Clear session buffers
+        sessionLogs = { "": [], "data": [], "debug": [] };
+        lastSeenTimestamp = { "": 0, "data": 0, "debug": 0 };
+        clearedMarkers = { "": 0, "data": 0, "debug": 0 };
+        
+        // Clear the DOM immediately
+        const viewer = document.getElementById('log-viewer');
+        if (viewer) viewer.innerHTML = '';
+        
+        showToast("Logs Cleared");
+    })
+    .catch(e => showToast("Clear Failed"));
 }
 
 function showToast(msg) {
