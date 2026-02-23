@@ -965,7 +965,7 @@ function loadFiles() {
                     <td><a href="${f.name}" download style="color:#fff;text-decoration:none">${f.name}</a></td>
                     <td>${formatBytes(f.size)}</td>
                     <td>
-                        <a href="${f.name}" download class="btn small" title="Download" style="text-decoration:none; display:inline-block; line-height:1.2; font-size: 1.2rem; padding: 2px 8px;">&darr;</a>
+                        <a href="${f.name}" download class="btn small" title="Download" style="text-decoration:none; display:inline-block; font-size: 1.2rem; padding: 0 6px; line-height: 1; vertical-align: middle;">&darr;</a>
                         ${isAudio ? `<button class="btn small primary" onclick="playAudio('${f.name}')">Play</button>` : ''}
                         <button class="btn small danger" onclick="deleteFile('${f.name}')">Del</button>
                     </td>
