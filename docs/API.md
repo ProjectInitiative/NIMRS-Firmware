@@ -22,6 +22,7 @@ This documentation is automatically generated from the source code.
   - [Upload File](#upload-file)
 - [Logs](#logs)
   - [Get Logs](#get-logs)
+  - [Clear Logs](#clear-logs)
 - [Motor](#motor)
   - [Start Calibration](#start-calibration)
   - [Get Calibration Status](#get-calibration-status)
@@ -323,6 +324,20 @@ Retrieves system logs.
 | Type  | Field | Description           |
 | ----- | ----- | --------------------- |
 | Array | logs  | Array of log strings. |
+
+---
+
+### Clear Logs
+
+`DELETE /api/logs`
+
+Clears all system and telemetry logs.
+
+#### Success Response
+
+| Type | Field  | Description           |
+| ---- | ------ | --------------------- |
+| JSON | status | {"status": "cleared"} |
 
 ---
 

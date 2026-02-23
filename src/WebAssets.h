@@ -149,7 +149,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                                         <th style="width:30px"><input type="checkbox" onclick="toggleAll(this)"></th>
                                         <th>Name</th>
                                         <th>Size</th>
-                                        <th>Actions</th>
+                                        <th style="width:140px"></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -967,8 +967,8 @@ function loadFiles() {
                     <td><input type="checkbox" class="file-check" value="${f.name}"></td>
                     <td><a href="${f.name}" download style="color:#fff;text-decoration:none">${f.name}</a></td>
                     <td>${formatBytes(f.size)}</td>
-                    <td>
-                        <a href="${f.name}" download class="btn small" title="Download" style="text-decoration:none; display:inline-block; font-size: 1.1rem; line-height: 0.7;">&darr;</a>
+                    <td style="text-align:right">
+                        <a href="${f.name}" download class="btn small" title="Download" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; font-size:1.1rem;">&darr;</a>
                         ${isAudio ? `<button class="btn small primary" onclick="playAudio('${f.name}')">Play</button>` : ''}
                         <button class="btn small danger" onclick="deleteFile('${f.name}')">Del</button>
                     </td>
@@ -1193,8 +1193,24 @@ function pollLogs() {
 }
 
 function clearLogs() {
-    document.getElementById('log-viewer').innerText = '';
-    // Server clear not implemented in API, so just clear view
+    const type = document.getElementById('log-type-filter').value;
+    const markerKey = type || "";
+
+    // Call backend to clear logs
+    fetch('/api/logs', { method: 'DELETE' })
+    .then(() => {
+        // Clear session buffers
+        sessionLogs = { "": [], "data": [], "debug": [] };
+        lastSeenTimestamp = { "": 0, "data": 0, "debug": 0 };
+        clearedMarkers = { "": 0, "data": 0, "debug": 0 };
+
+        // Clear the DOM immediately
+        const viewer = document.getElementById('log-viewer');
+        if (viewer) viewer.innerHTML = '';
+
+        showToast("Logs Cleared");
+    })
+    .catch(e => showToast("Clear Failed"));
 }
 
 function showToast(msg) {

@@ -197,6 +197,14 @@ void Logger::debug(const char *format, ...) {
   }
 }
 
+void Logger::clear() {
+  if (xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+    _lines.clear();
+    _dataLines.clear();
+    xSemaphoreGive(_historyMutex);
+  }
+}
+
 void Logger::_addToBuffer(const String &line) {
   if (xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
     // Add timestamp

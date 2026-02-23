@@ -198,6 +198,17 @@ void ConnectivityManager::setup() {
     }
     _server.send(200, "application/json", Log.getLogsJSON(filter));
   });
+  /**
+   * @api {DELETE} /api/logs Clear Logs
+   * @apiGroup Logs
+   * @apiDescription Clears all system and telemetry logs.
+   * @apiSuccess {JSON} status {"status": "cleared"}
+   */
+  _server.on("/api/logs", HTTP_DELETE, [this]() {
+    AUTH_CHECK();
+    Log.clear();
+    _server.send(200, "application/json", "{\"status\":\"cleared\"}");
+  });
 
   // API: File List
   /**

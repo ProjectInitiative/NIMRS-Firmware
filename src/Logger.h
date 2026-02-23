@@ -56,6 +56,7 @@ public:
   // Access for Web Server
   String getLogsHTML();
   String getLogsJSON(const String &filter = "");
+  void clear();
 
 private:
   Logger();
