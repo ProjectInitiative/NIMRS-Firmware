@@ -479,9 +479,9 @@ void ConnectivityManager::handleFileUpload() {
       _uploadBytesWritten += written;
 
       if (written != upload.currentSize) {
-        Log.printf(
-            "Upload Error: Write mismatch! Expected %u, wrote %u (FS Full?)\n",
-            upload.currentSize, written);
+        Log.printf("Upload Error: Write mismatch! Expected %lu, wrote %lu (FS "
+                   "Full?)\n",
+                   (unsigned long)upload.currentSize, (unsigned long)written);
         _uploadFile.close();  // Stop writing to avoid further errors
         _uploadFile = File(); // Invalidate
         _uploadError = "Write failed (FS Full?)";
