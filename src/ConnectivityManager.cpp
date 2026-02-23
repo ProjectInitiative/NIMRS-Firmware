@@ -200,15 +200,33 @@ void ConnectivityManager::setup() {
     handleFileDelete();
   });
 
+  // API: File Format (DANGER)
+  _server.on("/api/files/format", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    handleFileFormat();
+  });
+
   // API: File Upload
   _server.on(
       "/api/files/upload", HTTP_POST,
       [this]() {
+        // We check auth in the response phase too, but rely on
+        // _uploadAuthPassed/Error for status
+        if (_uploadError == "Unauthorized") {
+          // Auth failed during upload start
+          return; // requestAuthentication() was likely called inside
+                  // handleFileUpload
+        }
         AUTH_CHECK();
-        _server.send(200, "text/plain", "Upload OK");
+        if (_uploadError.length() > 0) {
+          _server.send(500, "text/plain", _uploadError);
+        } else {
+          _server.send(200, "text/plain", "Upload OK");
+        }
       },
       [this]() {
-        AUTH_CHECK();
+        // AUTH_CHECK removed here to prevent repeated auth calls during
+        // streaming
         handleFileUpload();
       });
 
@@ -395,7 +413,13 @@ void ConnectivityManager::loop() {
 
 // --- File Management Implementation ---
 
+/**
+ * Helper to bridge ArduinoJson serialization and WebServer chunked streaming.
+ */
 void ConnectivityManager::handleFileList() {
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+
   File root = LittleFS.open("/");
   if (!root || !root.isDirectory()) {
     _server.send(500, "application/json",
@@ -403,39 +427,20 @@ void ConnectivityManager::handleFileList() {
     return;
   }
 
-  _server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  _server.send(200, "application/json", "");
-  _server.sendContent("[");
-
-  {
-    ChunkedPrint writer(_server);
-    JsonDocument doc;
-    bool first = true;
-
-    File file = root.openNextFile();
-    while (file) {
-      if (!first) {
-        _server.sendContent(",");
-      }
-      first = false;
-
-      doc.clear();
-      JsonObject obj = doc.to<JsonObject>();
-      const char *fileName = file.name();
-      if (fileName[0] != '/') {
-        String path = "/" + String(fileName);
-        obj["name"] = path;
-      } else {
-        obj["name"] = fileName;
-      }
-      obj["size"] = file.size();
-
-      serializeJson(doc, writer);
-      file = root.openNextFile();
-    }
+  File file = root.openNextFile();
+  while (file) {
+    JsonObject obj = array.add<JsonObject>();
+    String name = String(file.name());
+    if (!name.startsWith("/"))
+      name = "/" + name;
+    obj["name"] = name;
+    obj["size"] = file.size();
+    file = root.openNextFile();
   }
 
-  _server.sendContent("]");
+  String output;
+  serializeJson(doc, output);
+  _server.send(200, "application/json", output);
 }
 
 void ConnectivityManager::handleFileDelete() {
@@ -452,12 +457,33 @@ void ConnectivityManager::handleFileDelete() {
   }
 }
 
-static File fsUploadFile;
+void ConnectivityManager::handleFileFormat() {
+  Log.println("Files: Formatting LittleFS...");
+  _server.send(200, "text/plain", "Formatting started...");
+
+  // Format is blocking and can take time
+  if (LittleFS.format()) {
+    Log.println("Files: Format Success");
+  } else {
+    Log.println("Files: Format Failed");
+  }
+
+  // Re-mount to be safe
+  LittleFS.end();
+  LittleFS.begin(true);
+}
 
 void ConnectivityManager::handleFileUpload() {
   HTTPUpload &upload = _server.upload();
 
   if (upload.status == UPLOAD_FILE_START) {
+    _uploadError = "";
+    _uploadAuthPassed = isAuthenticated();
+    if (!_uploadAuthPassed) {
+      _uploadError = "Unauthorized";
+      return;
+    }
+
     String filename = upload.filename;
     if (!filename.startsWith("/"))
       filename = "/" + filename;
@@ -473,7 +499,8 @@ void ConnectivityManager::handleFileUpload() {
     if (filename.indexOf("..") >= 0) {
       Log.printf("Upload Blocked: Path traversal detected in %s\n",
                  filename.c_str());
-      fsUploadFile = File(); // Ensure invalid
+      _uploadFile = File(); // Ensure invalid
+      _uploadError = "Invalid filename (path traversal)";
       return;
     }
 
@@ -484,7 +511,8 @@ void ConnectivityManager::handleFileUpload() {
         (unsigned int)filename.indexOf('\0') < filename.length()) {
       Log.printf("Upload Blocked: Null byte detected in %s\n",
                  filename.c_str());
-      fsUploadFile = File(); // Ensure invalid
+      _uploadFile = File(); // Ensure invalid
+      _uploadError = "Invalid filename (null byte)";
       return;
     }
 
@@ -502,21 +530,61 @@ void ConnectivityManager::handleFileUpload() {
     if (!allowed) {
       Log.printf("Upload Blocked: Invalid extension for %s\n",
                  filename.c_str());
-      fsUploadFile = File(); // Ensure invalid
+      _uploadFile = File(); // Ensure invalid
+      _uploadError = "Invalid file extension";
       return;
     }
 
+    // Cleanup: Remove file if it already exists to ensure fresh write
+    if (LittleFS.exists(filename)) {
+      LittleFS.remove(filename);
+    }
+
     Log.printf("Upload Start: %s\n", filename.c_str());
-    fsUploadFile = LittleFS.open(filename, "w");
+    _uploadFile = LittleFS.open(filename, "w");
+    _uploadBytesWritten = 0;
+
+    if (!_uploadFile) {
+      Log.printf("Upload Error: Failed to open %s for writing. (FS Total: %lu, "
+                 "Used: %lu)\n",
+                 filename.c_str(), (unsigned long)LittleFS.totalBytes(),
+                 (unsigned long)LittleFS.usedBytes());
+      _uploadError = "File open failed";
+    }
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (fsUploadFile) {
-      fsUploadFile.write(upload.buf, upload.currentSize);
+    if (_uploadFile) {
+      size_t written = _uploadFile.write(upload.buf, upload.currentSize);
+      _uploadBytesWritten += written;
+
+      if (written != upload.currentSize) {
+        Log.printf("Upload Error: Write mismatch! Expected %lu, wrote %lu (FS "
+                   "Full?)\n",
+                   (unsigned long)upload.currentSize, (unsigned long)written);
+        _uploadFile.close();  // Stop writing to avoid further errors
+        _uploadFile = File(); // Invalidate
+        _uploadError = "Write failed (FS Full?)";
+      }
+    } else {
+      // If we get here, it means file opening failed or authentication failed
+      // earlier, but the client is still sending data. We ignore it. Uncomment
+      // to debug why writes are skipped: Log.println("Upload Warning: Skipping
+      // write (File invalid or Auth failed)");
     }
   } else if (upload.status == UPLOAD_FILE_END) {
-    if (fsUploadFile) {
-      fsUploadFile.close();
-      Log.printf("Upload End: %lu bytes\n", (unsigned long)upload.totalSize);
+    if (_uploadFile) {
+      _uploadFile.close();
+      Log.printf("Upload End: %lu bytes. Written: %lu bytes.\n",
+                 (unsigned long)upload.totalSize,
+                 (unsigned long)_uploadBytesWritten);
+
+      if (_uploadBytesWritten != upload.totalSize) {
+        Log.printf("Upload Error: Size mismatch! Expected %lu, wrote %lu. "
+                   "Deleting %s\n",
+                   (unsigned long)upload.totalSize,
+                   (unsigned long)_uploadBytesWritten, upload.filename.c_str());
+        LittleFS.remove(upload.filename.c_str()); // Cleanup broken file
+      }
 
       // Hot-reload sound assets if the config file was just uploaded
       if (upload.filename.endsWith("sound_assets.json")) {
