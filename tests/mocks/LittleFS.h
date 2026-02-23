@@ -11,6 +11,8 @@ public:
   int callCount_open = 0;
 
   bool begin(bool format = true) { return true; }
+  void end() {}
+  bool format() { return true; }
   size_t totalBytes() { return 1000; }
   size_t usedBytes() { return 100; }
 

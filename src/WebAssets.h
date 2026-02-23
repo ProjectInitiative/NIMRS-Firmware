@@ -138,6 +138,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                             <div class="table-controls">
                                 <button class="btn small" onclick="loadFiles()">Refresh</button>
                                 <button class="btn small danger" onclick="deleteSelected()">Delete Selected</button>
+                                <button class="btn small danger" onclick="formatFileSystem()" title="Wipe all files">Format FS</button>
                             </div>
                         </div>
                         <div class="table-container">
@@ -965,7 +966,7 @@ function rwCustomCV(mode) {
 
 // --- File Manager ---
 function loadFiles() {
-    fetch('/api/files/list')
+    fetch('/api/files/list?_=' + Date.now())
         .then(r => r.json())
         .then(files => {
             const tbody = document.querySelector('#file-table tbody');
@@ -978,6 +979,7 @@ function loadFiles() {
                     <td><a href="${f.name}" download style="color:#fff;text-decoration:none">${f.name}</a></td>
                     <td>${formatBytes(f.size)}</td>
                     <td>
+                        <a href="${f.name}" download class="btn small" style="text-decoration:none; display:inline-block; line-height:1.2;">Down</a>
                         ${isAudio ? `<button class="btn small primary" onclick="playAudio('${f.name}')">Play</button>` : ''}
                         <button class="btn small danger" onclick="deleteFile('${f.name}')">Del</button>
                     </td>
@@ -1009,6 +1011,23 @@ async function deleteSelected() {
     loadFiles();
 }
 
+function formatFileSystem() {
+    if(!confirm("Format filesystem? This will delete ALL files and cannot be undone.")) return;
+    
+    showToast("Formatting...");
+    fetch('/api/files/format', { method: 'POST' })
+    .then(r => {
+        if(r.ok) {
+            showToast("Format Started. Please wait...");
+            // Formatting takes time, so reload list after a delay
+            setTimeout(loadFiles, 5000);
+        } else {
+            showToast("Format Failed");
+        }
+    })
+    .catch(() => showToast("Network Error"));
+}
+
 async function handleUpload(e) {
     e.preventDefault();
     const input = document.getElementById('file-input');
@@ -1020,31 +1039,48 @@ async function handleUpload(e) {
     for (let i = 0; i < input.files.length; i++) {
         let file = input.files[i];
         let name = file.name;
-        status.innerText = `Uploading ${name}...`;
+        
+        // Security Check: Whitelist Extensions (Client-side)
+        const lowerName = name.toLowerCase();
+        if (!(lowerName.endsWith(".json") || lowerName.endsWith(".wav") || lowerName.endsWith(".mp3"))) {
+            console.log(`[Upload] Rejected: ${name}`);
+            status.innerText = `Rejected: ${name} (Invalid extension)`;
+            continue;
+        }
 
-        if (compress && name.toLowerCase().endsWith('.wav')) {
+        console.log(`[Upload] Processing ${i+1}/${input.files.length}: ${name}`);
+        status.innerText = `Processing ${name}...`;
+
+        if (compress && lowerName.endsWith('.wav')) {
              try {
+                console.log(`[Upload] Compressing ${name}...`);
+                status.innerText = `Compressing ${name}...`;
                 file = await compressToMp3(file);
                 name = file.name;
-                status.innerText = `Compressed to ${name}. Uploading...`;
+                console.log(`[Upload] Compression done: ${name}`);
              } catch(err) {
                  console.error(err);
                  status.innerText = `Compression failed: ${err}`;
+                 continue; // Skip file on compression error
              }
         }
 
         const fd = new FormData();
         fd.append("file", file, name);
         try {
+            console.log(`[Upload] Sending ${name}...`);
+            status.innerText = `Uploading ${name}...`;
             const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
             if (!res.ok) {
                 const txt = await res.text();
                 status.innerText = `Error: ${txt}`;
-                console.error(txt);
+                console.error(`[Upload] Failed: ${txt}`);
+            } else {
+                console.log(`[Upload] Success: ${name}`);
             }
         } catch (e) {
             status.innerText = "Network Error";
-            console.error(e);
+            console.error(`[Upload] Network Error:`, e);
         }
     }
     status.innerText = "Done!";
@@ -1058,19 +1094,74 @@ async function compressToMp3(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const buf = await ctx.decodeAudioData(e.target.result);
-            const mp3enc = new lamejs.Mp3Encoder(buf.numberOfChannels, buf.sampleRate, 128);
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const buf = await ctx.decodeAudioData(e.target.result);
+                
+                const channels = buf.numberOfChannels;
+                const sampleRate = buf.sampleRate;
+                const kbps = 128;
+                
+                console.log(`[LameJS] Init Encoder: ${channels}ch ${sampleRate}Hz ${kbps}kbps`);
+                const mp3enc = new lamejs.Mp3Encoder(channels, sampleRate, kbps);
 
-            // Simplified conversion...
-            const samples = buf.getChannelData(0);
-            const int16 = new Int16Array(samples.length);
-            for(let i=0; i<samples.length; i++) int16[i] = samples[i] * (samples[i]<0 ? 0x8000 : 0x7FFF);
+                const samplesL = buf.getChannelData(0);
+                const samplesR = channels > 1 ? buf.getChannelData(1) : samplesL;
+                
+                // Convert Float32 to Int16 helper
+                const convert = (s) => s < 0 ? s * 0x8000 : s * 0x7FFF;
 
-            const mp3 = mp3enc.encodeBuffer(int16);
-            const end = mp3enc.flush();
-            resolve(new File([new Blob([mp3, end], {type: 'audio/mpeg'})], file.name.replace('.wav','.mp3')));
+                const mp3Chunks = [];
+                const blockSize = 1152; 
+                
+                // Determine length based on Left channel
+                const len = samplesL.length;
+                const int16L = new Int16Array(blockSize);
+                const int16R = new Int16Array(blockSize);
+
+                for (let i = 0; i < len; i += blockSize) {
+                    const chunkLen = Math.min(blockSize, len - i);
+                    
+                    // Fill Left Buffer
+                    for(let j=0; j<chunkLen; j++) int16L[j] = convert(samplesL[i+j]);
+                    
+                    let mp3buf;
+                    if (channels > 1) {
+                        // Fill Right Buffer
+                        for(let j=0; j<chunkLen; j++) int16R[j] = convert(samplesR[i+j]);
+                        
+                        // Pass subarrays to encodeBuffer (it expects Int16Arrays)
+                        // Note: LameJS encodeBuffer takes entire array if length matches, or we slice.
+                        // Since we reuse buffer, we must be careful.
+                        // Actually, simpler to slice input Float32 and convert on the fly?
+                        // LameJS expects Int16.
+                        
+                        // Proper way with reusable buffer:
+                        // But LameJS might not like 'trailing' garbage in buffer if chunkLen < blockSize.
+                        // So let's slice the Int16Array for the last chunk.
+                        const leftChunk = (chunkLen < blockSize) ? int16L.subarray(0, chunkLen) : int16L;
+                        const rightChunk = (chunkLen < blockSize) ? int16R.subarray(0, chunkLen) : int16R;
+                        
+                        mp3buf = mp3enc.encodeBuffer(leftChunk, rightChunk);
+                    } else {
+                        const leftChunk = (chunkLen < blockSize) ? int16L.subarray(0, chunkLen) : int16L;
+                        mp3buf = mp3enc.encodeBuffer(leftChunk);
+                    }
+                    
+                    if (mp3buf.length > 0) mp3Chunks.push(mp3buf);
+                }
+                
+                const end = mp3enc.flush();
+                if (end.length > 0) mp3Chunks.push(end);
+                
+                console.log(`[LameJS] Done. Chunks: ${mp3Chunks.length}`);
+                const blob = new Blob(mp3Chunks, {type: 'audio/mpeg'});
+                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, ".mp3"), {type: "audio/mpeg"}));
+            } catch (err) {
+                reject(err);
+            }
         };
+        reader.onerror = reject;
         reader.readAsArrayBuffer(file);
     });
 }
@@ -1098,8 +1189,24 @@ function pollLogs() {
 }
 
 function clearLogs() {
-    document.getElementById('log-viewer').innerText = '';
-    // Server clear not implemented in API, so just clear view
+    const type = document.getElementById('log-type-filter').value;
+    const markerKey = type || "";
+    
+    // Call backend to clear logs
+    fetch('/api/logs', { method: 'DELETE' })
+    .then(() => {
+        // Clear session buffers
+        sessionLogs = { "": [], "data": [], "debug": [] };
+        lastSeenTimestamp = { "": 0, "data": 0, "debug": 0 };
+        clearedMarkers = { "": 0, "data": 0, "debug": 0 };
+        
+        // Clear the DOM immediately
+        const viewer = document.getElementById('log-viewer');
+        if (viewer) viewer.innerHTML = '';
+        
+        showToast("Logs Cleared");
+    })
+    .catch(e => showToast("Clear Failed"));
 }
 
 function showToast(msg) {

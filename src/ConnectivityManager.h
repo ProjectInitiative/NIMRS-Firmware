@@ -37,7 +37,11 @@ private:
   void handleFileList();
   void handleFileUpload();
   void handleFileDelete();
+  void handleFileFormat();
   void handleStaticFile(); // Catch-all for FS files
+
+  File _uploadFile;
+  size_t _uploadBytesWritten = 0;
 
   // WiFi Management Handlers
   void handleWifiSave();

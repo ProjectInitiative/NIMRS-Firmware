@@ -17,6 +17,7 @@ This documentation is automatically generated from the source code.
 - [Files](#files)
   - [Delete File](#delete-file)
   - [Delete File (Method)](#delete-file-method)
+  - [Format Filesystem](#format-filesystem)
   - [List Files](#list-files)
   - [Upload File](#upload-file)
 - [Logs](#logs)
@@ -252,6 +253,20 @@ Deletes a file.
 | Type   | Field | Description                                 |
 | ------ | ----- | ------------------------------------------- |
 | String | text  | "File not found" or "Missing path argument" |
+
+---
+
+### Format Filesystem
+
+`POST /api/files/format`
+
+Formats the LittleFS partition. DANGER: Deletes all files.
+
+#### Success Response
+
+| Type   | Field | Description             |
+| ------ | ----- | ----------------------- |
+| String | text  | "Formatting started..." |
 
 ---
 

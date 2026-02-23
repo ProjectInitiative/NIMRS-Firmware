@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <cmath>
 #include <driver/adc.h>
-#include <driver/gpio.h>
 #include <driver/mcpwm.h>
 #include <esp_err.h>
 #include <esp_log.h>
@@ -35,13 +34,6 @@ void MotorHal::init() {
   mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, Pinout::MOTOR_IN1);
   mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, Pinout::MOTOR_IN2);
 
-  // Initialize Gain Select and Current Sense (High Impedance / Input)
-  gpio_reset_pin((gpio_num_t)Pinout::MOTOR_GAIN_SEL);
-  pinMode(Pinout::MOTOR_GAIN_SEL, INPUT);
-
-  gpio_reset_pin((gpio_num_t)Pinout::MOTOR_CURRENT);
-  pinMode(Pinout::MOTOR_CURRENT, INPUT);
-
   // Configure Timer & Frequency
   mcpwm_config_t pwm_config;
   pwm_config.frequency = 20000; // frequency = 20kHz,
@@ -65,7 +57,7 @@ void MotorHal::init() {
   adc_dma_config.adc2_chan_mask = 0; // Explicitly 0
 
   adc_digi_pattern_config_t adc_pattern[1] = {0};
-  adc_pattern[0].atten = ADC_ATTEN_DB_0;
+  adc_pattern[0].atten = ADC_ATTEN_DB_11;
   adc_pattern[0].channel = (uint8_t)ADC_CHAN;
   adc_pattern[0].unit = 0; // Explicitly ADC1 (S3 DMA requirement)
   adc_pattern[0].bit_width = (uint8_t)SOC_ADC_DIGI_MAX_BITWIDTH;
