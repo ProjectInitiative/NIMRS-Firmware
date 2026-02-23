@@ -743,6 +743,21 @@ function pollStatus() {
                 if(hn && !hn.value) hn.value = data.hostname;
             }
 
+            // Rollback Warning
+            if (data.rolled_back) {
+                const warn = document.getElementById('rollback-warning');
+                if(!warn) {
+                    const div = document.createElement('div');
+                    div.id = 'rollback-warning';
+                    div.className = 'card';
+                    div.style.borderLeft = '4px solid var(--warning-color)';
+                    div.innerHTML = '<h3>⚠️ System Rollback Detected</h3><p>The system recovered from a boot loop by rolling back to the previous firmware version.</p>';
+                    // Insert at top of dashboard
+                    const dashboard = document.querySelector('#dashboard .dashboard-grid');
+                    if(dashboard) dashboard.insertBefore(div, dashboard.firstChild);
+                }
+            }
+
             // Quota
             if (data.fs_total) {
                 const used = data.fs_used || 0;
