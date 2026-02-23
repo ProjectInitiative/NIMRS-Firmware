@@ -137,6 +137,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                             <h3>Files</h3>
                             <div class="table-controls">
                                 <button class="btn small" onclick="loadFiles()">Refresh</button>
+                                <button class="btn small" onclick="downloadSelected()">Download Selected</button>
                                 <button class="btn small danger" onclick="deleteSelected()">Delete Selected</button>
                                 <button class="btn small danger" onclick="formatFileSystem()" title="Wipe all files">Format FS</button>
                             </div>
@@ -964,7 +965,7 @@ function loadFiles() {
                     <td><a href="${f.name}" download style="color:#fff;text-decoration:none">${f.name}</a></td>
                     <td>${formatBytes(f.size)}</td>
                     <td>
-                        <a href="${f.name}" download class="btn small" style="text-decoration:none; display:inline-block; line-height:1.2;">Down</a>
+                        <a href="${f.name}" download class="btn small" title="Download" style="text-decoration:none; display:inline-block; line-height:1.2; font-size: 1.2rem; padding: 2px 8px;">&darr;</a>
                         ${isAudio ? `<button class="btn small primary" onclick="playAudio('${f.name}')">Play</button>` : ''}
                         <button class="btn small danger" onclick="deleteFile('${f.name}')">Del</button>
                     </td>
@@ -982,6 +983,21 @@ function deleteFile(name) {
     if(confirm(`Delete ${name}?`)) {
         fetch('/api/files/delete', { method: 'POST', body: `path=${encodeURIComponent(name)}`, headers: {'Content-Type': 'application/x-www-form-urlencoded'} })
         .then(() => loadFiles());
+    }
+}
+
+async function downloadSelected() {
+    const checked = document.querySelectorAll('.file-check:checked');
+    if(!checked.length) return;
+
+    for(const c of checked) {
+        const a = document.createElement('a');
+        a.href = c.value;
+        a.download = c.value;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        await new Promise(r => setTimeout(r, 500));
     }
 }
 
