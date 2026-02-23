@@ -19,7 +19,7 @@ private:
   WebServer _server;
   HTTPUpdateServer _httpUpdater;
   String _uploadError;
-  bool _uploadAuthPassed = false;
+  String _lastUploadedFile;
 
   // WiFi State
   enum WifiState {

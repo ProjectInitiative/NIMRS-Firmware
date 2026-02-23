@@ -168,14 +168,16 @@ void ConnectivityManager::setup() {
   _server.on(
       "/api/files/upload", HTTP_POST,
       [this]() {
-        // We check auth in the response phase too, but rely on
-        // _uploadAuthPassed/Error for status
-        if (_uploadError == "Unauthorized") {
-          // Auth failed during upload start
-          return; // requestAuthentication() was likely called inside
-                  // handleFileUpload
+        // Auth check is done AFTER upload to prevent stream corruption.
+        // If auth fails, we delete the uploaded file.
+        if (!isAuthenticated()) {
+            if (_lastUploadedFile.length() > 0 && LittleFS.exists(_lastUploadedFile)) {
+                LittleFS.remove(_lastUploadedFile);
+                Log.printf("Upload Blocked: Unauthorized. Deleted %s\n", _lastUploadedFile.c_str());
+            }
+            return; // isAuthenticated handles the 401 response
         }
-        AUTH_CHECK();
+
         if (_uploadError.length() > 0) {
           _server.send(500, "text/plain", _uploadError);
         } else {
@@ -183,8 +185,6 @@ void ConnectivityManager::setup() {
         }
       },
       [this]() {
-        // AUTH_CHECK removed here to prevent repeated auth calls during
-        // streaming
         handleFileUpload();
       });
 
@@ -427,15 +427,11 @@ void ConnectivityManager::handleFileUpload() {
 
   if (upload.status == UPLOAD_FILE_START) {
     _uploadError = "";
-    _uploadAuthPassed = isAuthenticated();
-    if (!_uploadAuthPassed) {
-      _uploadError = "Unauthorized";
-      return;
-    }
-
     String filename = upload.filename;
     if (!filename.startsWith("/"))
       filename = "/" + filename;
+
+    _lastUploadedFile = filename;
 
     // Workaround: Some clients/browsers may include a null terminator in the
     // filename which triggers our security check. Strip trailing null bytes.
@@ -511,8 +507,8 @@ void ConnectivityManager::handleFileUpload() {
       Log.printf("Upload End: %lu bytes. Stored Size: %lu bytes.\n", (unsigned long)upload.totalSize, (unsigned long)finalSize);
 
       if (finalSize != upload.totalSize) {
-          Log.printf("Upload Error: File size mismatch! Deleting %s\n", upload.filename.c_str());
-          LittleFS.remove(upload.filename.c_str()); // Cleanup broken file
+          Log.printf("Upload Error: File size mismatch! Deleting %s\n", _lastUploadedFile.c_str());
+          LittleFS.remove(_lastUploadedFile); // Cleanup broken file
       }
 
       // Hot-reload sound assets if the config file was just uploaded
