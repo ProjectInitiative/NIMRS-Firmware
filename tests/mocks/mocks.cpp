@@ -58,6 +58,7 @@ size_t Logger::write(const uint8_t *buffer, size_t size) {
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
 String Logger::getLogsHTML() { return ""; }
 void Logger::_addToBuffer(const String &line) {}
+void Logger::clear() { mockLogBuffer = ""; }
 #endif
 
 #ifndef SKIP_MOCK_AUDIO_CONTROLLER
