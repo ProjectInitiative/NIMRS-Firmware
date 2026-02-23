@@ -499,6 +499,8 @@ void ConnectivityManager::loop() {
 
   if (_shouldRestart && millis() - _restartTimer > 1000) {
     Log.println("Rebooting...");
+    // Ensure we don't trigger a rollback for an intentional restart
+    BootLoopDetector::markSuccessful();
     ESP.restart();
   }
 }

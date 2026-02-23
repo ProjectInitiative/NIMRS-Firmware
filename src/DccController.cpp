@@ -1,5 +1,6 @@
 #include "DccController.h"
 #include "../config.h"
+#include "BootLoopDetector.h"
 #include "CvRegistry.h"
 #include "Logger.h"
 #include "nimrs-pinout.h"
@@ -136,6 +137,8 @@ uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
 
     // Restart to apply clean state
     Log.println("Rebooting in 1s...");
+    // Ensure this intentional reset doesn't trigger rollback
+    BootLoopDetector::markSuccessful();
     delay(1000);
     ESP.restart();
     return Value;
