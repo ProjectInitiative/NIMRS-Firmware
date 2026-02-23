@@ -4,8 +4,8 @@
 #include "Logger.h"
 #include "SystemContext.h"
 #include <ArduinoJson.h>
-#include <HTTPUpdateServer.h>
 #include <LittleFS.h>
+#include <Update.h>
 #include <WebServer.h>
 #include <WiFi.h>
 
@@ -17,7 +17,6 @@ public:
 
 private:
   WebServer _server;
-  HTTPUpdateServer _httpUpdater;
   String _uploadError;
   bool _uploadAuthPassed = false;
 
@@ -36,6 +35,7 @@ private:
   // File Manager Handlers
   void handleFileList();
   void handleFileUpload();
+  void handleFirmwareUpdate();
   void handleFileDelete();
   void handleFileFormat();
   void handleStaticFile(); // Catch-all for FS files

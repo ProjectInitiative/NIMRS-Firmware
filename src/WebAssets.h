@@ -752,11 +752,25 @@ function pollStatus() {
                     div.id = 'rollback-warning';
                     div.className = 'card';
                     div.style.borderLeft = '4px solid var(--warning-color)';
-                    div.innerHTML = '<h3>⚠️ System Rollback Detected</h3><p>The system recovered from a boot loop by rolling back to the previous firmware version.</p>';
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:start;">
+                            <div>
+                                <h3 style="color:var(--warning-color)">⚠️ System Rollback Detected</h3>
+                                <p>The system recovered from a boot loop by rolling back.</p>
+                                <p style="font-size:0.9rem; color:var(--text-muted)">
+                                    Crashed Version: <b>${data.crashed_version || 'Unknown'}</b><br>
+                                    Currently Running: <b>${data.running_version || 'Unknown'}</b>
+                                </p>
+                            </div>
+                            <button class="btn small" onclick="sendAction('clear_rollback'); document.getElementById('rollback-warning').remove();">Dismiss</button>
+                        </div>`;
                     // Insert at top of dashboard
                     const dashboard = document.querySelector('#dashboard .dashboard-grid');
                     if(dashboard) dashboard.insertBefore(div, dashboard.firstChild);
                 }
+            } else {
+                const warn = document.getElementById('rollback-warning');
+                if(warn) warn.remove();
             }
 
             // Quota

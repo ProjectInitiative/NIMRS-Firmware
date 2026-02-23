@@ -60,6 +60,7 @@ size_t Logger::write(const uint8_t *buffer, size_t size) {
 }
 String Logger::getLogsJSON(const String &filter) { return "[]"; }
 String Logger::getLogsHTML() { return ""; }
+void Logger::clear() {}
 void Logger::_addToBuffer(const String &line) {}
 #endif
 
@@ -136,6 +137,10 @@ esp_ota_get_next_update_partition(const esp_partition_t *start_from) {
   return &mock_ota_0;
 }
 
+const esp_partition_t *esp_ota_get_last_invalid_partition(void) {
+  return NULL; // Simple mock for now
+}
+
 esp_err_t esp_ota_set_boot_partition(const esp_partition_t *partition) {
   mock_boot = partition;
   return ESP_OK;
@@ -146,3 +151,35 @@ esp_err_t esp_ota_mark_app_valid_cancel_rollback(void) { return ESP_OK; }
 void setMockRunningPartition(const esp_partition_t *p) { mock_running = p; }
 
 const esp_partition_t *getMockBootPartition() { return mock_boot; }
+
+static esp_app_desc_t mock_app_desc = {
+
+    0,      0,   {0}, "1.0.0", "nimrs-fw", "12:00:00", "2023-01-01",
+    "v1.0", {0}, {0}
+
+};
+
+const esp_app_desc_t *esp_ota_get_app_description(void) {
+
+  return &mock_app_desc;
+}
+
+esp_err_t esp_ota_get_partition_description(const esp_partition_t *partition,
+                                            esp_app_desc_t *app_desc) {
+
+  if (app_desc) {
+
+    *app_desc = mock_app_desc;
+
+    if (partition == &mock_ota_1) {
+
+      snprintf(app_desc->version, 32, "1.1.0");
+
+    } else {
+
+      snprintf(app_desc->version, 32, "1.0.0");
+    }
+  }
+
+  return ESP_OK;
+}

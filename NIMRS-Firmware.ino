@@ -44,11 +44,11 @@ void controlPlaneTask(void *pvParameters) {
 }
 
 void setup() {
-  // 1. Initialize Logging (Serial remains disabled to avoid Pin 1 conflict)
-  Log.startTask();
-
-  // Check for bootloop early
+  // Check for bootloop early (before ANY other tasks)
   BootLoopDetector::check();
+
+  // 1. Initialize Logging
+  Log.startTask();
 
   Log.println("\n\nNIMRS Decoder Starting...");
 

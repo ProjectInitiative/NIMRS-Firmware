@@ -9,6 +9,9 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Preferences.h>
+#include <esp_app_format.h>
+#include <esp_ota_ops.h>
+#include <esp_partition.h>
 
 #ifndef BUILD_VERSION
 #define BUILD_VERSION "dev"
@@ -485,7 +488,22 @@ void ConnectivityManager::setup() {
   });
 
   // OTA Updater
-  _httpUpdater.setup(&_server, "/update", _webUser.c_str(), _webPass.c_str());
+  // Use manual handler to ensure proper logging and control
+  _server.on(
+      "/update", HTTP_POST,
+      [this]() {
+        // Send success
+        AUTH_CHECK();
+        _server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+        if (!Update.hasError()) {
+          _shouldRestart = true;
+          _restartTimer = millis();
+        }
+      },
+      [this]() {
+        // Handle upload
+        handleFirmwareUpdate();
+      });
 
   // Static File Catch-All (For serving audio files or other assets from FS)
   _server.onNotFound([this]() {
@@ -711,6 +729,43 @@ void ConnectivityManager::handleFileUpload() {
   }
 }
 
+void ConnectivityManager::handleFirmwareUpdate() {
+  HTTPUpload &upload = _server.upload();
+  if (upload.status == UPLOAD_FILE_START) {
+    if (!isAuthenticated()) {
+      return;
+    }
+    Log.printf("Update: Receiving %s\n", upload.filename.c_str());
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+      Update.printError(Serial);
+    }
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+      Update.printError(Serial);
+    }
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (Update.end(true)) {
+      Log.printf("Update: Success! Size: %u\n", upload.totalSize);
+
+      // Check the state of the newly written partition
+      // Note: esp_ota_get_next_update_partition(NULL) gives us the one we JUST
+      // wrote to because Update.end() flips the boot partition pointer. Wait,
+      // Update.end() sets the boot partition. So esp_ota_get_boot_partition()
+      // should be it.
+      const esp_partition_t *boot = esp_ota_get_boot_partition();
+      if (boot) {
+        esp_ota_img_states_t state;
+        if (esp_ota_get_state_partition(boot, &state) == ESP_OK) {
+          Log.printf("Update: New Partition State = %d (Expected 0=NEW)\n",
+                     state);
+        }
+      }
+    } else {
+      Update.printError(Serial);
+    }
+  }
+}
+
 void ConnectivityManager::handleStaticFile() {
   String path = _server.uri();
 
@@ -836,6 +891,9 @@ void ConnectivityManager::handleControl() {
     int level = doc["value"]; // 0=Debug, 1=Info
     Log.setLevel((LogLevel)level);
     Log.printf("Web: Log Level %d\n", level);
+  } else if (action == "clear_rollback") {
+    BootLoopDetector::clearRollback();
+    Log.println("Web: Rollback Flag Cleared");
   } else {
     _server.send(400, "text/plain", "Unknown action");
     return;
@@ -939,7 +997,11 @@ void ConnectivityManager::handleStatus() {
   doc["uptime"] = millis() / 1000;
   doc["version"] = BUILD_VERSION;
   doc["hash"] = GIT_HASH;
-  doc["rolled_back"] = BootLoopDetector::didRollback();
+
+  RollbackInfo rb = BootLoopDetector::getRollbackInfo();
+  doc["rolled_back"] = rb.rolledback;
+  doc["running_version"] = rb.runningVersion;
+  doc["crashed_version"] = rb.crashedVersion;
 
   // Retrieve hostname dynamically (in case it changed)
   Preferences prefs;
