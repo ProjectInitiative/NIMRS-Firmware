@@ -36,25 +36,6 @@ void DccController::setup() {
   // 0x02 = FLAGS_AUTO_FACTORY_DEFAULT
   _dcc.init(MAN_ID_DIY, 10, 0x02, 0);
 
-  // Check version for automatic factory reset
-  // This ensures new CVs are initialized when we bump the firmware version
-  uint8_t currentVersion = _dcc.getCV(CV::DECODER_VERSION);
-  uint8_t targetVersion = 0;
-
-  // Find the target version from our registry
-  for (size_t i = 0; i < CV_DEFS_COUNT; i++) {
-    if (CV_DEFS[i].id == CV::DECODER_VERSION) {
-      targetVersion = CV_DEFS[i].defaultValue;
-      break;
-    }
-  }
-
-  if (currentVersion != targetVersion) {
-    Log.printf("DCC: Version mismatch (Saved: %d, Target: %d). Skipping "
-               "auto-reset to avoid loop.\n",
-               currentVersion, targetVersion);
-  }
-
   Log.printf("DccController: Listening on Pin %d\n", Pinout::TRACK_LEFT_3V3);
 }
 
