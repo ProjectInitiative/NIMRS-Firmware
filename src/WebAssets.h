@@ -587,6 +587,9 @@ details[open] summary::after { content: '-'; }
 .hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; }
 
 /* File Manager */
+#file-table tr .btn { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+#file-table tr:hover .btn, #file-table tr:focus-within .btn { opacity: 1; pointer-events: auto; }
+
 .quota-container { margin-top: 10px; }
 .quota-bar { height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
 #quota-fill { height: 100%; width: 0%; background: var(--primary-color); transition: width 0.5s; }
