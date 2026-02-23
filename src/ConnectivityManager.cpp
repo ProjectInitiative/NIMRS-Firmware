@@ -465,45 +465,6 @@ void ConnectivityManager::handleFileUpload() {
       return;
     }
 
-    // Smart Truncation for LittleFS (Limit ~31 chars)
-    // REQUIRED: Evidence shows LittleFS opens >31 char filenames but writes 0 bytes silently.
-    String namePart =
-        filename.startsWith("/") ? filename.substring(1) : filename;
-    if (namePart.length() > 31) {
-      int dotIndex = namePart.lastIndexOf('.');
-      String ext = "";
-      String base = namePart;
-      if (dotIndex > 0) {
-        ext = namePart.substring(dotIndex);
-        base = namePart.substring(0, dotIndex);
-      }
-
-      int maxBase = 31 - ext.length();
-      if (base.length() > (unsigned int)maxBase) {
-        // Hashing to ensure uniqueness for bulk uploads of similar files
-        uint16_t hash = 0;
-        for (unsigned int i = 0; i < namePart.length(); i++) {
-          hash = (hash * 31) + namePart.charAt(i);
-        }
-        char hashStr[6];
-        snprintf(hashStr, sizeof(hashStr), "%04X", hash);
-
-        int reserved = 5; // "~HASH"
-        int available = maxBase - reserved;
-        if (available < 2) available = 2;
-
-        int keepStart = available / 2;
-        int keepEnd = available - keepStart;
-
-        String newBase = base.substring(0, keepStart) + "~" + String(hashStr) +
-                         base.substring(base.length() - keepEnd);
-        String newName = newBase + ext;
-        Log.printf("Renaming %s to %s (FS Limit)\n", namePart.c_str(),
-                   newName.c_str());
-        filename = "/" + newName;
-      }
-    }
-
     // Security Check: Whitelist Extensions
     // Only allow specific asset types to prevent uploading malicious scripts
     // (HTML/JS) or overwriting system files.
@@ -523,6 +484,11 @@ void ConnectivityManager::handleFileUpload() {
       return;
     }
 
+    // Cleanup: Remove file if it already exists to ensure fresh write
+    if (LittleFS.exists(filename)) {
+      LittleFS.remove(filename);
+    }
+
     Log.printf("Upload Start: %s\n", filename.c_str());
     fsUploadFile = LittleFS.open(filename, "w");
     if (!fsUploadFile) {
@@ -532,20 +498,21 @@ void ConnectivityManager::handleFileUpload() {
     }
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (_uploadAuthPassed && fsUploadFile) {
+    if (fsUploadFile) {
       size_t written = fsUploadFile.write(upload.buf, upload.currentSize);
       if (written != upload.currentSize) {
           Log.printf("Upload Error: Write mismatch! Expected %u, wrote %u\n", upload.currentSize, written);
       }
     }
   } else if (upload.status == UPLOAD_FILE_END) {
-    if (_uploadAuthPassed && fsUploadFile) {
+    if (fsUploadFile) {
       size_t finalSize = fsUploadFile.size();
       fsUploadFile.close();
       Log.printf("Upload End: %lu bytes. Stored Size: %lu bytes.\n", (unsigned long)upload.totalSize, (unsigned long)finalSize);
 
       if (finalSize != upload.totalSize) {
-          Log.println("Upload Error: File size mismatch on disk!");
+          Log.printf("Upload Error: File size mismatch! Deleting %s\n", upload.filename.c_str());
+          LittleFS.remove(upload.filename.c_str()); // Cleanup broken file
       }
 
       // Hot-reload sound assets if the config file was just uploaded
