@@ -2,9 +2,9 @@
 
 pkgs.stdenv.mkDerivation {
   name = "nimrs-firmware-dependencies";
-  
+
   # We only need the component manifest to determine dependencies
-  src = pkgs.runCommand "component-manifest" {} ''
+  src = pkgs.runCommand "component-manifest" { } ''
     mkdir -p $out/main
     cp ${./main/idf_component.yml} $out/main/idf_component.yml
     cp ${./sdkconfig.defaults} $out/sdkconfig.defaults
@@ -18,26 +18,26 @@ pkgs.stdenv.mkDerivation {
   dontConfigure = true;
 
   buildPhase = ''
-    export HOME=$TMPDIR
-    
-    # Create a minimal CMakeLists.txt for idf.py
-    cat > CMakeLists.txt <<EOF
-cmake_minimum_required(VERSION 3.16)
-include(\$ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(dependencies)
-EOF
-    
-    # Create main component CMakeLists.txt to register the component
-    # This ensures idf.py sees 'main' and processes its manifest
-    cat > main/CMakeLists.txt <<EOF
-idf_component_register(SRCS "" INCLUDE_DIRS ".")
-EOF
+        export HOME=$TMPDIR
 
-    echo "Downloading dependencies..."
-    # We use 'idf.py reconfigure' or component manager directly to resolve and download
-    # Since we don't have a full project, we rely on the manifest in main/
-    
-    idf.py reconfigure
+        # Create a minimal CMakeLists.txt for idf.py
+        cat > CMakeLists.txt <<EOF
+    cmake_minimum_required(VERSION 3.16)
+    include(\$ENV{IDF_PATH}/tools/cmake/project.cmake)
+    project(dependencies)
+    EOF
+
+        # Create main component CMakeLists.txt to register the component
+        # This ensures idf.py sees 'main' and processes its manifest
+        cat > main/CMakeLists.txt <<EOF
+    idf_component_register(SRCS "" INCLUDE_DIRS ".")
+    EOF
+
+        echo "Downloading dependencies..."
+        # We use 'idf.py reconfigure' or component manager directly to resolve and download
+        # Since we don't have a full project, we rely on the manifest in main/
+
+        idf.py reconfigure
   '';
 
   installPhase = ''
@@ -48,7 +48,7 @@ EOF
       echo "Error: managed_components not found!"
       exit 1
     fi
-    
+
     if [ -f dependencies.lock ]; then
       cp dependencies.lock $out/
     fi

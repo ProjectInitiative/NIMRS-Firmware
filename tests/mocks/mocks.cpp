@@ -12,12 +12,14 @@
 #include "MotorController.h"
 #endif
 #include "Preferences.h"
+#include "Update.h"
 #include "WiFi.h"
 #include "esp_ota_ops.h"
 #include <stdarg.h>
 #include <stdio.h>
 
 MockSerial Serial;
+UpdateClass Update;
 WiFiClass WiFi;
 LittleFSClass LittleFS;
 ESPClass ESP;
@@ -146,7 +148,16 @@ esp_err_t esp_ota_set_boot_partition(const esp_partition_t *partition) {
   return ESP_OK;
 }
 
+const esp_partition_t *esp_ota_get_boot_partition(void) { return mock_boot; }
+
 esp_err_t esp_ota_mark_app_valid_cancel_rollback(void) { return ESP_OK; }
+
+esp_err_t esp_ota_get_state_partition(const esp_partition_t *partition,
+                                      esp_ota_img_states_t *ota_state) {
+  if (ota_state)
+    *ota_state = ESP_OTA_IMG_UNDEFINED;
+  return ESP_OK;
+}
 
 void setMockRunningPartition(const esp_partition_t *p) { mock_running = p; }
 
