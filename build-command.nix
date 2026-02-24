@@ -1,8 +1,4 @@
-{
-  outputDir ? "build",
-  lamejs ? null,
-}:
-''
+{ outputDir ? "build", lamejs ? null, }: ''
   # Ensure we have the partition table
   if [ ! -f "partitions.csv" ]; then
     echo "Error: partitions.csv not found in $PWD"

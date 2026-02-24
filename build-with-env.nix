@@ -1,19 +1,15 @@
-{
-  pkgs,
-  src,
-  arduino-nix,
-  arduino-indexes,
-  gitHash ? "unknown",
-  lamejs ? null,
-  ...
-}:
+{ pkgs, src, arduino-nix, arduino-indexes, gitHash ? "unknown", lamejs ? null
+, ... }:
 
 let
   overlays = [
     (arduino-nix.overlay)
-    (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_index.json"))
-    (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_esp32_index.json"))
-    (arduino-nix.mkArduinoLibraryOverlay (arduino-indexes + "/index/library_index.json"))
+    (arduino-nix.mkArduinoPackageOverlay
+      (arduino-indexes + "/index/package_index.json"))
+    (arduino-nix.mkArduinoPackageOverlay
+      (arduino-indexes + "/index/package_esp32_index.json"))
+    (arduino-nix.mkArduinoLibraryOverlay
+      (arduino-indexes + "/index/library_index.json"))
   ];
 
   pkgsWithArduino = import pkgs.path {
@@ -23,9 +19,8 @@ let
 
   # The wrapped environment (executable)
   arduinoEnv = pkgsWithArduino.mkArduinoEnv {
-    packages = with pkgsWithArduino.arduinoPackages; [
-      platforms.esp32.esp32."2.0.14"
-    ];
+    packages = with pkgsWithArduino.arduinoPackages;
+      [ platforms.esp32.esp32."2.0.14" ];
     libraries = import ./common-libs.nix { inherit pkgsWithArduino; };
   };
 
@@ -40,16 +35,12 @@ let
     fi
   '';
 
-in
-pkgs.stdenv.mkDerivation {
+in pkgs.stdenv.mkDerivation {
   name = "nimrs-firmware";
   src = "${preparedSrc}/NIMRS-Firmware";
 
-  nativeBuildInputs = [
-    arduinoEnv
-    pkgs.git
-    (pkgs.python3.withPackages (ps: [ ps.pyserial ]))
-  ];
+  nativeBuildInputs =
+    [ arduinoEnv pkgs.git (pkgs.python3.withPackages (ps: [ ps.pyserial ])) ];
 
   # Pass git hash if provided
   GIT_HASH_ENV = gitHash;

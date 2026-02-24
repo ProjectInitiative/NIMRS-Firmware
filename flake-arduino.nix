@@ -1,5 +1,6 @@
 {
-  description = "NIMRS-21Pin-Decoder Firmware Development Environment (ESP32-S3)";
+  description =
+    "NIMRS-21Pin-Decoder Firmware Development Environment (ESP32-S3)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -11,39 +12,27 @@
     };
 
     # Arduino Nix with Env patch
-    arduino-nix = {
-      url = "github:clerie/arduino-nix/clerie/arduino-env";
-    };
+    arduino-nix = { url = "github:clerie/arduino-nix/clerie/arduino-env"; };
 
     # Lame.js for client-side MP3 compression
     lamejs = {
-      url = "https://raw.githubusercontent.com/zhuker/lamejs/master/lame.min.js";
+      url =
+        "https://raw.githubusercontent.com/zhuker/lamejs/master/lame.min.js";
       flake = false;
     };
   };
 
-  outputs =
-    {
-      self,
-      nixpkgs,
-      arduino-indexes,
-      arduino-nix,
-      lamejs,
-      ...
-    }@inputs:
+  outputs = { self, nixpkgs, arduino-indexes, arduino-nix, lamejs, ... }@inputs:
     let
-      supportedSystems = [
-        "x86_64-linux"
-        "aarch64-linux"
-      ];
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
 
       # Get git hash from flake input
       gitHash = self.shortRev or "dirty";
 
       # Shared formatting tools for CI and devShell
-      mkFormattingTools =
-        pkgs: with pkgs; [
+      mkFormattingTools = pkgs:
+        with pkgs; [
           treefmt
           clang-tools # clang-format
           nodePackages.prettier # prettier
@@ -52,14 +41,10 @@
           shfmt
           git
         ];
-    in
-    {
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
+    in {
+      packages = forAllSystems (system:
+        let pkgs = nixpkgs.legacyPackages.${system};
+        in {
           # Clean build method using arduino-nix-env
           default = import ./build-with-env.nix {
             inherit pkgs arduino-nix arduino-indexes;
@@ -71,10 +56,7 @@
           tests = pkgs.stdenv.mkDerivation {
             name = "nimrs-tests";
             src = ./.;
-            nativeBuildInputs = [
-              pkgs.gcc
-              pkgs.python3
-            ];
+            nativeBuildInputs = [ pkgs.gcc pkgs.python3 ];
             buildPhase = import ./test-command.nix { };
             installPhase = ''
               mkdir -p $out
@@ -84,53 +66,41 @@
               fi
             '';
           };
-        }
-      );
+        });
 
       # Checks (Formatting & Tests)
-      checks = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          formatting =
-            pkgs.runCommand "check-formatting"
-              {
-                nativeBuildInputs = mkFormattingTools pkgs;
-                src = ./.;
-              }
-              ''
-                cp -r $src/. .
-                chmod -R +w .
-                export XDG_CACHE_HOME=$TMPDIR
-                treefmt --fail-on-change
-                touch $out
-              '';
+      checks = forAllSystems (system:
+        let pkgs = nixpkgs.legacyPackages.${system};
+        in {
+          formatting = pkgs.runCommand "check-formatting" {
+            nativeBuildInputs = mkFormattingTools pkgs;
+            src = ./.;
+          } ''
+            cp -r $src/. .
+            chmod -R +w .
+            export XDG_CACHE_HOME=$TMPDIR
+            treefmt --fail-on-change
+            touch $out
+          '';
 
-          api-docs =
-            pkgs.runCommand "check-api-docs"
-              {
-                nativeBuildInputs = [ pkgs.python3 ] ++ mkFormattingTools pkgs;
-                src = ./.;
-              }
-              ''
-                cp -r $src/. .
-                chmod -R +w .
-                export XDG_CACHE_HOME=$TMPDIR
-                python3 tools/generate_api_docs.py
-                treefmt docs/API.md
-                diff -u $src/docs/API.md docs/API.md
-                touch $out
-              '';
+          api-docs = pkgs.runCommand "check-api-docs" {
+            nativeBuildInputs = [ pkgs.python3 ] ++ mkFormattingTools pkgs;
+            src = ./.;
+          } ''
+            cp -r $src/. .
+            chmod -R +w .
+            export XDG_CACHE_HOME=$TMPDIR
+            python3 tools/generate_api_docs.py
+            treefmt docs/API.md
+            diff -u $src/docs/API.md docs/API.md
+            touch $out
+          '';
 
           tests = self.packages.${system}.tests;
-        }
-      );
+        });
 
       # Development shells
-      devShells = forAllSystems (
-        system:
+      devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
 
@@ -139,9 +109,12 @@
             system = pkgs.stdenv.hostPlatform.system;
             overlays = [
               arduino-nix.overlay
-              (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_index.json"))
-              (arduino-nix.mkArduinoPackageOverlay (arduino-indexes + "/index/package_esp32_index.json"))
-              (arduino-nix.mkArduinoLibraryOverlay (arduino-indexes + "/index/library_index.json"))
+              (arduino-nix.mkArduinoPackageOverlay
+                (arduino-indexes + "/index/package_index.json"))
+              (arduino-nix.mkArduinoPackageOverlay
+                (arduino-indexes + "/index/package_esp32_index.json"))
+              (arduino-nix.mkArduinoLibraryOverlay
+                (arduino-indexes + "/index/library_index.json"))
             ];
           };
 
@@ -150,9 +123,8 @@
 
           # Wrapped arduino-cli with ESP32 platform and libraries
           arduino-cli-wrapped = pkgsWithArduino.wrapArduinoCLI {
-            packages = with pkgsWithArduino.arduinoPackages; [
-              platforms.esp32.esp32."2.0.14"
-            ];
+            packages = with pkgsWithArduino.arduinoPackages;
+              [ platforms.esp32.esp32."2.0.14" ];
             libraries = buildLibs;
           };
 
@@ -359,11 +331,9 @@
             python3 tools/generate_api_docs.py
           '';
 
-        in
-        {
+        in {
           default = pkgs.mkShell {
-            packages =
-              with pkgs;
+            packages = with pkgs;
               [
                 # Core Arduino tools (Wrapped)
                 arduino-cli-wrapped
@@ -372,9 +342,7 @@
                 esptool
                 # For OTA upload
                 curl
-              ]
-              ++ mkFormattingTools pkgs
-              ++ [
+              ] ++ mkFormattingTools pkgs ++ [
                 # Helper scripts
                 buildFirmware
                 uploadFirmware
@@ -436,7 +404,6 @@
                             echo "  nix build .#tests         : Build and run tests in a sandbox"
             '';
           };
-        }
-      );
+        });
     };
 }

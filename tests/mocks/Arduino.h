@@ -136,7 +136,15 @@ public:
   }
 };
 
-class MockSerial : public Print {
+class Stream : public Print {
+public:
+  virtual int available() { return 0; }
+  virtual int read() { return -1; }
+  virtual int peek() { return -1; }
+  virtual void flush() {}
+};
+
+class MockSerial : public Stream {
 public:
   void begin(unsigned long baud) {}
   virtual size_t write(uint8_t c) override { return putchar(c); }
