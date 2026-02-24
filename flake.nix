@@ -399,8 +399,10 @@
               ];
             shellHook = ''
                           ${old.shellHook or ""}
-                          echo "NIMRS-Firmware ESP-IDF Environment"
-                          echo "Run 'build-firmware' to setup and build the project."
+                          echo "NIMRS-Firmware Development Environment (ESP-IDF Native)"
+                          echo "-------------------------------------------------------"
+                          echo "This environment provides a full ESP-IDF toolchain managed by Nix."
+                          echo ""
 
                           # Setup pre-commit hook
                           HOOK_FILE=".git/hooks/pre-commit"
@@ -417,6 +419,20 @@
               EOF
                             chmod +x "$HOOK_FILE"
                           fi
+
+                          echo "Commands available:"
+                          echo "  build-firmware            : Build the firmware from current directory (wrapper for idf.py build)"
+                          echo "  upload-firmware <PORT|IP> : Upload firmware via Serial (default: app only) or OTA (curl)"
+                          echo "  monitor-firmware <PORT|IP>: Monitor logs via Serial (idf.py) or WiFi (nimrs-logs)"
+                          echo "  flash-all <PORT>          : Flash EVERYTHING via Serial (bootloader + partition table + app)"
+                          echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
+                          echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
+                          echo "  ci-ready                  : Run formatting, tests, and build to verify CI readiness"
+                          echo "  agent-check               : Run ci-ready + check for merge conflicts (REQUIRED for Agents)"
+                          echo "  treefmt                   : Format all code (C++, JSON, MD)"
+                          echo "  generate-api-docs         : Generate API documentation (docs/API.md)"
+                          echo "  nix build                 : Clean build of the firmware (sandboxed)"
+                          echo "  nix flake check           : Run all checks (formatting, tests, docs)"
             '';
           });
       });
