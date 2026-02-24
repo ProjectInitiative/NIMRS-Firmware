@@ -310,8 +310,8 @@ String MotorTask::getTestJSON() const {
     char buf[128];
     uint16_t pwm = (uint16_t)(fabs(_testData[i].duty) * 1023.0f);
     snprintf(buf, sizeof(buf),
-             "{\"t\":%u,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
-             _testData[i].t, _testData[i].target, pwm, _testData[i].current,
+             "{\"t\":%lu,\"tgt\":%u,\"pwm\":%u,\"cur\":%.3f,\"spd\":%.1f}",
+             (unsigned long)_testData[i].t, _testData[i].target, pwm, _testData[i].current,
              _testData[i].rpm);
     out += buf;
     if (i < _testDataIdx - 1)

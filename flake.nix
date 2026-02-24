@@ -75,7 +75,7 @@
             chmod -R u+w "$TARGET_DIR"
 
             # Patch ESP8266Audio for IDF 5 compatibility
-            if [[ "$COMP_NAME" == "ESP8266Audio_1_9_7" ]]; then
+            if [[ "$COMP_NAME" == "ESP8266Audio_1_9_7" || "$COMP_NAME" == "ESP8266Audio_1_9_9" ]]; then
                 echo "    Patching $COMP_NAME for IDF 5..."
                 # Fix I2S_MCLK_MULTIPLE_DEFAULT -> I2S_MCLK_MULTIPLE_256 in ALL files
                 find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/I2S_MCLK_MULTIPLE_DEFAULT/I2S_MCLK_MULTIPLE_256/g' {} +
@@ -124,6 +124,8 @@ else()
     target_compile_options(\''${COMPONENT_LIB} PRIVATE 
         \$<\$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> 
         \$<\$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+        -Wno-error=stringop-overflow
+        -Wno-error=narrowing
     )
 endif()
 EOF
@@ -194,7 +196,17 @@ EOF
 
                   setup-components
 
-                  
+                  # Ensure config.h exists for the build
+                  if [ ! -f main/config.h ]; then
+                      echo "main/config.h not found, copying config.example.h..."
+                      if [ -f config.example.h ]; then
+                          cp config.example.h main/config.h
+                      elif [ -f main/config.example.h ]; then
+                          cp main/config.example.h main/config.h
+                      else
+                          echo "Warning: config.example.h not found!"
+                      fi
+                  fi
 
                               # Link vendored components
 
