@@ -55,12 +55,25 @@
             git
           ];
 
-        # Create a derivation that symlinks these libraries into a structure suitable for IDF components
-        setupComponents = pkgs.writeShellScriptBin "setup-components" ''
-                    echo "Setting up Arduino libraries as IDF components..."
+        # The dependency derivation (vendored components)
+        nimrsDeps = pkgs.callPackage ./dependencies.nix {
+          esp-idf = esp-dev.packages.${system}.esp-idf-esp32s3;
+        };
+
+        # ---------------------------------------------------------
+        # Unified Build Logic
+        # ---------------------------------------------------------
+
+        # Setup Script: Handles Arduino libs, config.h, and Managed Components
+        # This script is designed to be idempotent and safe for both CI and local dev.
+        setupProject = pkgs.writeShellScriptBin "setup-project" ''
+                    set -e
+                    echo "=== Setting up NIMRS-Firmware Project Environment ==="
+
+                    # 1. Setup Arduino Components (components/LibName)
+                    echo "-> Configuring Arduino libraries..."
                     mkdir -p components
 
-                    # Function to link a library
                     link_lib() {
                       LIB_PATH=$1
                       LIB_NAME_RAW=$(basename $LIB_PATH)
@@ -69,40 +82,39 @@
                       TARGET_DIR="components/$COMP_NAME"
 
                       if [ -d "$TARGET_DIR" ]; then
-                        echo "  Skipping $COMP_NAME (already exists in components/)"
-                        return
-                      fi
-
-                      echo "  Copying $COMP_NAME from $LIB_PATH..."
-                      cp -rL "$LIB_PATH" "$TARGET_DIR"
-                      chmod -R u+w "$TARGET_DIR"
-
-                      # Patch ESP8266Audio for IDF 5 compatibility
-                      if [[ "$COMP_NAME" == "ESP8266Audio_1_9_7" || "$COMP_NAME" == "ESP8266Audio_1_9_9" ]]; then
-                          echo "    Patching $COMP_NAME for IDF 5..."
-                          find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/I2S_MCLK_MULTIPLE_DEFAULT/I2S_MCLK_MULTIPLE_256/g' {} +
-                          find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/rtc_clk_apll_enable/\/\/rtc_clk_apll_enable/g' {} +
-                      fi
-
-                      # Create CMakeLists.txt for the Arduino library
-                      echo "    Creating CMakeLists.txt for $COMP_NAME..."
-                      REAL_LIB_ROOT="."
-                      if [ -d "$TARGET_DIR/libraries" ]; then
-                          NESTED=$(ls "$TARGET_DIR/libraries" | head -n 1)
-                          if [ -n "$NESTED" ]; then
-                              REAL_LIB_ROOT="libraries/$NESTED"
-                          fi
-                      fi
-
-                      INCDIRS="\"$REAL_LIB_ROOT\""
-                      if [ -d "$TARGET_DIR/$REAL_LIB_ROOT/src" ]; then
-                          INCDIRS="\"$REAL_LIB_ROOT/src\" $INCDIRS"
-                          GLOB_PATTERN="GLOB_RECURSE SOURCES \"$REAL_LIB_ROOT/src/*.cpp\" \"$REAL_LIB_ROOT/src/*.c\" \"$REAL_LIB_ROOT/src/*.S\""
+                        # In dev, we might already have it. In clean build, we don't.
+                        :
                       else
-                          GLOB_PATTERN="GLOB SOURCES \"$REAL_LIB_ROOT/*.cpp\" \"$REAL_LIB_ROOT/*.c\" \"$REAL_LIB_ROOT/*.S\""
-                      fi
+                         echo "   Copying $COMP_NAME..."
+                         cp -rL "$LIB_PATH" "$TARGET_DIR"
+                         chmod -R u+w "$TARGET_DIR"
 
-                      cat > "$TARGET_DIR/CMakeLists.txt" <<EOF
+                         # Patch ESP8266Audio for IDF 5 compatibility
+                         if [[ "$COMP_NAME" == "ESP8266Audio_1_9_7" || "$COMP_NAME" == "ESP8266Audio_1_9_9" ]]; then
+                             echo "   Patching $COMP_NAME for IDF 5..."
+                             find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/I2S_MCLK_MULTIPLE_DEFAULT/I2S_MCLK_MULTIPLE_256/g' {} +
+                             find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/rtc_clk_apll_enable/\/\/rtc_clk_apll_enable/g' {} +
+                         fi
+
+                         # Create CMakeLists.txt
+                         REAL_LIB_ROOT="."
+                         if [ -d "$TARGET_DIR/libraries" ]; then
+                             NESTED=$(ls "$TARGET_DIR/libraries" | head -n 1)
+                             if [ -n "$NESTED" ]; then
+                                 REAL_LIB_ROOT="libraries/$NESTED"
+                             fi
+                         fi
+
+                         INCDIRS="\"$REAL_LIB_ROOT\""
+                         if [ -d "$TARGET_DIR/$REAL_LIB_ROOT/src" ]; then
+                             INCDIRS="\"$REAL_LIB_ROOT/src\" $INCDIRS"
+                             GLOB_PATTERN="GLOB_RECURSE SOURCES \"$REAL_LIB_ROOT/src/*.cpp\" \"$REAL_LIB_ROOT/src/*.c\" \"$REAL_LIB_ROOT/src/*.S\""
+                         else
+                             GLOB_PATTERN="GLOB SOURCES \"$REAL_LIB_ROOT/*.cpp\" \"$REAL_LIB_ROOT/*.c\" \"$REAL_LIB_ROOT/*.S\""
+                         fi
+
+                         # Write CMakeLists.txt (Unquoted EOF to allow variable expansion)
+                         cat > "$TARGET_DIR/CMakeLists.txt" <<EOF
           file($GLOB_PATTERN)
           if("\''${SOURCES}" STREQUAL "")
               idf_component_register(INCLUDE_DIRS $INCDIRS REQUIRES arduino-esp32)
@@ -116,18 +128,60 @@
               )
           endif()
           EOF
+                      fi
                     }
                     ${
                       builtins.concatStringsSep "\n"
                       (map (lib: ''link_lib "${lib}"'') arduinoLibs)
                     }
-                    echo "Done."
+
+                    # 2. Ensure config.h exists
+                    echo "-> Checking config.h..."
+                    if [ ! -f main/config.h ]; then
+                        echo "   main/config.h not found, copying config.example.h..."
+                        if [ -f config.example.h ]; then
+                            cp config.example.h main/config.h
+                        elif [ -f main/config.example.h ]; then
+                            cp main/config.example.h main/config.h
+                        else
+                            echo "   Warning: config.example.h not found!"
+                        fi
+                    fi
+
+                    # 3. Sync Managed Components (IDF Registry) from Nix
+                    # This avoids redownloading them via IDF and ensures reproducibility.
+                    NIMRS_DEPS_PATH="${nimrsDeps}"
+                    echo "-> Syncing managed_components from $NIMRS_DEPS_PATH..."
+
+                    if [ -d "$NIMRS_DEPS_PATH/managed_components" ]; then
+                        # We use rsync-like behavior with cp -rn to avoid overwriting modified files in dev
+                        # but ensuring missing ones are there.
+                        mkdir -p managed_components
+                        cp -rn "$NIMRS_DEPS_PATH/managed_components/"* managed_components/ || true
+                        chmod -R u+w managed_components
+                    fi
+
+                    if [ -f "$NIMRS_DEPS_PATH/dependencies.lock" ]; then
+                        # Only copy lock file if it doesn't exist or we want to enforce?
+                        # For now, let's copy if missing to bootstrap.
+                        if [ ! -f "dependencies.lock" ]; then
+                            cp "$NIMRS_DEPS_PATH/dependencies.lock" .
+                            chmod u+w dependencies.lock
+                        fi
+                    fi
+
+                    echo "=== Setup Complete ==="
         '';
 
-        # The dependency derivation (vendored components)
-        nimrsDeps = pkgs.callPackage ./dependencies.nix {
-          esp-idf = esp-dev.packages.${system}.esp-idf-esp32s3;
-        };
+        # Build Firmware Script (Local Wrapper)
+        buildFirmware = pkgs.writeShellScriptBin "build-firmware" ''
+          set -e
+          # Run setup first
+          setup-project
+
+          echo "=== Building Firmware (IDF) ==="
+          idf.py build
+        '';
 
         # Helper Scripts
         nimrsLogs = pkgs.writeShellScriptBin "nimrs-logs" ''
@@ -172,20 +226,70 @@
           echo "=== Agent Check Complete: READY FOR REVIEW ==="
         '';
 
-        idfFlash = pkgs.writeShellScriptBin "flash" ''
+        uploadFirmware = pkgs.writeShellScriptBin "upload-firmware" ''
           if [ -z "$1" ]; then
-            echo "Usage: flash <PORT>"
+            echo "Usage: upload-firmware <PORT|IP> [app|all|monitor]"
+            echo "  <PORT|IP>: Serial port (e.g. /dev/ttyACM0) OR IP Address (e.g. 192.168.1.100)"
+            echo "  app      : Flash only the application (Serial only, preserves NVS/SPIFFS)"
+            echo "  all      : Flash everything (Serial only, default)"
+            echo "  monitor  : Flash and monitor (Serial only)"
             exit 1
           fi
+
+          TARGET="$1"
+
+          # Check if target is an IP address
+          if [[ "$TARGET" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Uploading via OTA to $TARGET..."
+              BIN_FILE="build/nimrs-firmware.bin"
+
+              if [ ! -f "$BIN_FILE" ]; then
+                  echo "Error: Binary not found at $BIN_FILE. Run build-firmware first."
+                  exit 1
+              fi
+
+              curl --progress-bar -F "update=@$BIN_FILE" "http://$TARGET/update" | cat
+              echo -e "\nDone."
+          else
+              # Serial Upload
+              MODE="app-flash" # Default to app-flash for safety as requested
+
+              if [ "$2" == "all" ]; then
+                  MODE="flash"
+              elif [ "$2" == "monitor" ]; then
+                  MODE="app-flash monitor"
+              fi
+
+              echo "Flashing to $TARGET with mode: $MODE"
+              idf.py -p "$TARGET" $MODE
+          fi
+        '';
+
+        flashAll = pkgs.writeShellScriptBin "flash-all" ''
+          if [ -z "$1" ]; then
+            echo "Usage: flash-all <PORT>"
+            echo "  Flashes bootloader, partition table, and app."
+            exit 1
+          fi
+          echo "Flashing everything to $1..."
           idf.py -p "$1" flash
         '';
 
-        idfMonitor = pkgs.writeShellScriptBin "monitor" ''
+        monitorFirmware = pkgs.writeShellScriptBin "monitor-firmware" ''
           if [ -z "$1" ]; then
-            echo "Usage: monitor <PORT>"
+            echo "Usage: monitor-firmware <PORT|IP>"
             exit 1
           fi
-          idf.py -p "$1" monitor
+
+          TARGET="$1"
+
+          if [[ "$TARGET" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Starting IP Log Monitor for $TARGET..."
+              python3 tools/nimrs-logs.py "$TARGET"
+          else
+              echo "Starting Serial Monitor on $TARGET..."
+              idf.py -p "$TARGET" monitor
+          fi
         '';
 
         generateApiDocs = pkgs.writeShellScriptBin "generate-api-docs" ''
@@ -204,12 +308,12 @@
             buildPhase = ''
               # Fix path for tests which expect src/ at root
               ln -s main/src src
-               # Ensure main/config.h exists for tests
-               if [ -f config.example.h ]; then
-                   cp config.example.h main/config.h
-               elif [ -f main/config.example.h ]; then
-                   cp main/config.example.h main/config.h
-               fi
+              # Ensure main/config.h exists for tests
+              if [ -f config.example.h ]; then
+                  cp config.example.h main/config.h
+              elif [ -f main/config.example.h ]; then
+                  cp main/config.example.h main/config.h
+              fi
               python3 tools/test_runner.py
             '';
             installPhase = ''
@@ -225,27 +329,15 @@
             version = "0.1.0";
             src = ./.;
             nativeBuildInputs =
-              [ esp-dev.packages.${system}.esp-idf-esp32s3 setupComponents ];
+              [ esp-dev.packages.${system}.esp-idf-esp32s3 setupProject ];
             IDF_TARGET = "esp32s3";
             configurePhase = ''
               export HOME=$TMPDIR
-              setup-components
-              # Ensure config.h exists for the build
-              if [ ! -f main/config.h ]; then
-                  echo "main/config.h not found, copying config.example.h..."
-                  if [ -f config.example.h ]; then
-                      cp config.example.h main/config.h
-                  elif [ -f main/config.example.h ]; then
-                      cp main/config.example.h main/config.h
-                  else
-                      echo "Warning: config.example.h not found!"
-                  fi
-              fi
-              cp -r ${nimrsDeps}/managed_components .
-              if [ -f ${nimrsDeps}/dependencies.lock ]; then
-                cp ${nimrsDeps}/dependencies.lock .
-              fi
-              chmod -R u+w managed_components dependencies.lock || true
+
+              # Use the unified setup script
+              # In sandbox, we want to ensure everything is copied correctly.
+              # setup-project handles copying from store paths.
+              setup-project
             '';
             buildPhase = ''
               idf.py build
@@ -292,14 +384,15 @@
 
         devShells.default =
           esp-dev.devShells.${system}.esp-idf-full.overrideAttrs (old: {
-            buildInputs = old.buildInputs ++ [ setupComponents ]
+            buildInputs = old.buildInputs ++ [ setupProject buildFirmware ]
               ++ (mkFormattingTools pkgs) ++ [
                 nimrsLogs
                 nimrsTelemetry
                 ciReady
                 agentCheck
-                idfFlash
-                idfMonitor
+                uploadFirmware
+                monitorFirmware
+                flashAll
                 generateApiDocs
                 pkgs.python3
                 pkgs.esptool
@@ -307,7 +400,7 @@
             shellHook = ''
                           ${old.shellHook or ""}
                           echo "NIMRS-Firmware ESP-IDF Environment"
-                          echo "Run 'setup-components' to populate components/ with Arduino libraries."
+                          echo "Run 'build-firmware' to setup and build the project."
 
                           # Setup pre-commit hook
                           HOOK_FILE=".git/hooks/pre-commit"
