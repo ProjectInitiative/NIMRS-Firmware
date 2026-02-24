@@ -154,19 +154,27 @@
                     echo "-> Syncing managed_components from $NIMRS_DEPS_PATH..."
 
                     if [ -d "$NIMRS_DEPS_PATH/managed_components" ]; then
-                        # We use rsync-like behavior with cp -rn to avoid overwriting modified files in dev
-                        # but ensuring missing ones are there.
-                        mkdir -p managed_components
-                        cp -rn "$NIMRS_DEPS_PATH/managed_components/"* managed_components/ || true
-                        chmod -R u+w managed_components
-                    fi
+                        # Check if managed_components is empty or missing (CI/Sandbox/Clean State)
+                        if [ ! -d "managed_components" ] || [ -z "$(ls -A managed_components)" ]; then
+                            echo "   Initializing managed_components from Nix store..."
+                            mkdir -p managed_components
+                            cp -r "$NIMRS_DEPS_PATH/managed_components/"* managed_components/
+                            chmod -R u+w managed_components
 
-                    if [ -f "$NIMRS_DEPS_PATH/dependencies.lock" ]; then
-                        # Only copy lock file if it doesn't exist or we want to enforce?
-                        # For now, let's copy if missing to bootstrap.
-                        if [ ! -f "dependencies.lock" ]; then
-                            cp "$NIMRS_DEPS_PATH/dependencies.lock" .
-                            chmod u+w dependencies.lock
+                            # CRITICAL: Force sync lock file to match vendored components
+                            # This prevents idf.py from trying to access the internet to resolve mismatch
+                            if [ -f "$NIMRS_DEPS_PATH/dependencies.lock" ]; then
+                                echo "   Forcing dependencies.lock sync to match vendored components..."
+                                cp -f "$NIMRS_DEPS_PATH/dependencies.lock" .
+                                chmod u+w dependencies.lock
+                            fi
+                        else
+                            echo "   managed_components exists. Skipping sync to preserve local state."
+                            # In local dev, we don't force lock file to allow user updates
+                            if [ ! -f "dependencies.lock" ] && [ -f "$NIMRS_DEPS_PATH/dependencies.lock" ]; then
+                                 cp "$NIMRS_DEPS_PATH/dependencies.lock" .
+                                 chmod u+w dependencies.lock
+                            fi
                         fi
                     fi
 
