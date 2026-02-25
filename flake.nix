@@ -107,6 +107,15 @@
               elif [ -f main/config.example.h ]; then
                   cp main/config.example.h main/config.h
               fi
+
+              # Generate LameJs.h for tests
+              if [ ! -f "${lamejs}" ]; then
+                  echo "Error: lamejs source not found at ${lamejs}"
+                  exit 1
+              fi
+              mkdir -p src
+              python3 tools/generate_lamejs_header.py "${lamejs}" "src/LameJs.h"
+
               python3 tools/test_runner.py
             '';
             installPhase = ''
