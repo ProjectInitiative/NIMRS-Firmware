@@ -6,11 +6,15 @@ pkgs.stdenv.mkDerivation {
   # We only need the component manifest to determine dependencies
   src = pkgs.runCommand "component-manifest" { } ''
     mkdir -p $out/main
-    cp ${./main/idf_component.yml} $out/main/idf_component.yml
-    cp ${./sdkconfig.defaults} $out/sdkconfig.defaults
+    cp ${../main/idf_component.yml} $out/main/idf_component.yml
+    cp ${../sdkconfig.defaults} $out/sdkconfig.defaults
   '';
 
-  nativeBuildInputs = [ esp-idf pkgs.cacert pkgs.git ];
+  nativeBuildInputs = [
+    esp-idf
+    pkgs.cacert
+    pkgs.git
+  ];
 
   # We need to set IDF_TARGET so the component manager knows what to download for
   IDF_TARGET = "esp32s3";
@@ -57,5 +61,5 @@ pkgs.stdenv.mkDerivation {
   outputHashAlgo = "sha256";
   outputHashMode = "recursive";
   # New hash for 3.0.0
-  outputHash = "sha256-ECPJuCCkz+UMx1l0hje2sKoIL1NRHAA0vGRqfiv5Nc0=";
+  outputHash = "sha256-eGFFCXyG4mGc3WQDzgsTLDf0auBlPMvAtJuk4oe0/rI=";
 }
