@@ -20,19 +20,15 @@ Convert the build system from `arduino-cli` to native ESP-IDF (`idf.py`) while m
   - Register `main` component with these sources.
   - Define dependencies (`REQUIRES arduino-esp32 NmraDcc ArduinoJson`).
 
-## 3. Component & Library Management
+## 3. Component & Library Management (Completed)
 
-- [ ] **Single Source of Truth**: Use `common-libs.nix` to fetch libraries for both Arduino and IDF builds.
-  - Update `flake.nix` to import `common-libs.nix`.
-  - In the Nix build/shell, auto-populate `components/` with libraries from `common-libs.nix`.
-  - Auto-generate `CMakeLists.txt` for these libraries if missing.
-- [ ] **NmraDcc**:
-  - Will be handled via `common-libs.nix` (it is listed there).
-- [ ] **ArduinoJson**:
-  - Will be handled via `common-libs.nix`.
-- [ ] **Arduino Core (`arduino-esp32`)**:
-  - Use `main/idf_component.yml` to depend on `espressif/arduino-esp32` (standard IDF way for the core).
-  - _Alternative:_ If `common-libs.nix` can provide the core, we might need to handle it. But usually IDF component is preferred for the core.
+- [x] **Nix-Native Dependency Management**:
+  - **Old Way (arduino-cli)**: `arduino-nix` was used to download libraries to a location where the `arduino-cli` wrapper could find them. The build orchestration was left entirely to `arduino-cli`, which lacks native CMake integration and fine-grained control over the build process (like menuconfig).
+  - **New Way (ESP-IDF Native)**: We leverage the official ESP-IDF build system (`idf.py` / CMake).
+    - **Arduino Libraries**: `nix/arduino-components.nix` downloads standard Arduino libraries (like NmraDcc, ArduinoJson, ESP8266Audio) directly from the Nix store. Crucially, it dynamically generates a `CMakeLists.txt` for each library and applies any necessary patches (like the I2S fix for ESP8266Audio) _before_ ESP-IDF sees them. This transforms standard Arduino libraries into native, hermetic ESP-IDF components.
+    - **Managed Components**: ESP-IDF registry components (like `arduino-esp32`, `esp-libhelix-mp3`) are securely vendored in the Nix store via `nix/dependencies.nix` (a Fixed-Output Derivation).
+    - **Symlink Strategy**: Instead of polluting the project directory with generated `dependencies.cmake` files or copied components, `nix/scripts.nix` (via `setup-project`) simply creates clean symlinks (`components/` and `managed_components/`) pointing directly to the immutable Nix store derivations.
+    - **Offline Mode**: `idf.py` is configured to run entirely offline (`IDF_COMPONENT_MANAGER_OFFLINE=1`), ensuring it only uses the exact, hashed dependencies provided by Nix, guaranteeing strict reproducibility.
 
 ## 4. Configuration (`sdkconfig`)
 
@@ -40,15 +36,15 @@ Convert the build system from `arduino-cli` to native ESP-IDF (`idf.py`) while m
 - [ ] Configure Partition Table (`partitions.csv`) in `sdkconfig.defaults` (`CONFIG_PARTITION_TABLE_CUSTOM=y`, etc.).
 - [ ] Enable Rollback/OTA features.
 
-## 5. Nix Integration
+## 5. Nix Integration (Completed)
 
-- [ ] Update `flake.nix` / `devShell`:
+- [x] Update `flake.nix` / `devShell`:
   - Ensure `esp-idf` tools (`idf.py`, `cmake`, `ninja`) are in the shell (provided by `esp-dev` input).
-- [ ] Create/Update `build-idf.nix` (or similar):
-  - Replicate the build command using `idf.py build`.
-  - Ensure the build is hermetic (handling `IDF_PATH` correctly).
+- [x] Unified Hermetic Build:
+  - The default package derivation in `flake.nix` successfully runs the entire `idf.py build` process offline, utilizing the injected component paths and producing the final `.bin` and `.elf` artifacts cleanly in the `result/` directory.
 
-## 6. Cleanup
+## 6. Cleanup (In Progress)
 
-- [ ] Remove `build-command.nix` (old arduino-cli).
-- [ ] Remove `platformio.ini` (if no longer used).
+- [x] Remove `build-command.nix` (old arduino-cli).
+- [x] Remove `platformio.ini` (if no longer used).
+- [x] Remove `dependencies.cmake` generation.

@@ -56,7 +56,12 @@
         # Get libraries from nix/common-libs.nix
         arduinoLibs = import ./nix/common-libs.nix { inherit pkgsWithArduino; };
 
-        # The dependency derivation (vendored components)
+        # Arduino components derivation
+        arduinoComponents = pkgs.callPackage ./nix/arduino-components.nix {
+          inherit arduinoLibs;
+        };
+
+        # The dependency derivation (vendored managed components)
         nimrsDeps = pkgs.callPackage ./nix/dependencies.nix {
           esp-idf = esp-dev.packages.${system}.esp-idf-esp32s3;
         };
@@ -89,6 +94,7 @@
       {
         packages = {
           dependencies = nimrsDeps;
+          arduino-components = arduinoComponents;
 
           # Host-side unit tests
           tests = pkgs.stdenv.mkDerivation {
@@ -135,15 +141,20 @@
               setupProject
             ];
             IDF_TARGET = "esp32s3";
+
+            # Export paths for CMake and setup-project
+            LAMEJS_PATH = "${lamejs}";
+            ARDUINO_COMPONENTS_PATH = "${arduinoComponents}";
+            MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
+            NIMRS_DEPS_PATH = "${nimrsDeps}";
+
             configurePhase = ''
               export HOME=$TMPDIR
-
-              # Use the unified setup script
               setup-project
             '';
             buildPhase = ''
-              # Enforce that idf.py does not try to download missing components
-              export IDF_COMPONENT_MANAGER_ONLY_CHECK_DEPENDENCIES=1
+              export IDF_COMPONENT_MANAGER=1
+              export IDF_COMPONENT_MANAGER_OFFLINE=1
               idf.py build
             '';
             installPhase = ''
@@ -212,9 +223,15 @@
               pkgs.python3
               pkgs.esptool
             ];
+
+          # Export paths for CMake and setup-project
+          LAMEJS_PATH = "${lamejs}";
+          ARDUINO_COMPONENTS_PATH = "${arduinoComponents}";
+          MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
+          NIMRS_DEPS_PATH = "${nimrsDeps}";
+
           shellHook = ''
                         ${old.shellHook or ""}
-                        export LAMEJS_PATH="${lamejs}"
                         echo "NIMRS-Firmware Development Environment (ESP-IDF Native)"
                         echo "-------------------------------------------------------"
                         echo "This environment provides a full ESP-IDF toolchain managed by Nix."
