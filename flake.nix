@@ -63,7 +63,7 @@
 
         # The dependency derivation (vendored managed components)
         nimrsDeps = pkgs.callPackage ./nix/dependencies.nix {
-          esp-idf = esp-dev.packages.${system}.esp-idf-esp32s3;
+          esp-idf = esp-dev.packages.${system}.esp-idf-full;
         };
 
         # Import scripts
