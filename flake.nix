@@ -142,6 +142,8 @@
               setup-project
             '';
             buildPhase = ''
+              # Enforce that idf.py does not try to download missing components
+              export IDF_COMPONENT_MANAGER_ONLY_CHECK_DEPENDENCIES=1
               idf.py build
             '';
             installPhase = ''

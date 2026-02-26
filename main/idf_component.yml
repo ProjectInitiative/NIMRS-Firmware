@@ -2,3 +2,6 @@ dependencies:
   # Use Arduino Core v3.0+ for ESP-IDF v5.x compatibility
   espressif/arduino-esp32:
     version: "^3.0.0"
+
+  # Explicitly require transitive dependency to ensure it is fetched in Nix FOD
+  chmorgan/esp-libhelix-mp3: "^1.0"

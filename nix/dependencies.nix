@@ -61,5 +61,5 @@ pkgs.stdenv.mkDerivation {
   outputHashAlgo = "sha256";
   outputHashMode = "recursive";
   # New hash for 3.0.0
-  outputHash = "sha256-eGFFCXyG4mGc3WQDzgsTLDf0auBlPMvAtJuk4oe0/rI=";
+  outputHash = "sha256-2kdOWfJdH2DxR1i7e3JnS9bSmcawuRn437Dey7a8xMA=";
 }
