@@ -53,6 +53,9 @@
         # Create pkgs with Arduino overlays
         pkgsWithArduino = import pkgs.path { inherit system overlays; };
 
+        # Extract git hash for versioning
+        gitHash = self.rev or self.dirtyRev or "unknown";
+
         # Get libraries from nix/common-libs.nix
         arduinoLibs = import ./nix/common-libs.nix { inherit pkgsWithArduino pkgs; };
 
@@ -147,6 +150,7 @@
             ARDUINO_COMPONENTS_PATH = "${arduinoComponents}";
             MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
             NIMRS_DEPS_PATH = "${nimrsDeps}";
+            GIT_HASH = "${gitHash}";
 
             configurePhase = ''
               export HOME=$TMPDIR
@@ -229,6 +233,7 @@
           ARDUINO_COMPONENTS_PATH = "${arduinoComponents}";
           MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
           NIMRS_DEPS_PATH = "${nimrsDeps}";
+          GIT_HASH = "${gitHash}";
 
           shellHook = ''
                         ${old.shellHook or ""}
