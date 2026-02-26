@@ -2,10 +2,7 @@
 // TEST_FLAGS: -DUNIT_TEST -DSKIP_MOCK_AUDIO_CONTROLLER
 
 #include "Arduino.h"
-#include "AudioFileSourceLittleFS.h"
-#include "AudioGeneratorMP3.h"
-#include "AudioGeneratorWAV.h"
-#include "AudioOutputI2S.h"
+#include "AudioTools.h"
 #include "LittleFS.h"
 
 // Include source file directly to test internal logic
