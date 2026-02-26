@@ -4,37 +4,43 @@
 #include "DccController.h"
 #include "Logger.h"
 #include <ArduinoJson.h>
-#include <AudioFileSourceLittleFS.h>
-#include <AudioGeneratorMP3.h>
-#include <AudioGeneratorWAV.h>
-#include <AudioOutputI2S.h>
 #include <LittleFS.h>
 #include <cstring>
 #include <strings.h>
 
 AudioController::AudioController()
-    : _out(nullptr), _generator(nullptr), _file(nullptr) {}
+    : _i2s(nullptr), _volume(nullptr), _decoder(nullptr), _mp3(nullptr),
+      _wav(nullptr), _copier(nullptr) {}
 
 void AudioController::setup() {
   Log.println("AudioController: Initializing...");
 
   // I2S Setup
-  _out = new AudioOutputI2S();
-  _out->SetPinout(Pinout::AMP_BCLK, Pinout::AMP_LRCLK, Pinout::AMP_DIN);
-  _out->SetOutputModeMono(true); // Mono DAC
+  _i2s = new I2SStream();
+  auto config = _i2s->defaultConfig(TX_MODE);
+  config.pin_bck = Pinout::AMP_BCLK;
+  config.pin_ws = Pinout::AMP_LRCLK;
+  config.pin_data = Pinout::AMP_DIN;
+  config.channels = 1;
+  config.sample_rate = 44100;
+  _i2s->begin(config);
+
+  _volume = new VolumeStream(*_i2s);
+  _volume->begin(config); // VolumeStream uses the same config
+
+  _mp3 = new MP3DecoderHelix();
+  _wav = new WAVDecoder();
+  _decoder = new EncodedAudioStream(_volume, _mp3); // Default decoder
+
+  _copier = new StreamCopy(*_decoder, _file);
 
   // Initial Volume from CV
   uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
-  // Clamp max gain to 3.0 to prevent clipping/distortion
-  // (ESP8266Audio uses >1.0 for amplification, but >1.0 often clips if source
-  // is loud)
-  float gain = (vol / 255.0f) * 3.0f; // Scale 0-255 to 0.0-3.0
-  _out->SetGain(gain);
+  float gain = (vol / 255.0f); // Map 0-255 to 0.0-1.0
+  _volume->setVolume(gain);
 
   // Load Assets
   loadAssets();
-
-  // Note: Generator is allocated on playFile()
 
   // Enable Amp (Initially LOW/Muted until playback)
   pinMode(Pinout::AMP_SD_MODE, OUTPUT);
@@ -45,39 +51,27 @@ void AudioController::setup() {
 
 void AudioController::loop() {
   // Update Volume dynamically
-  if (_out) {
+  if (_volume) {
     uint8_t vol = DccController::getInstance().getDcc().getCV(CV::MASTER_VOL);
-    // Map 0-255 to 0.0-1.5 (Allow slight boost, but be careful)
-    _out->SetGain((vol / 255.0f) * 1.5f);
+    _volume->setVolume((vol / 255.0f));
   }
 
   // Check for Function Changes
   SystemContext &ctx = SystemContext::getInstance();
-  // We need a way to peek at state without holding the lock for the whole loop
-  // if possible, but for safety we'll lock briefly to copy.
   bool currentFunctions[29];
   {
     ScopedLock lock(ctx);
     memcpy(currentFunctions, ctx.getState().functions, 29 * sizeof(bool));
   }
 
-  // Iterate over Sound Assets to check triggers
-  // (We iterate assets because they are the "consumers" of functions)
-  // Optimization: Pre-calculate which function maps to which asset?
-  // For now, simple iteration is fine (N < 20).
-
   for (auto const &[id, asset] : _assets) {
     uint16_t cvId = CV::AUDIO_MAP_BASE + id;
-    // Get mapped function index (0-28)
     int funcIdx = DccController::getInstance().getDcc().getCV(cvId);
 
-    // If mapped to a valid function
     if (funcIdx >= 0 && funcIdx <= 28) {
       bool state = currentFunctions[funcIdx];
-      bool lastState = _lastFunctions[funcIdx]; // Note: This logic assumes
-                                                // 1-to-1 or handled properly
+      bool lastState = _lastFunctions[funcIdx];
 
-      // Detect Change
       if (state != lastState) {
         Log.printf(
             "Audio: Function F%d Changed to %d. Triggering Asset %d (%s)\n",
@@ -87,19 +81,14 @@ void AudioController::loop() {
           if (state)
             playFile(asset.fileLoop.c_str());
           else
-            stop(); // Or playOutro if supported
+            stop();
         } else if (asset.type == "simple" || asset.type == "complex_loop") {
           if (state) {
-            // Trigger start
             if (asset.fileIntro.length() > 0)
               playFile(asset.fileIntro.c_str());
             else
               playFile(asset.fileLoop.c_str());
-          }
-          // On release, complex_loop might play outro, simple does nothing
-          else if (!state && asset.type == "complex_loop") {
-            // Ensure we don't just cut off if loop is running?
-            // For now, simple Stop. Phase 3/4 handles complex transitions.
+          } else if (!state && asset.type == "complex_loop") {
             stop();
           }
         }
@@ -107,14 +96,11 @@ void AudioController::loop() {
     }
   }
 
-  // Update history
   memcpy(_lastFunctions, currentFunctions, 29 * sizeof(bool));
 
-  if (_generator && _generator->isRunning()) {
-    if (!_generator->loop()) {
-      _generator->stop();
-      // Auto-mute on finish
-      digitalWrite(Pinout::AMP_SD_MODE, LOW);
+  if (_playing && _copier) {
+    if (!_copier->copy()) {
+      stop();
       Log.println("Audio: Playback Finished");
     }
   }
@@ -168,57 +154,41 @@ void AudioController::playFile(const char *filename) {
     return;
   }
 
-  // Stop and clean up existing playback
-  if (_generator) {
-    if (_generator->isRunning())
-      _generator->stop();
-    delete _generator;
-    _generator = nullptr;
-  }
-  if (_file) {
-    delete _file;
-    _file = nullptr;
-  }
+  stop();
 
   // Wake up Amp
   digitalWrite(Pinout::AMP_SD_MODE, HIGH);
   delay(10); // Small warmup
 
-  _file = new AudioFileSourceLittleFS();
-  if (!_file->open(filename)) {
+  _file = LittleFS.open(filename, "r");
+  if (!_file) {
     Log.printf("Audio: File not found: %s\n", filename);
-    delete _file;
-    _file = nullptr;
-    // Mute Amp again
     digitalWrite(Pinout::AMP_SD_MODE, LOW);
     return;
   }
 
   if (isMp3File(filename)) {
     Log.println("Audio: Detected MP3");
-    _generator = new AudioGeneratorMP3();
+    _decoder->setDecoder(_mp3);
   } else {
     Log.println("Audio: Detected WAV");
-    _generator = new AudioGeneratorWAV();
+    _decoder->setDecoder(_wav);
   }
 
-  _generator->begin(_file, _out);
+  _decoder->begin();
+  _copier->begin(*_decoder, _file);
+  _playing = true;
   Log.printf("Audio: Playing %s\n", filename);
 }
 
 void AudioController::stop() {
-  if (_generator && _generator->isRunning())
-    _generator->stop();
-
-  if (_generator) {
-    delete _generator;
-    _generator = nullptr;
+  if (_playing) {
+    _playing = false;
+    _decoder->end();
+    if (_file) {
+      _file.close();
+    }
   }
-  if (_file) {
-    delete _file;
-    _file = nullptr;
-  }
-
   // Mute Amp
   digitalWrite(Pinout::AMP_SD_MODE, LOW);
 }

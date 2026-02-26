@@ -16,3 +16,5 @@ endif()
 idf_component_register(SRCS "main.cpp" ${SOURCES}
                        INCLUDE_DIRS "." "src"
                        REQUIRES espressif__arduino-esp32 app_update ${AUTO_REQUIRES})
+
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format -Wno-error=missing-field-initializers)

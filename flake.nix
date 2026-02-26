@@ -54,7 +54,7 @@
         pkgsWithArduino = import pkgs.path { inherit system overlays; };
 
         # Get libraries from nix/common-libs.nix
-        arduinoLibs = import ./nix/common-libs.nix { inherit pkgsWithArduino; };
+        arduinoLibs = import ./nix/common-libs.nix { inherit pkgsWithArduino pkgs; };
 
         # Arduino components derivation
         arduinoComponents = pkgs.callPackage ./nix/arduino-components.nix {

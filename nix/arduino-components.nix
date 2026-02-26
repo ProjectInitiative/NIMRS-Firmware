@@ -16,18 +16,12 @@ pkgs.stdenv.mkDerivation {
           COMP_NAME=$(echo "$GENERIC_NAME" | tr '-' '_' | tr '.' '_')
           TARGET_DIR="$out/$COMP_NAME"
 
-          echo "Processing $COMP_NAME from $LIB_PATH..."
-          cp -rL "$LIB_PATH" "$TARGET_DIR"
-          chmod -R u+w "$TARGET_DIR"
-
-          if [[ "$COMP_NAME" == "ESP8266Audio" ]]; then
-              echo "   Patching $COMP_NAME for IDF 5..."
-              find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/I2S_MCLK_MULTIPLE_DEFAULT/I2S_MCLK_MULTIPLE_256/g' {} +
-              find "$TARGET_DIR" -type f -name "*.cpp" -exec sed -i 's/rtc_clk_apll_enable/\/\/rtc_clk_apll_enable/g' {} +
-          fi
-
-          REAL_LIB_ROOT="."
-          if [ -d "$TARGET_DIR/libraries" ]; then
+                echo "Processing $COMP_NAME from $LIB_PATH..."
+                cp -rL "$LIB_PATH" "$TARGET_DIR"
+                chmod -R u+w "$TARGET_DIR"
+          
+                REAL_LIB_ROOT="."
+      if [ -d "$TARGET_DIR/libraries" ]; then
               NESTED=$(ls "$TARGET_DIR/libraries" | head -n 1)
               if [ -n "$NESTED" ]; then
                   REAL_LIB_ROOT="libraries/$NESTED"

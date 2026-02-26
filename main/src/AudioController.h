@@ -4,13 +4,12 @@
 #include "SystemContext.h"
 #include "nimrs-pinout.h"
 #include <Arduino.h>
+#include <LittleFS.h>
 #include <map>
 #include <vector>
 
-// Forward declarations
-class AudioOutputI2S;
-class AudioGenerator; // Base class
-class AudioFileSourceLittleFS;
+#include "AudioTools.h"
+#include "AudioTools/AudioCodecs/CodecMP3Helix.h"
 
 struct SoundAsset {
   uint8_t id;
@@ -39,9 +38,13 @@ public:
 private:
   AudioController();
 
-  AudioOutputI2S *_out;
-  AudioGenerator *_generator; // Polymorphic generator (WAV or MP3)
-  AudioFileSourceLittleFS *_file;
+  I2SStream *_i2s;
+  VolumeStream *_volume;
+  EncodedAudioStream *_decoder;
+  MP3DecoderHelix *_mp3;
+  WAVDecoder *_wav;
+  StreamCopy *_copier;
+  File _file; // Using LittleFS File
 
   bool _playing = false;
   std::map<uint8_t, SoundAsset> _assets;
