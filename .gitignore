@@ -19,3 +19,7 @@ arduino_data/
 Arduino/
 
 GEMINI.md
+sdkconfig
+components/
+managed_components/
+main/src/LameJs.h
