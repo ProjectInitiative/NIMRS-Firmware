@@ -13,89 +13,65 @@
 #include "src/MotorController.h"
 #include "src/SystemContext.h"
 
+#include "Arduino.h"
+#include "esp_ota_ops.h"
+#include "esp_task_wdt.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "nvs_flash.h"
+
 ConnectivityManager connectivityManager;
 LightingController lightingController;
-// AudioController is Singleton
 
-// Task handle
+// Task handles
 TaskHandle_t ControlPlaneTaskHandle;
+extern TaskHandle_t loopTaskHandle; // Defined in Arduino core main.cpp
 
 // Real-time Control Plane Task (Core 0)
-// This task handles the time-critical DCC decoding and motor/output loops.
 void controlPlaneTask(void *pvParameters) {
-  Log.println("ControlPlane: Task started on Core 0");
-
-  // Initialize DCC on Core 0 to ensure interrupt affinity
-
-  DccController::getInstance().setup();
-
-  Log.printf("DCC: Configured Pin: %d (Core 0)\n", Pinout::TRACK_LEFT_3V3);
-
   for (;;) {
-
-    // High priority loops
     DccController::getInstance().loop();
     MotorController::getInstance().loop();
     lightingController.loop();
-
-    // Yield 1ms to prevent watchdog issues and allow background OS tasks
     vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
 
+// Standard Arduino Loop Task
+void arduinoLoopTask(void *pvParameters) {
+  setup();
+  for (;;) {
+    loop();
+    if (serialEventRun)
+      serialEventRun();
+  }
+}
+
 void setup() {
-  // Check for bootloop early (before ANY other tasks)
-  BootLoopDetector::check();
+  // 0. Immediate hardware check
+  Serial.begin(115200);
+  delay(100);
 
-  // 1. Initialize Logging
-  Log.startTask();
+  // 1. Logging is already started in app_main
+  Log.println("NIMRS Decoder Starting...");
 
-  Log.println("\n\nNIMRS Decoder Starting...");
-
-  // Initialize Storage (EEPROM) before any controller reads CVs
   DccController::getInstance().setupStorage();
-
-  // 2. Connectivity (WiFi, Web, Filesystem) - Core 1
   connectivityManager.setup();
-
-  // 3. Hardware Control - Setup pins
   MotorController::getInstance().setup();
   lightingController.setup();
   AudioController::getInstance().setup();
 
-  // 4. Create Real-time Task on Core 0
-  //
-  // To test dynamic scheduling change xTaskCreatePinnedToCore to xTaskCreate
-  // (which usually takes one less argument—the core ID—or ignores it depending
-  // on the wrapper). In the ESP32 Arduino framework xTaskCreate corresponds to
-  // xTaskCreatePinnedToCore with tskNO_AFFINITY (which is MAX_INT).
-  xTaskCreatePinnedToCore(
-      controlPlaneTask, /* Task function. */
-      "ControlPlane",   /* name of task. */
-      16384,            /* Stack size of task */
-      NULL,             /* parameter of the task */
-      5,                /* priority of the task (Higher than main loop) */
-      &ControlPlaneTaskHandle, /* Task handle to keep track of created task */
-      0);                      /* pin task to core 0 */
+  xTaskCreatePinnedToCore(controlPlaneTask, "ControlPlane", 16384, NULL, 5,
+                          &ControlPlaneTaskHandle, 0);
 
-// 5. Heartbeat Pin
 #ifdef STATUS_LED_PIN
   pinMode(STATUS_LED_PIN, OUTPUT);
 #endif
 }
 
 void loop() {
-  // Core 1 handles Web Server, WiFi, Audio, and Logging
   connectivityManager.loop();
   AudioController::getInstance().loop();
-
-  // Verify boot stability after 30 seconds
-  static bool bootVerified = false;
-  if (!bootVerified && millis() > 30000) {
-    BootLoopDetector::markSuccessful();
-    bootVerified = true;
-    Log.println("System Stable: Boot verification passed.");
-  }
 
   static unsigned long lastHeartbeat = 0;
   if (millis() - lastHeartbeat > 1000) {
@@ -103,14 +79,39 @@ void loop() {
 #ifdef STATUS_LED_PIN
     digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
 #endif
-
-    SystemContext &ctx = SystemContext::getInstance();
-    ScopedLock lock(ctx);
-    SystemState &state = ctx.getState();
-
-    // Log status every second (at debug level)
-    Log.debug("Status: Spd=%d Dir=%d WiFi=%d F0=%d F1=%d\n", state.speed,
-              state.direction, state.wifiConnected, state.functions[0],
-              state.functions[1]);
   }
+}
+
+extern "C" void app_main() {
+  // 1. Initialize NVS and Logger fully
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(ret);
+
+  Log.begin(115200);
+  Log.startTask();
+
+  // 2. Immediate boot check and crash loop detection
+  // This must happen BEFORE initArduino() to catch early crashes
+  BootLoopDetector::check();
+
+  // 3. Standard ESP32-S3 / Arduino Core frequency & USB init
+#ifdef F_CPU
+  setCpuFrequencyMhz(F_CPU / 1000000);
+#endif
+#if ARDUINO_USB_CDC_ON_BOOT && !ARDUINO_USB_MODE
+  Serial.begin();
+#endif
+
+  // 4. Core Arduino Hardware Init
+  // This calls verifyRollbackLater() which we override to return true
+  initArduino();
+
+  // 5. Start the main Arduino loop task
+  xTaskCreateUniversal(arduinoLoopTask, "loopTask", 8192, NULL, 1,
+                       &loopTaskHandle, ARDUINO_RUNNING_CORE);
 }

@@ -63,6 +63,7 @@ private:
 
   bool _shouldRestart = false;
   uint32_t _restartTimer = 0;
+  const esp_partition_t *_ota_partition = nullptr;
 };
 
 #endif

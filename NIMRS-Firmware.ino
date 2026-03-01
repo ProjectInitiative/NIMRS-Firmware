@@ -89,14 +89,6 @@ void loop() {
   connectivityManager.loop();
   AudioController::getInstance().loop();
 
-  // Verify boot stability after 30 seconds
-  static bool bootVerified = false;
-  if (!bootVerified && millis() > 30000) {
-    BootLoopDetector::markSuccessful();
-    bootVerified = true;
-    Log.println("System Stable: Boot verification passed.");
-  }
-
   static unsigned long lastHeartbeat = 0;
   if (millis() - lastHeartbeat > 1000) {
     lastHeartbeat = millis();

@@ -2,13 +2,19 @@
 #include <ArduinoJson.h>
 
 Logger::Logger() {
-  _historyMutex = xSemaphoreCreateMutex();
-  _bufferMutex = xSemaphoreCreateMutex();
+  _historyMutex = NULL;
+  _bufferMutex = NULL;
   _logQueue = NULL;
   _taskHandle = NULL;
 }
 
 void Logger::startTask() {
+  if (_historyMutex == NULL) {
+    _historyMutex = xSemaphoreCreateMutex();
+  }
+  if (_bufferMutex == NULL) {
+    _bufferMutex = xSemaphoreCreateMutex();
+  }
   if (_logQueue == NULL) {
     _logQueue = xQueueCreate(50, sizeof(LogMessage));
   }
@@ -33,7 +39,6 @@ void Logger::_processQueue() {
       if (_serialEnabled) {
         Serial.println(msg.text);
       }
-      _addToBuffer(msg.text);
     }
   }
 }
@@ -55,10 +60,15 @@ size_t Logger::write(uint8_t c) {
   // Async Mode
   if (xSemaphoreTake(_bufferMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
     if (c == '\n') {
-      LogMessage msg;
-      strncpy(msg.text, _currentLine.c_str(), sizeof(msg.text) - 1);
-      msg.text[sizeof(msg.text) - 1] = '\0';
-      xQueueSend(_logQueue, &msg, 0);
+      _addToBuffer(_currentLine); // Capture for history/telemetry
+
+      // Only send to serial queue if it's NOT telemetry data
+      if (_currentLine.indexOf("[NIMRS_DATA]") == -1) {
+        LogMessage msg;
+        strncpy(msg.text, _currentLine.c_str(), sizeof(msg.text) - 1);
+        msg.text[sizeof(msg.text) - 1] = '\0';
+        xQueueSend(_logQueue, &msg, 0);
+      }
       _currentLine = "";
     } else if (c != '\r') {
       _currentLine += (char)c;
@@ -108,10 +118,16 @@ size_t Logger::write(const uint8_t *buffer, size_t size) {
           _currentLine.concat(buf + start, i - start);
         }
 
-        LogMessage msg;
-        strncpy(msg.text, _currentLine.c_str(), sizeof(msg.text) - 1);
-        msg.text[sizeof(msg.text) - 1] = '\0';
-        xQueueSend(_logQueue, &msg, 0);
+        _addToBuffer(_currentLine); // Capture for history/telemetry (checks for
+                                    // [NIMRS_DATA] internally)
+
+        // Only send to serial queue if it's NOT telemetry data
+        if (_currentLine.indexOf("[NIMRS_DATA]") == -1) {
+          LogMessage msg;
+          strncpy(msg.text, _currentLine.c_str(), sizeof(msg.text) - 1);
+          msg.text[sizeof(msg.text) - 1] = '\0';
+          xQueueSend(_logQueue, &msg, 0);
+        }
 
         _currentLine = "";
         start = i + 1;
@@ -206,7 +222,8 @@ void Logger::clear() {
 }
 
 void Logger::_addToBuffer(const String &line) {
-  if (xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+  if (_historyMutex != NULL &&
+      xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
     // Add timestamp
     String entry = "[" + String(millis()) + "] " + line;
 
@@ -229,7 +246,8 @@ void Logger::_addToBuffer(const String &line) {
 
 String Logger::getLogsHTML() {
   String html = "";
-  if (xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+  if (_historyMutex != NULL &&
+      xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     for (const auto &line : _lines) {
       html += line + "<br>\n";
     }
@@ -242,7 +260,8 @@ String Logger::getLogsJSON(const String &filter) {
   JsonDocument doc;
   JsonArray arr = doc.to<JsonArray>();
 
-  if (xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+  if (_historyMutex != NULL &&
+      xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     if (filter == "[NIMRS_DATA]") {
       // Specifically requested telemetry
       for (const auto &line : _dataLines) {

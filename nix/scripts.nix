@@ -72,8 +72,8 @@ let
 
     TARGET="$1"
 
-    # Check if target is an IP address
-    if [[ "$TARGET" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    # Check if target is an IP address or hostname (not a serial port)
+    if [[ ! "$TARGET" =~ ^(/dev/|COM) ]]; then
         echo "Uploading via OTA to $TARGET..."
         BIN_FILE="build/nimrs-firmware.bin"
 
@@ -93,6 +93,11 @@ let
         elif [ "$2" == "monitor" ]; then
             MODE="app-flash monitor"
         fi
+        
+        # Ensure we have permissions to the serial port
+        if [ -c "$TARGET" ]; then
+            sudo chmod 666 "$TARGET" 2>/dev/null || true
+        fi
 
         echo "Flashing to $TARGET with mode: $MODE"
         idf.py -p "$TARGET" $MODE
@@ -102,11 +107,22 @@ let
   flashAll = pkgs.writeShellScriptBin "flash-all" ''
     if [ -z "$1" ]; then
       echo "Usage: flash-all <PORT>"
-      echo "  Flashes bootloader, partition table, and app."
+      echo "  Flashes EVERYTHING: bootloader, partition table, and app."
       exit 1
     fi
-    echo "Flashing everything to $1..."
+
+    # Ensure we have permissions to the serial port
+    if [ -c "$1" ]; then
+        sudo chmod 666 "$1" 2>/dev/null || true
+    fi
+
+    echo "=== Flashing Full Firmware Stack to $1 ==="
+    echo "1. Bootloader (0x0)"
+    echo "2. Partition Table (0x8000)"
+    echo "3. Application (0x10000)"
+
     idf.py -p "$1" flash
+    echo "=== Flash Complete ==="
   '';
 
   monitorFirmware = pkgs.writeShellScriptBin "monitor-firmware" ''
@@ -121,9 +137,20 @@ let
         echo "Starting IP Log Monitor for $TARGET..."
         python3 tools/nimrs-logs.py "$TARGET"
     else
-        echo "Starting Serial Monitor on $TARGET..."
-        idf.py -p "$TARGET" monitor
+        echo "Starting Serial Monitor on $TARGET (115200)..."
+        echo "Press Ctrl+C to exit."
+        # Use miniterm (from pyserial) instead of idf.py monitor for a non-sticky experience
+        python3 -m serial.tools.miniterm --raw "$TARGET" 115200
     fi
+  '';
+
+  resetOta = pkgs.writeShellScriptBin "reset-ota" ''
+    if [ -z "$1" ]; then
+      echo "Usage: reset-ota <PORT>"
+      exit 1
+    fi
+    echo "Erasing OTA data partition (0xE000) to reset rollback state..."
+    esptool.py -p "$1" erase_region 0xE000 0x2000
   '';
 
   generateApiDocs = pkgs.writeShellScriptBin "generate-api-docs" ''
@@ -206,6 +233,7 @@ in
     uploadFirmware
     flashAll
     monitorFirmware
+    resetOta
     generateApiDocs
     mkFormattingTools
     ;

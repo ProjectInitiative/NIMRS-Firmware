@@ -539,8 +539,8 @@ void ConnectivityManager::loop() {
 
   if (_shouldRestart && millis() - _restartTimer > 1000) {
     Log.println("Rebooting...");
-    // Ensure we don't trigger a rollback for an intentional restart
-    BootLoopDetector::markSuccessful();
+    // Do NOT call markSuccessful() here. We want the next boot to be
+    // verified by the 30-second timer, not force-validated now.
     ESP.restart();
   }
 }
@@ -736,6 +736,10 @@ void ConnectivityManager::handleFirmwareUpdate() {
       return;
     }
     Log.printf("Update: Receiving %s\n", upload.filename.c_str());
+
+    // Track which partition we are updating
+    _ota_partition = esp_ota_get_next_update_partition(NULL);
+
     if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
       Update.printError(Serial);
     }
@@ -747,18 +751,21 @@ void ConnectivityManager::handleFirmwareUpdate() {
     if (Update.end(true)) {
       Log.printf("Update: Success! Size: %u\n", upload.totalSize);
 
-      // Check the state of the newly written partition
-      // Note: esp_ota_get_next_update_partition(NULL) gives us the one we JUST
-      // wrote to because Update.end() flips the boot partition pointer. Wait,
-      // Update.end() sets the boot partition. So esp_ota_get_boot_partition()
-      // should be it.
-      const esp_partition_t *boot = esp_ota_get_boot_partition();
-      if (boot) {
-        esp_ota_img_states_t state;
-        if (esp_ota_get_state_partition(boot, &state) == ESP_OK) {
-          Log.printf("Update: New Partition State = %d (Expected 0=NEW)\n",
-                     state);
+      // EXPLICITLY set boot partition to the one we just wrote.
+      // This sets state to NEW (0) in otadata.
+      if (_ota_partition) {
+        esp_err_t err = esp_ota_set_boot_partition(_ota_partition);
+        if (err == ESP_OK) {
+          Log.printf("Update: Boot partition set to %s. State is NEW.\n",
+                     _ota_partition->label);
+        } else {
+          Log.printf("Update: ERROR setting boot partition: 0x%x\n", err);
         }
+      }
+
+      if (!Update.hasError()) {
+        _shouldRestart = true;
+        _restartTimer = millis();
       }
     } else {
       Update.printError(Serial);

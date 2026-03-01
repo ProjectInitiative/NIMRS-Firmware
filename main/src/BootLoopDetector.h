@@ -3,6 +3,9 @@
 
 #include <Arduino.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/timers.h>
+
 struct RollbackInfo {
   bool rolledback;
   String runningVersion;
@@ -12,14 +15,15 @@ struct RollbackInfo {
 class BootLoopDetector {
 public:
   static void check();
+  static void startStabilityTimer();
   static void markSuccessful();
   static bool didRollback();
   static RollbackInfo getRollbackInfo();
   static void clearRollback();
 
 private:
-  static const int CRASH_THRESHOLD = 3;
   static void rollback();
+  static void timerCallback(TimerHandle_t xTimer);
 };
 
 #endif
