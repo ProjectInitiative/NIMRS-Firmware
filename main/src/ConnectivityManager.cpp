@@ -737,8 +737,15 @@ void ConnectivityManager::handleFirmwareUpdate() {
     }
     Log.printf("Update: Receiving %s\n", upload.filename.c_str());
 
-    // Track which partition we are updating
-    _ota_partition = esp_ota_get_next_update_partition(NULL);
+    // Clear rollback acknowledgment so a future crash can be reported
+    Preferences prefs;
+    if (prefs.begin("bootloop", false)) {
+      prefs.putBool("acknowledged", false);
+      prefs.end();
+    }
+
+    // Track which partition we are updating    _ota_partition =
+    // esp_ota_get_next_update_partition(NULL);
 
     if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
       Update.printError(Serial);
