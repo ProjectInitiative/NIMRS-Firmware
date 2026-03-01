@@ -25,7 +25,7 @@ This document outlines the architecture and implementation plan for adding high-
 
 ### 2.2 Software Stack
 
-We will utilize the **ESP8266Audio** library (compatible with ESP32) for decoding and I2S output, wrapped in our own `AudioController`.
+We will utilize the **arduino-audio-tools** and **arduino-libhelix** libraries for decoding and I2S output, wrapped in our own `AudioController`.
 
 #### The Audio Pipeline
 
@@ -85,7 +85,7 @@ Users map DCC Functions to Sound IDs using CVs.
 ### Phase 1: Dependencies & I2S Setup [DONE]
 
 - **Tasks:**
-  - [x] Add `ESP8266Audio` to `common-libs.nix`.
+  - [x] Add `arduino-audio-tools` and `arduino-libhelix` to `common-libs.nix`.
   - [x] Implement `AudioController` class (Singleton).
   - [x] Configure I2S output (BCLK=38, LRCLK=36, DIN=37).
   - [x] Add API endpoint `/api/audio/play` for testing.

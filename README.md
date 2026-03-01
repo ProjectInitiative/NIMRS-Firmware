@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project contains the firmware for the open-source [NIMRS-21Pin-Decoder](https://github.com/CDFER/NIMRS-21Pin-Decoder), based on the ESP32-S3 microcontroller. The firmware is built using the Arduino framework on top of ESP-IDF.
+This project contains the firmware for the open-source [NIMRS-21Pin-Decoder](https://github.com/CDFER/NIMRS-21Pin-Decoder), based on the ESP32-S3 microcontroller. The firmware is built using the native ESP-IDF build system, utilizing the Arduino core as a component for compatibility.
 
 ## Project Roadmap
 
@@ -59,12 +59,12 @@ If the device is blank or stuck in a loop, you may need to manually enter "Downl
 
 - **Platform:** ESP32-S3 (`esp32:esp32:esp32s3`)
 - **Flash Size:** 8MB (Quad SPI)
-- **Framework:** Arduino (via `arduino-esp32` core 3.x)
+- **Framework:** ESP-IDF (with `arduino-esp32` core 3.x as a component)
 - **Partitioning:** Custom 8MB layout (see `partitions.csv`)
 
 ### Partition Layout (8MB)
 
-- **App Slots (2MB x 2):** Two identical partitions (`app0`, `app1`) enable safe A/B Over-The-Air (OTA) updates.
+- **App Slots (2MB x 2):** Two identical partitions (`app0`, `app1`) enable safe A/B Over-The-Air (OTA) updates. Includes automatic rollback at the bootloader and software levels in case of crash or boot failures.
 - **File System (~4MB):** A large `spiffs` partition (mounted as LittleFS) for storing WAV/MP3 files and configuration data.
 - **NVS (20KB):** Non-volatile storage for WiFi credentials and persistent settings.
 

@@ -10,7 +10,7 @@ The repository environment is automatically loaded via `direnv`. Ensure you have
 
 Use these commands via `nix develop --command <cmd>` or directly if your shell is hooked:
 
-- **`build-firmware`**: Compiles the project using `arduino-cli`.
+- **`build-firmware`**: Compiles the project using ESP-IDF (`idf.py`).
 - **`run-tests`**: Executes host-side unit tests.
 - **`treefmt`**: Automatically formats all code (C++, JSON, MD, Python).
 - **`agent-check`**: **(REQUIRED)** Comprehensive pre-submission validation.
