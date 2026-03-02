@@ -1,6 +1,7 @@
 #ifndef MOTOR_HAL_H
 #define MOTOR_HAL_H
 
+#include "esp_adc/adc_continuous.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -23,17 +24,12 @@ public:
   // Get the configured ADC sample rate in Hz
   float getAdcSampleRate() const;
 
-  // Direct voltage reading (for low speed average)
-  // Or we compute average from buffer?
-  // Let's expose raw average too for convenience if needed,
-  // but the Estimator will likely calculate it from the buffer to be
-  // consistent.
-
 private:
   MotorHal();
 
   // Internal state
   float _sampleRate;
+  adc_continuous_handle_t _adcHandle;
 };
 
 #endif

@@ -56,84 +56,81 @@ void MotorTask::_loop() {
     float sampleRate = MotorHal::getInstance().getAdcSampleRate();
 
     // 3. Process Ripple & Current
-    // Average current (Low speed)
     float sumCurrent = 0.0f;
     for (size_t i = 0; i < samples; i++) {
       sumCurrent += adcBuffer[i];
     }
     float instantAvg = (samples > 0) ? (sumCurrent / samples) : 0.0f;
 
-    // Convert raw ADC to Amps (Need calibration factor)
-    // Using existing factor from MotorController: 0.00054f
-    float currentAmps = instantAvg * 0.00054f;
+    // --- AUTO-ZERO CALIBRATION ---
+    static float adcOffset = 0.0f;
+    static int offsetSamples = 0;
+    if (fabs(_currentDuty) < 0.01f && offsetSamples < 50) {
+      adcOffset =
+          (adcOffset * offsetSamples + instantAvg) / (offsetSamples + 1);
+      offsetSamples++;
+    }
+    float calibratedAvg = std::max(0.0f, instantAvg - adcOffset);
+
+    // Convert raw ADC to Amps
+    float currentAmps = calibratedAvg * 0.00025f;
 
     // Update Filters
     float avgCurrent = _currentFilter.update(currentAmps);
 
-    // Resistance Measurement Override
+    // --- SENSING & MEASUREMENT OVERRIDES ---
     if (_resistanceState == ResistanceState::MEASURING) {
-      if (millis() - _resistanceStartTime < 1000) {
-        // Apply fixed PWM (approx 20%)
-        _currentDuty = 0.2f; // Fixed 20%
+      unsigned long elapsed = millis() - _resistanceStartTime;
+      if (elapsed < 1000) {
+        _currentDuty = 0.3f; // Apply 30% PWM
         MotorHal::getInstance().setDuty(_currentDuty);
+        if (elapsed < 100) {
+          _status.duty = _currentDuty;
+          continue;
+        }
       } else {
-        // Measurement complete
         _currentDuty = 0.0f;
         MotorHal::getInstance().setDuty(0.0f);
-
-        float vApplied = _trackVoltage * 0.2f;
-
-        if (avgCurrent > 0.05f) { // Ensure some current is flowing
-          float r = vApplied / avgCurrent;
-          _measuredResistance = r;
-
-          // Note: CV Write is delegated to MotorController (Core 0) to ensure
-          // thread safety
-
-          Log.printf("Motor: Measured R=%.2f Ohm\n", r);
+        float vApplied = _trackVoltage * 0.3f;
+        if (avgCurrent > 0.01f) {
+          _measuredResistance = vApplied / avgCurrent;
+          Log.printf("Motor: Measured Resistance = %.2f Ohm (I=%.3fA)\n",
+                     _measuredResistance, avgCurrent);
           _resistanceState = ResistanceState::DONE;
         } else {
-          Log.printf("Motor: Measured current I=%.4f A. Resistance Measurement "
-                     "Failed (Low Current)\n",
+          Log.printf("Motor: Low signal (I=%.4fA). Measurement Failed.\n",
                      avgCurrent);
           _resistanceState = ResistanceState::ERROR;
         }
       }
-
-      // Update Telemetry even in test mode
-      _status.appliedVoltage = _trackVoltage * 0.2f;
+      _status.appliedVoltage = _trackVoltage * fabs(_currentDuty);
       _status.current = avgCurrent;
       _status.estimatedRpm = 0;
       _status.rippleFreq = 0;
       _status.stalled = false;
       _status.duty = _currentDuty;
-
-      continue; // Skip normal control
+      continue;
     } else if (_resistanceState == ResistanceState::DONE ||
                _resistanceState == ResistanceState::ERROR) {
       _currentDuty = 0.0f;
       MotorHal::getInstance().setDuty(0.0f);
-
-      if (millis() - _resistanceStartTime > 6000) {
+      if (millis() - _resistanceStartTime > 6000)
         _resistanceState = ResistanceState::IDLE;
-      }
-
-      // Update Telemetry
       _status.current = avgCurrent;
       _status.duty = 0.0f;
-
       continue;
     }
 
+    // --- NORMAL OPERATION ---
+
     // Ripple Detector
-    // Convert buffer to Amps for RippleDetector
     for (size_t i = 0; i < samples; i++) {
-      adcBuffer[i] *= 0.00054f;
+      adcBuffer[i] *= 0.00025f;
     }
     _rippleDetector.processBuffer(adcBuffer, samples, sampleRate);
     float rippleFreq = _rippleDetector.getFrequency();
 
-    // 4. Update Estimator
+    // Update Estimator
     float vApplied = _trackVoltage * fabs(_currentDuty);
     _estimator.updateLowSpeedData(vApplied, avgCurrent);
     _estimator.updateRippleFreq(rippleFreq);
@@ -162,68 +159,44 @@ void MotorTask::_loop() {
           _targetDirection = false;
         }
 
-        // Data Logging (Decimate to fit 3s into 100 points: every 2nd frame)
         static uint8_t decimate = 0;
         if (++decimate >= 2) {
           decimate = 0;
           if (_testDataIdx < MAX_TEST_POINTS) {
-            _testData[_testDataIdx++] = {(uint32_t)t, _targetSpeedStep,
-                                         _currentDuty, avgCurrent, actualRpm};
+            _testData[_testDataIdx].t = (uint32_t)t;
+            _testData[_testDataIdx].target = _targetSpeedStep;
+            _testData[_testDataIdx].duty = _currentDuty;
+            _testData[_testDataIdx].current = avgCurrent;
+            _testData[_testDataIdx].rpm = actualRpm;
+            _testDataIdx++;
           }
         }
       }
     }
 
-    // 5. Control Loop
+    // Control Loop
     if (_targetSpeedStep == 0) {
       _currentDuty = 0.0f;
       _piErrorSum = 0.0f;
     } else {
-      // Target RPM
       float targetRpm = (_targetSpeedStep / 255.0f) * _maxRpm;
-
       float error = targetRpm - actualRpm;
-
-      // PI
-      _piErrorSum += error;
-      // Anti-windup
-      if (_piErrorSum > 2000.0f)
-        _piErrorSum = 2000.0f;
-      if (_piErrorSum < -2000.0f)
-        _piErrorSum = -2000.0f;
-
-      float output = (_kp * error) + (_ki * _piErrorSum);
-
-      float vControl = output;
-
-      // Constrain Voltage
-      if (vControl > _trackVoltage)
-        vControl = _trackVoltage;
-      if (vControl < 0.0f)
-        vControl = 0.0f;
-
-      // Calculate Duty
+      _piErrorSum = constrain(_piErrorSum + error, -2000.0f, 2000.0f);
+      float vControl =
+          constrain((_kp * error) + (_ki * _piErrorSum), 0.0f, _trackVoltage);
       float duty = vControl / _trackVoltage;
 
-      // --- DITHER LOGIC ---
+      // DITHER
       if (_targetSpeedStep > 0 && _targetSpeedStep < 15 && _cvPwmDither > 0) {
-        // 40ms period = 25Hz
         unsigned long phase = (xTaskGetTickCount() * portTICK_PERIOD_MS) % 40;
-
-        // Base amplitude: CV 0-255 maps to 0-400 (out of 1023) -> 0-0.39 duty
         float baseAmplitude = (_cvPwmDither / 255.0f) * 0.39f;
-
-        // Fade factor
         float fadeFactor = 1.0f - (_targetSpeedStep / 15.0f);
         float dither = baseAmplitude * fadeFactor;
-
-        if (phase < 20) {
+        if (phase < 20)
           duty += dither;
-        } else {
+        else
           duty -= dither;
-        }
       }
-      // ---------------------
 
       if (!_targetDirection)
         duty = -duty;
@@ -232,7 +205,7 @@ void MotorTask::_loop() {
 
     MotorHal::getInstance().setDuty(_currentDuty);
 
-    // 6. Telemetry Update
+    // Telemetry Update
     _status.appliedVoltage = vApplied;
     _status.current = avgCurrent;
     _status.estimatedRpm = actualRpm;
@@ -252,14 +225,13 @@ void MotorTask::setTargetSpeed(uint8_t speedStep, bool forward) {
 void MotorTask::reloadCvs() {
   NmraDcc &dcc = DccController::getInstance().getDcc();
 
-  // Read CVs
-  uint16_t cvRa = dcc.getCV(CV::MOTOR_R_ARM); // 10mOhm units
-  float rArm = cvRa * 0.01f;                  // Convert to Ohm
+  uint16_t cvRa = dcc.getCV(CV::MOTOR_R_ARM);
+  float rArm = cvRa * 0.01f;
 
-  uint16_t cvTv = dcc.getCV(CV::TRACK_VOLTAGE); // 100mV units
-  _trackVoltage = cvTv * 0.1f;                  // Volts
+  uint16_t cvTv = dcc.getCV(CV::TRACK_VOLTAGE);
+  _trackVoltage = cvTv * 0.1f;
   if (_trackVoltage < 5.0f)
-    _trackVoltage = 12.0f; // Safety default
+    _trackVoltage = 14.0f;
 
   uint16_t poles = dcc.getCV(CV::MOTOR_POLES);
   if (poles == 0)
@@ -267,10 +239,8 @@ void MotorTask::reloadCvs() {
 
   _estimator.setMotorParams(rArm, poles);
 
-  // PI Gains
   uint16_t kp = dcc.getCV(CV::MOTOR_KP);
   uint16_t ki = dcc.getCV(CV::MOTOR_KI);
-
   _kp = kp * 0.01f;
   _ki = ki * 0.001f;
 
@@ -284,7 +254,7 @@ void MotorTask::measureResistance() {
     _resistanceState = ResistanceState::MEASURING;
     _resistanceStartTime = millis();
     _measuredResistance = 0.0f;
-    _currentFilter.reset(); // Reset filter
+    _currentFilter.reset();
     Log.println("MotorTask: Starting Resistance Measurement...");
   }
 }
