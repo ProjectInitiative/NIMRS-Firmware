@@ -48,8 +48,8 @@ jobs:
           }
           EOF
 
-          sudo systemctl reload apparmor
-          echo "AppArmor reloaded."
+          sudo apparmor_parser -r /etc/apparmor.d/bwrap-nix || true
+          echo "AppArmor profile applied."
 
       - name: Build Firmware
         run: nix build
