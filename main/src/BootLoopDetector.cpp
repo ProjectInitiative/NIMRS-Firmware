@@ -16,10 +16,51 @@ const int STABILITY_TIME_MS = 30000;
 TimerHandle_t stabilityTimer = nullptr;
 } // namespace
 
+extern void notifyCVResetFactoryDefault(); // In DccController.cpp
+
+void BootLoopDetector::performFactoryReset() {
+  Log.println("!!! FACTORY RESET TRIGGERED !!!");
+
+  // 1. Reset all DCC CVs to defaults
+  notifyCVResetFactoryDefault();
+
+  // 2. Wipe WiFi and Networking settings
+  // This effectively wipes the NVS 'nvs.net' or standard Arduino WiFi storage
+  Log.println("Factory Reset: Clearing WiFi credentials...");
+  WiFi.disconnect(true, true);
+
+  // 3. TODO: Potentially wipe specific custom NVS namespaces or LittleFS if
+  // needed nvs_flash_erase();
+
+  Log.println("Factory Reset: Complete. Rebooting in 1s...");
+  delay(1000);
+  esp_restart();
+}
+
 void BootLoopDetector::timerCallback(TimerHandle_t xTimer) {
   Log.println(
-      "BootLoopDetector: Stability timer reached. Marking firmware as VALID.");
-  BootLoopDetector::markSuccessful();
+      "BootLoopDetector: Stability timer reached. Running health check...");
+
+  if (performHealthCheck()) {
+    Log.println(
+        "BootLoopDetector: Health check PASSED. Marking firmware as VALID.");
+    BootLoopDetector::markSuccessful();
+  } else {
+    Log.println("BootLoopDetector: Health check FAILED! Triggering Rollback.");
+    rollback();
+  }
+}
+
+bool BootLoopDetector::performHealthCheck() {
+  // --- HEALTH CHECK CODE HERE ---
+  // This is called after 30 seconds of uptime.
+  // Return true if the system is healthy, false to trigger a rollback.
+
+  // 1. Check if WiFi/Connectivity is functional (if enabled)
+  // 2. Check if critical tasks are still responding
+  // 3. Check for specific "soft brick" conditions
+
+  return true; // Default to healthy for now
 }
 
 void BootLoopDetector::startStabilityTimer() {

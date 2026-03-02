@@ -16,6 +16,8 @@ class BootLoopDetector {
 public:
   static void check();
   static void startStabilityTimer();
+  static bool performHealthCheck();
+  static void performFactoryReset(); // Wipe settings and restore defaults
   static void markSuccessful();
   static bool didRollback();
   static RollbackInfo getRollbackInfo();

@@ -129,18 +129,7 @@ uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
     }
 
     Log.println("DCC: Factory Reset Triggered (CV8)");
-    notifyCVResetFactoryDefault();
-
-    // Reset WiFi Credentials (erasing NVS config for WiFi)
-    Log.println("DCC: Resetting WiFi Credentials...");
-    WiFi.disconnect(true, true);
-
-    // Restart to apply clean state
-    Log.println("Rebooting in 1s...");
-    // Ensure this intentional reset doesn't trigger rollback
-    BootLoopDetector::markSuccessful();
-    delay(1000);
-    ESP.restart();
+    BootLoopDetector::performFactoryReset();
     return Value;
   }
 
