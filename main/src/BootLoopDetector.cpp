@@ -4,6 +4,7 @@
 #include "freertos/timers.h"
 #include <Arduino.h>
 #include <Preferences.h>
+#include <WiFi.h>
 #include <esp_app_format.h>
 #include <esp_ota_ops.h>
 #include <esp_system.h>
@@ -16,7 +17,9 @@ const int STABILITY_TIME_MS = 30000;
 TimerHandle_t stabilityTimer = nullptr;
 } // namespace
 
-extern void notifyCVResetFactoryDefault(); // In DccController.cpp
+extern "C" {
+void notifyCVResetFactoryDefault(); // In DccController.cpp
+}
 
 void BootLoopDetector::performFactoryReset() {
   Log.println("!!! FACTORY RESET TRIGGERED !!!");

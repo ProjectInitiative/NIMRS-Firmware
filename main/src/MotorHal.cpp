@@ -51,13 +51,14 @@ void MotorHal::init() {
 
   // --- 2. ADC Continuous Setup (Legacy) ---
   adc_digi_init_config_t adc_dma_config = {0};
-  adc_dma_config.max_store_buf_size = 4096;
+  adc_dma_config.max_store_buf_size = 8192;
   adc_dma_config.conv_num_each_intr = ADC_READ_LEN;
   adc_dma_config.adc1_chan_mask = BIT(ADC_CHAN);
   adc_dma_config.adc2_chan_mask = 0; // Explicitly 0
 
   adc_digi_pattern_config_t adc_pattern[1] = {0};
-  adc_pattern[0].atten = ADC_ATTEN_DB_11;
+  adc_pattern[0].atten =
+      ADC_ATTEN_DB_0; // 0dB = 1.1V range (Matches old firmware)
   adc_pattern[0].channel = (uint8_t)ADC_CHAN;
   adc_pattern[0].unit = 0; // Explicitly ADC1 (S3 DMA requirement)
   adc_pattern[0].bit_width = (uint8_t)SOC_ADC_DIGI_MAX_BITWIDTH;

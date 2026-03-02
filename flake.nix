@@ -160,6 +160,8 @@
               export IDF_COMPONENT_MANAGER=1
               export IDF_COMPONENT_MANAGER_OFFLINE=1
               idf.py build
+              echo "=== Checking Firmware Size ==="
+              python3 tools/check_firmware_size.py build/nimrs-firmware.bin partitions.csv app0
             '';
             installPhase = ''
               mkdir -p $out

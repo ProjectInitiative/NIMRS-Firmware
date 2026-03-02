@@ -219,6 +219,9 @@ let
 
     echo "=== Building Firmware (IDF) ==="
     idf.py build
+
+    echo "=== Checking Firmware Size ==="
+    python3 tools/check_firmware_size.py build/nimrs-firmware.bin partitions.csv app0
   '';
 
 in

@@ -101,6 +101,7 @@ void DccController::updateFunction(uint8_t functionIndex, bool active) {
 
 // --- Global Callbacks ---
 
+extern "C" {
 void notifyCVResetFactoryDefault() {
   Log.println("DCC: Factory Reset - Writing Defaults...");
   NmraDcc &dcc = DccController::getInstance().getDcc();
@@ -116,6 +117,7 @@ void notifyCVResetFactoryDefault() {
 
   Log.println("DCC: Factory Reset Complete");
 }
+} // extern "C"
 
 uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
   // Intercept CV8 for Factory Reset
