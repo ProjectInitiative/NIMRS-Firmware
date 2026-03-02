@@ -30,6 +30,8 @@ const esp_app_desc_t *esp_ota_get_app_description(void);
 esp_err_t esp_ota_get_partition_description(const esp_partition_t *partition,
                                             esp_app_desc_t *app_desc);
 
+esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(void);
+
 // Helper to control mock state from tests
 void setMockRunningPartition(const esp_partition_t *p);
 const esp_partition_t *getMockBootPartition();

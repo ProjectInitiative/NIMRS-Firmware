@@ -1,8 +1,8 @@
 #include "DccController.h"
-#include "../config.h"
 #include "BootLoopDetector.h"
 #include "CvRegistry.h"
 #include "Logger.h"
+#include "../config.h"
 #include "nimrs-pinout.h"
 #include <EEPROM.h>
 #include <WiFi.h>

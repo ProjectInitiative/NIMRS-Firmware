@@ -15,8 +15,27 @@ This guide explains how to flash the NIMRS Firmware onto the decoder using pre-c
 Go to the [GitHub Releases](../../releases) page and download the following files from the latest release:
 
 1.  `nimrs-firmware.bin` (Application)
-2.  `partitions.bin` (Partition Table)
+2.  `partition-table.bin` (Partition Table)
 3.  `bootloader.bin` (System Bootloader)
+
+## Flashing with Nix Environment (Recommended)
+
+If you are building the firmware yourself using the Nix environment, you can use the built-in helper script to flash all components automatically:
+
+```bash
+flash-all /dev/ttyACM0
+```
+
+## Manual Flashing Command
+
+If you downloaded the pre-compiled binaries and are flashing manually, open a terminal/command prompt in the folder where you downloaded the files and run:
+
+```bash
+esptool.py -p COM3 -b 460800 --before default_reset --after hard_reset --chip esp32s3 write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0000 bootloader.bin 0x8000 partition-table.bin 0x10000 nimrs-firmware.bin
+```
+
+- Replace `COM3` with your actual serial port (e.g., `/dev/ttyUSB0` on Linux/Mac).
+- If flashing fails, try a lower baud rate (`-b 115200`).
 
 ## Wiring
 
@@ -27,17 +46,6 @@ Connect the decoder to your USB Serial Adapter:
 - **TX** -> RX
 - **RX** -> TX
 - **IO0** -> GND (Held during power-up for bootloader mode)
-
-## Flashing Command
-
-Open a terminal/command prompt in the folder where you downloaded the files and run:
-
-```bash
-esptool.py -p COM3 -b 460800 --before default_reset --after hard_reset --chip esp32s3 write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0000 bootloader.bin 0x8000 partitions.bin 0x10000 nimrs-firmware.bin
-```
-
-- Replace `COM3` with your actual serial port (e.g., `/dev/ttyUSB0` on Linux/Mac).
-- If flashing fails, try a lower baud rate (`-b 115200`).
 
 ## Post-Flash
 

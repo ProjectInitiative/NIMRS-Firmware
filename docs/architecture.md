@@ -18,7 +18,7 @@ Handles all network and high-level system interactions.
 
 - **WiFi:** Manages station connection and Fallback AP (`NIMRS-Decoder`).
 - **Web Server:** Serves the Dashboard and API.
-- **OTA:** Handles safe A/B firmware updates via `/update`.
+- **OTA:** Handles safe A/B firmware updates via `/update`. It supports ESP-IDF native auto-rollbacks in case of boot or crash failures.
 - **Logging:** Hosts the live log viewer at `/logs`.
 
 ### 3. DccController

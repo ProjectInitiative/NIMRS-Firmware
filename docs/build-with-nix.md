@@ -25,7 +25,7 @@ Otherwise, you can manually enter the shell:
 nix develop
 ```
 
-Once inside, you will have access to all necessary tools (`arduino-cli`, `python`, `esptool`, etc.) and helper scripts.
+Once inside, you will have access to all necessary tools (`idf.py`, `python`, `esptool`, etc.) and helper scripts.
 
 ## Helper Scripts
 
@@ -33,15 +33,16 @@ The environment provides several scripts to simplify development:
 
 ### Building
 
-- **`build-firmware`**: Compiles the firmware using `arduino-cli`.
+- **`build-firmware`**: Compiles the firmware using ESP-IDF (`idf.py build`).
   - Output is placed in the `build/` directory.
-  - Automatically checks firmware size against the `app0` partition.
 
 ### Flashing
 
 - **`upload-firmware <port|IP>`**: Uploads the compiled binary.
   - **Serial:** `upload-firmware /dev/ttyACM0`
   - **OTA:** `upload-firmware 192.168.1.50` (Requires the device to be on WiFi)
+- **`flash-all <port>`**: Flashes everything (bootloader, partition table, and app) via Serial.
+- **`reset-ota <port>`**: Erases OTA data partition to reset rollback state via Serial.
 
 ### Monitoring
 

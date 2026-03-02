@@ -152,6 +152,12 @@ const esp_partition_t *esp_ota_get_boot_partition(void) { return mock_boot; }
 
 esp_err_t esp_ota_mark_app_valid_cancel_rollback(void) { return ESP_OK; }
 
+esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(void) {
+  // Return fail so the fallback path is executed which sets rollback flag and
+  // calls esp_restart
+  return ESP_FAIL;
+}
+
 esp_err_t esp_ota_get_state_partition(const esp_partition_t *partition,
                                       esp_ota_img_states_t *ota_state) {
   if (ota_state)

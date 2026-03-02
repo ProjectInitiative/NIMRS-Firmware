@@ -9,7 +9,10 @@ class Preferences {
 public:
   static std::map<std::string, std::string> _storage;
 
-  void begin(const char *name, bool readOnly) {}
+  bool begin(const char *name, bool readOnly,
+             const char *partition_label = NULL) {
+    return true;
+  }
   void end() {}
 
   String getString(const char *key, const char *def) {
