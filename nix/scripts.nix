@@ -153,6 +153,24 @@ let
     esptool.py -p "$1" erase_region 0xE000 0x2000
   '';
 
+  eraseFlash = pkgs.writeShellScriptBin "erase-flash" ''
+    if [ -z "$1" ]; then
+      echo "Usage: erase-flash <PORT>"
+      exit 1
+    fi
+    echo "=== ERASING ENTIRE FLASH (Factory Reset) ==="
+    esptool.py -p "$1" erase_flash
+  '';
+
+  flashFactory = pkgs.writeShellScriptBin "flash-factory" ''
+    if [ -z "$1" ]; then
+      echo "Usage: flash-factory <PORT>"
+      exit 1
+    fi
+    ${eraseFlash}/bin/erase-flash "$1"
+    ${flashAll}/bin/flash-all "$1"
+  '';
+
   generateApiDocs = pkgs.writeShellScriptBin "generate-api-docs" ''
     python3 tools/generate_api_docs.py
   '';
@@ -235,6 +253,8 @@ in
     agentCheck
     uploadFirmware
     flashAll
+    flashFactory
+    eraseFlash
     monitorFirmware
     resetOta
     generateApiDocs

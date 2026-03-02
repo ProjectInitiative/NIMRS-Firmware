@@ -222,6 +222,11 @@ void Logger::clear() {
 }
 
 void Logger::_addToBuffer(const String &line) {
+  // Always output to Serial immediately if the task isn't running yet
+  if (_taskHandle == NULL && _serialEnabled) {
+    Serial.println(line);
+  }
+
   if (_historyMutex != NULL &&
       xSemaphoreTake(_historyMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
     // Add timestamp

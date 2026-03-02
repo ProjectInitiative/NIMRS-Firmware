@@ -31,9 +31,23 @@ void ConnectivityManager::setup() {
   Log.println("ConnectivityManager: Initializing...");
 
   // 1. Initialize File System
-  if (!LittleFS.begin(true)) {
-    Log.println("ConnectivityManager: LittleFS Mount Failed");
-  } else {
+  // We attempt to mount WITHOUT formatting first.
+  // If it fails (usually due to stale data from a different partition layout),
+  // we explicitly format it. This avoids the internal LFS assert during a
+  // "format-on-failure" mount.
+  if (!LittleFS.begin(false)) {
+    Log.println("ConnectivityManager: LittleFS Mount Failed. Formatting...");
+    if (LittleFS.format()) {
+      Log.println("ConnectivityManager: LittleFS Format Successful.");
+      if (!LittleFS.begin(true)) {
+        Log.println("ConnectivityManager: LittleFS Mount Failed AFTER format!");
+      }
+    } else {
+      Log.println("ConnectivityManager: LittleFS Format FAILED!");
+    }
+  }
+
+  if (LittleFS.usedBytes() >= 0) { // Check if mounted correctly
     Log.printf("ConnectivityManager: LittleFS Total: %lu, Used: %lu\n",
                (unsigned long)LittleFS.totalBytes(),
                (unsigned long)LittleFS.usedBytes());

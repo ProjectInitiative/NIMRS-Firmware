@@ -88,6 +88,8 @@
           agentCheck
           uploadFirmware
           flashAll
+          flashFactory
+          eraseFlash
           monitorFirmware
           resetOta
           generateApiDocs
@@ -225,6 +227,8 @@
               uploadFirmware
               monitorFirmware
               flashAll
+              flashFactory
+              eraseFlash
               resetOta
               generateApiDocs
               pkgs.python3
@@ -266,6 +270,8 @@
                         echo "  upload-firmware <PORT|IP> : Upload firmware via Serial (default: app only) or OTA (curl)"
                         echo "  monitor-firmware <PORT|IP>: Monitor logs via Serial (miniterm) or WiFi (nimrs-logs)"
                         echo "  flash-all <PORT>          : Flash EVERYTHING via Serial (bootloader + partition table + app)"
+                        echo "  flash-factory <PORT>      : FULL CHIP ERASE then Flash everything (solves filesystem issues)"
+                        echo "  erase-flash <PORT>        : Wipe the entire chip (Factory Reset)"
                         echo "  reset-ota <PORT>          : Erase OTA data to reset rollback state (enables testing of rollback)"
                         echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
                         echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
