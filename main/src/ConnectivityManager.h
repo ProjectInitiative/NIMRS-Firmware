@@ -8,6 +8,7 @@
 #include <Update.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <esp_partition.h>
 
 class ConnectivityManager {
 public:

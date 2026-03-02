@@ -38,6 +38,20 @@ void BootLoopDetector::startStabilityTimer() {
 }
 
 void BootLoopDetector::check() {
+  Preferences prefs;
+  prefs.begin(PREF_NAMESPACE, false);
+  int crashes = prefs.getInt("crashes", 0);
+  crashes++;
+  prefs.putInt("crashes", crashes);
+  if (crashes >= 3) {
+    Log.println("BootLoopDetector: Crash loop detected! Triggering rollback.");
+    prefs.putInt("crashes", 0);
+    prefs.end();
+    rollback();
+    return;
+  }
+  prefs.end();
+
   const esp_partition_t *running = esp_ota_get_running_partition();
   if (!running)
     return;
@@ -55,6 +69,11 @@ void BootLoopDetector::check() {
 }
 
 void BootLoopDetector::markSuccessful() {
+  Preferences prefs;
+  prefs.begin(PREF_NAMESPACE, false);
+  prefs.putInt("crashes", 0);
+  prefs.end();
+
   esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
   if (err == ESP_OK) {
     Log.println("BootLoopDetector: Firmware marked VALID.");

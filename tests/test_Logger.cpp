@@ -16,6 +16,8 @@ void test_initial_logs() {
   std::cout << "Testing initial logs..." << std::endl;
   // Initialize Logger
   Log.begin(115200);
+  Log.startTask();
+  Log.println("Logger: Initialized");
 
   String json = Log.getLogsJSON();
   // Expect "Logger: Initialized"
