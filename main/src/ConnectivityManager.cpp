@@ -481,6 +481,31 @@ void ConnectivityManager::setup() {
     }
   });
 
+  // API: Telemetry
+  /**
+   * @api {GET} /api/telemetry Get Live Telemetry
+   * @apiGroup Status
+   * @apiDescription Retrieves live motor and system telemetry as JSON.
+   */
+  _server.on("/api/telemetry", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    MotorTask::Status status = MotorTask::getInstance().getStatus();
+    SystemState &state = SystemContext::getInstance().getState();
+
+    JsonDocument doc;
+    doc["target_speed"] = state.speed;
+    doc["duty"] = status.duty;
+    doc["current"] = status.current;
+    doc["voltage"] = status.appliedVoltage;
+    doc["rpm"] = status.estimatedRpm;
+    doc["ripple_freq"] = status.rippleFreq;
+    doc["stalled"] = status.stalled;
+
+    String output;
+    serializeJson(doc, output);
+    _server.send(200, "application/json", output);
+  });
+
   // API: CV Definitions
   /**
    * @api {GET} /api/cv/defs Get CV Definitions

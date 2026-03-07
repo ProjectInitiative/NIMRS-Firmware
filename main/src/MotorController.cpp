@@ -49,11 +49,11 @@ void MotorController::loop() {
     if ((float)targetSpeed > _currentSpeed) {
       _currentSpeed += step;
       if (_currentSpeed > targetSpeed)
-        _currentSpeed = targetSpeed;
+        _currentSpeed = (float)targetSpeed;
     } else if ((float)targetSpeed < _currentSpeed) {
       _currentSpeed -= step;
       if (_currentSpeed < targetSpeed)
-        _currentSpeed = targetSpeed;
+        _currentSpeed = (float)targetSpeed;
     }
   }
 
@@ -76,11 +76,18 @@ void MotorController::streamTelemetry() {
     // pwm_val: 0-1023 (derived from duty)
     int pwm = (int)(fabs(status.duty) * 1023.0f);
 
-    Log.printf("[NIMRS_DATA],%d,%.1f,%d,%.3f,%.3f,%d\n", state.speed,
-               _currentSpeed, pwm, status.current,
-               status.estimatedRpm,               // Replaces unused 0.0f
-               (int)(status.current / 0.00054f)); // Reconstruct raw ADC approx
+    Log.printf("[NIMRS_DATA],%d,%.1f,%d,%.3f,%.3f,%u\n", state.speed,
+               _currentSpeed, pwm, status.current, status.estimatedRpm,
+               status.rawAdc);
   }
+}
+
+void MotorController::stopImmediate() {
+  SystemState &state = SystemContext::getInstance().getState();
+  state.speed = 0;
+  _currentSpeed = 0.0f;
+  MotorTask::getInstance().setTargetSpeed(0, true);
+  Log.println("MotorController: Emergency STOP (Bypass Momentum)");
 }
 
 void MotorController::_updateCvCache() {

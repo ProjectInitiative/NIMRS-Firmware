@@ -29,6 +29,9 @@ extern TaskHandle_t loopTaskHandle; // Defined in Arduino core main.cpp
 
 // Real-time Control Plane Task (Core 0)
 void controlPlaneTask(void *pvParameters) {
+  // Initialize DCC hardware on Core 0 for interrupt affinity
+  DccController::getInstance().setup();
+
   for (;;) {
     DccController::getInstance().loop();
     MotorController::getInstance().loop();

@@ -39,6 +39,9 @@ static constexpr uint8_t AMP_BCLK = 38;
 static constexpr uint8_t AMP_DIN = 37;
 static constexpr uint8_t AMP_LRCLK = 36;
 static constexpr uint8_t AMP_SD_MODE = 33;
+
+// SuperCap (GoPack!) Control
+static constexpr uint8_t SUPERCAP_CTRL = 19;
 } // namespace Pinout
 
 #endif // NIMRS_PINOUT_H

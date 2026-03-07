@@ -3,6 +3,7 @@
 #include "BootLoopDetector.h"
 #include "CvRegistry.h"
 #include "Logger.h"
+#include "MotorHal.h"
 #include "nimrs-pinout.h"
 #include <EEPROM.h>
 #include <WiFi.h>
@@ -30,6 +31,21 @@ void DccController::setupStorage() {
 }
 
 void DccController::setup() {
+  // 0. SuperCap Initialization
+  // GPIO 19 is shared with USB D- on S3. We must reset it to use as GPIO.
+  gpio_reset_pin((gpio_num_t)Pinout::SUPERCAP_CTRL);
+  pinMode(Pinout::SUPERCAP_CTRL, OUTPUT);
+  // Increase drive strength to overcome the 330R resistor load
+  gpio_set_drive_capability((gpio_num_t)Pinout::SUPERCAP_CTRL,
+                            GPIO_DRIVE_CAP_3);
+
+  // Set initial state from CV (Active Low: 1=On/LOW, 0=Off/HIGH)
+  uint8_t scEnable = _dcc.getCV(CV::SUPERCAP_ENABLE);
+  digitalWrite(Pinout::SUPERCAP_CTRL, (scEnable > 0) ? LOW : HIGH);
+  Log.printf("DCC: SuperCap support %s (CV151=%d, Pin=%s).\n",
+             (scEnable > 0) ? "ENABLED" : "DISABLED", scEnable,
+             (scEnable > 0) ? "LOW" : "HIGH");
+
   // 1. Setup Pin first so init() knows which interrupt to attach
   _dcc.pin(Pinout::TRACK_LEFT_3V3, 1);
 
@@ -102,6 +118,30 @@ void DccController::updateFunction(uint8_t functionIndex, bool active) {
 // --- Global Callbacks ---
 
 extern "C" {
+/**
+ * DCC Library call to acknowledge a CV read/write in Service Mode.
+ * We must draw ~60mA for 6ms.
+ * CRITICAL: We disable the SuperCap during this time so it doesn't
+ * buffer the current pulse and hide the ACK from the command station.
+ */
+void notifyCVAck() {
+  // 1. Disable SuperCap during ACK pulse (HIGH = Disabled)
+  digitalWrite(Pinout::SUPERCAP_CTRL, HIGH);
+
+  // 2. Pulse Motor to draw current (~20% PWM)
+  // Spec requires ~60mA for 6ms.
+  MotorHal::getInstance().setDuty(0.2f);
+  delay(6);
+  MotorHal::getInstance().setDuty(0.0f);
+
+  // 3. Restore SuperCap state based on CV (1=LOW/Enabled)
+  NmraDcc &dcc = DccController::getInstance().getDcc();
+  uint8_t scEnable = dcc.getCV(CV::SUPERCAP_ENABLE);
+  if (scEnable > 0) {
+    digitalWrite(Pinout::SUPERCAP_CTRL, LOW);
+  }
+}
+
 void notifyCVResetFactoryDefault() {
   Log.println("DCC: Factory Reset - Writing Defaults...");
   NmraDcc &dcc = DccController::getInstance().getDcc();
@@ -130,9 +170,16 @@ uint8_t notifyCVWrite(uint16_t CV, uint8_t Value) {
       return Value;
     }
 
-    Log.println("DCC: Factory Reset Triggered (CV8)");
+    Log.println("DCC: Write CV8 triggered Factory Reset");
     BootLoopDetector::performFactoryReset();
     return Value;
+  }
+
+  if (CV == CV::SUPERCAP_ENABLE) {
+    digitalWrite(Pinout::SUPERCAP_CTRL, (Value > 0) ? LOW : HIGH);
+    Log.printf("DCC: SuperCap %s via CV update (Pin %s).\n",
+               (Value > 0) ? "ENABLED" : "DISABLED",
+               (Value > 0) ? "LOW" : "HIGH");
   }
 
   Log.printf("DCC: Write CV%d = %d\n", CV, Value);

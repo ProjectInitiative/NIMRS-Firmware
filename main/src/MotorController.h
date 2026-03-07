@@ -16,6 +16,7 @@ public:
   void setup();
   void loop();
   void streamTelemetry();
+  void stopImmediate(); // Bypass momentum
 
   // Test Mode (Delegate to MotorTask)
   void startTest();

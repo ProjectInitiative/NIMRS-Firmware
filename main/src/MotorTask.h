@@ -30,6 +30,7 @@ public:
     float rippleFreq;
     bool stalled;
     float duty;
+    uint32_t rawAdc;
   };
   Status getStatus() const;
 

@@ -53,6 +53,7 @@ static constexpr uint16_t TRACK_VOLTAGE = 145; // Track Voltage (100mV units)
 static constexpr uint16_t MOTOR_R_ARM =
     149;                                  // Armature Resistance (10mOhm units)
 static constexpr uint16_t MOTOR_KE = 150; // Back-EMF Constant (mV/RPM)
+static constexpr uint16_t SUPERCAP_ENABLE = 151; // 0=Off, 1=On
 
 // Function Mapping
 static constexpr uint16_t FRONT = 33;
@@ -129,6 +130,8 @@ static const CvDef CV_DEFS[] = {
     {CV::MOTOR_R_ARM, 200, "Armature R",
      "Armature Resistance in 10mOhm units (200=2.0 Ohm)."},
     {CV::MOTOR_KE, 50, "Motor Ke", "Back-EMF Constant (mV/RPM)."},
+    {CV::SUPERCAP_ENABLE, 1, "SuperCap Enable",
+     "Enable Capacitor Pack (0=Off, 1=On)."},
     {CV::TRACK_VOLTAGE, 140, "Track Voltage",
      "Track Voltage in 100mV units (140=14.0V)."},
     {CV::MOTOR_POLES, 5, "Motor Poles", "Number of motor poles (Default 5)."},
