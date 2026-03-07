@@ -32,6 +32,13 @@ void RippleDetector::processBuffer(float *data, size_t len, float sampleRate) {
       }
     } else if (_state && sample < _thresholdLow) {
       _state = false;
+    } else {
+      // TIMEOUT CATCH: If no pulse is seen within 200ms, motor is stopped.
+      float elapsedUs = _samplesSincePulse * sampleIntervalUs;
+      if (elapsedUs > 200000.0f) {
+        _currentFreq = 0.0f;
+        _state = false;
+      }
     }
   }
 }

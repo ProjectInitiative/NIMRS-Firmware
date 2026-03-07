@@ -13,16 +13,10 @@ class MotorTask {
 public:
   static MotorTask &getInstance();
 
-  // Start the FreeRTOS task on Core 1
   void start();
-
-  // Set Target Speed (0-255) and Direction
   void setTargetSpeed(uint8_t speedStep, bool forward);
-
-  // Update CVs from Registry
   void reloadCvs();
 
-  // Telemetry
   struct Status {
     float appliedVoltage;
     float current;
@@ -30,20 +24,19 @@ public:
     float rippleFreq;
     bool stalled;
     bool hardwareFault;
+    bool isMoving;
     float duty;
     uint32_t rawAdc;
   };
   Status getStatus() const;
 
-  // Resistance Measurement
   enum class ResistanceState { IDLE, MEASURING, DONE, ERROR };
   void measureResistance();
   void resetModel();
   ResistanceState getResistanceState() const;
   float getMeasuredResistance() const;
-  float getLearnedResistance() const; // Dynamic tracking
+  float getLearnedResistance() const;
 
-  // Test Mode
   void startTest();
   String getTestJSON() const;
 
@@ -55,37 +48,50 @@ private:
 
   TaskHandle_t _taskHandle;
 
-  // Components
   BemfEstimator _estimator;
   RippleDetector _rippleDetector;
-  EmaFilter _currentFilter; // For low speed average (I_avg)
-  EmaFilter _peakFilter;    // For software-based spike filtering (Stall)
+  EmaFilter _currentFilter;
+  EmaFilter _peakFilter;
 
-  // Control State
   uint8_t _targetSpeedStep;
   bool _targetDirection;
-  float _currentDuty; // Current PWM output
+  float _currentDuty;
 
-  // PI State
   float _piErrorSum;
+  float _prevCurrent;
+  float _filteredDiDt;
 
-  // CV Cache
+  // --- Adaptive Stall Detector State ---
+  enum class AdaptiveMotorState {
+    STOPPED,
+    STARTUP,
+    BASELINING,
+    RUNNING
+  } _adaptiveState;
+
+  uint32_t _stateStartTime;
+  float _baselineCurrent;
+  uint16_t _baselineSampleCount;
+  float _baselineSum;
+  // --------------------------------------
+
   float _kp;
   float _ki;
   float _trackVoltage;
-  float _maxRpm; // Calculated from CVs? Or hardcoded limit?
+  float _maxRpm;
   float _vStart;
   uint8_t _cvPwmDither;
+  uint8_t _cvStictionKick;
 
-  // Telemetry
+  bool _vKickActive;
+  unsigned long _vKickStartTime;
+
   Status _status;
 
-  // Resistance Measurement State
   ResistanceState _resistanceState;
   unsigned long _resistanceStartTime;
   float _measuredResistance;
 
-  // Test Mode State
   bool _testMode;
   unsigned long _testStartTime;
   static const int MAX_TEST_POINTS = 100;

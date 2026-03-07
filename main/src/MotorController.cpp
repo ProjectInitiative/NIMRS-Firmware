@@ -19,39 +19,6 @@ void MotorController::loop() {
 
   _updateCvCache();
 
-  // --- Resistance Measurement Completion Check ---
-  static ResistanceState lastResState = ResistanceState::IDLE;
-  ResistanceState currentResState =
-      MotorTask::getInstance().getResistanceState();
-  if (lastResState == ResistanceState::MEASURING &&
-      currentResState == ResistanceState::DONE) {
-    float r = MotorTask::getInstance().getMeasuredResistance();
-    uint16_t cvVal = (uint16_t)(r * 100.0f);
-    NmraDcc &dcc = DccController::getInstance().getDcc();
-    dcc.setCV(CV::MOTOR_R_ARM, cvVal);
-    Log.printf("MotorController: Saved Resistance CV%d = %d\n", CV::MOTOR_R_ARM,
-               cvVal);
-  }
-  lastResState = currentResState;
-  // ---------------------------------------------
-
-  // --- Dynamic Resistance Sync ---
-  static unsigned long lastRSync = 0;
-  if (millis() - lastRSync > 10000) { // Every 10 seconds
-    lastRSync = millis();
-    float learnedR = MotorTask::getInstance().getLearnedResistance();
-    uint16_t cvVal = (uint16_t)(learnedR * 100.0f);
-    NmraDcc &dcc = DccController::getInstance().getDcc();
-    // Only update if it changed significantly (> 0.1 Ohm) to save EEPROM life
-    uint16_t currentCv = dcc.getCV(CV::MOTOR_R_ARM);
-    if (abs((int)cvVal - (int)currentCv) > 10) {
-      dcc.setCV(CV::MOTOR_R_ARM, cvVal);
-      Log.printf("MotorController: Synced Dynamic R -> CV%d = %d\n",
-                 CV::MOTOR_R_ARM, cvVal);
-    }
-  }
-  // --------------------------------
-
   // MOMENTUM (CV3)
   // Note: Using CV3 (Accel) for both accel and decel for simplicity as per
   // previous implementation. Ideally CV4 should be used for decel.

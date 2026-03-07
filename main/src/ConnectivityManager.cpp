@@ -521,6 +521,7 @@ void ConnectivityManager::setup() {
     doc["ripple_freq"] = status.rippleFreq;
     doc["learned_r"] = MotorTask::getInstance().getLearnedResistance();
     doc["stalled"] = status.stalled;
+    doc["moving"] = status.isMoving;
 
     String output;
     serializeJson(doc, output);

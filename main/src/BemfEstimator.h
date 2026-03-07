@@ -23,7 +23,9 @@ public:
   float getEstimatedRpm() const;
   float getBemfVoltage() const;
   float getMeasuredResistance() const;
+  float getBemfConstant() const { return _bemfConstant; }
   bool isStalled() const;
+  bool useRipple() const { return _useRipple; }
 
 private:
   float _rArmature; // Current learned/configured resistance

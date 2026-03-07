@@ -9,6 +9,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NIMRS Decoder</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="lame.min.js"></script>
 </head>
 <body>
@@ -22,6 +23,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
         <nav>
             <button class="nav-btn" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="showTab('telemetry')">Telemetry</button>
             <button class="nav-btn" onclick="showTab('cvs')">CVs</button>
             <button class="nav-btn" onclick="showTab('files')">Files</button>
             <button class="nav-btn" onclick="showTab('logs')">Logs</button>
@@ -78,6 +80,16 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                             <!-- Populated by JS -->
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Telemetry Tab -->
+            <section id="telemetry" class="tab-content">
+                <div class="card" style="min-height: 400px; background: #000;">
+                    <div class="card-header">
+                        <h3>Live Motor Telemetry</h3>
+                    </div>
+                    <canvas id="telemetryChart"></canvas>
                 </div>
             </section>
 
@@ -655,6 +667,7 @@ let cvValues = {};
 let lastSeenTimestamp = { "": 0, "data": 0, "debug": 0 };
 let sessionLogs = { "": [], "data": [], "debug": [] };
 let clearedMarkers = { "": 0, "data": 0, "debug": 0 };
+let telemetryChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Restore tab
@@ -664,6 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFunctions();
     pollStatus();
     statusInterval = setInterval(pollStatus, 1000);
+    initTelemetryChart();
 
     document.getElementById('upload-form').addEventListener('submit', handleUpload);
     
@@ -671,6 +685,72 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentTab === 'cvs') loadAllCVs();
     if (currentTab === 'files') loadFiles();
 });
+
+// --- Telemetry Chart ---
+function initTelemetryChart() {
+    const el = document.getElementById('telemetryChart');
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    telemetryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [], 
+            datasets: [
+                { label: 'RPM', borderColor: '#4bc0c0', yAxisID: 'yRpm', data: [], tension: 0.1, pointRadius: 0 },
+                { label: 'Current (A)', borderColor: '#ff6384', yAxisID: 'yLow', data: [], tension: 0.1, pointRadius: 0 },
+                { label: 'Zone', borderColor: '#ffce56', yAxisID: 'yLow', data: [], stepped: true, pointRadius: 0 },
+                { label: 'Stall', borderColor: '#ff0000', yAxisID: 'yLow', data: [], stepped: true, pointRadius: 0 }
+            ]
+        },
+        options: {
+            animation: false,
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { display: false },
+                yRpm: { type: 'linear', position: 'left', title: { display: true, text: 'RPM', color: '#4bc0c0' }, grid: { color: '#333' } },
+                yLow: { type: 'linear', position: 'right', max: 5, title: { display: true, text: 'Amps / Zone' }, grid: { drawOnChartArea: false } }
+            },
+            plugins: { legend: { labels: { color: '#fff' } } }
+        }
+    });
+}
+
+async function updateTelemetryData() {
+    if (currentTab !== 'telemetry' || !telemetryChart) return;
+    try {
+        const response = await fetch('/api/logs?filter=[NIMRS_DATA]'); 
+        const logArray = await response.json();
+
+        let times = [], rpms = [], currents = [], zones = [], stalls = [];
+
+        logArray.forEach(line => {
+            const jsonStart = line.indexOf('{');
+            if (jsonStart > -1) {
+                try {
+                    const data = JSON.parse(line.substring(jsonStart));
+                    const tsMatch = line.match(/\[(\d+)\]/);
+                    times.push(tsMatch ? tsMatch[1] : '');
+                    rpms.push(data.rpm);
+                    currents.push(data.cur);
+                    zones.push(data.zone);
+                    stalls.push(data.stall);
+                } catch (e) {}
+            }
+        });
+
+        // Keep last 100 points
+        const limit = 100;
+        telemetryChart.data.labels = times.slice(-limit);
+        telemetryChart.data.datasets[0].data = rpms.slice(-limit);
+        telemetryChart.data.datasets[1].data = currents.slice(-limit);
+        telemetryChart.data.datasets[2].data = zones.slice(-limit);
+        telemetryChart.data.datasets[3].data = stalls.slice(-limit);
+        telemetryChart.update();
+    } catch (e) {}
+}
+
+setInterval(updateTelemetryData, 500);
 
 // --- Tab Management ---
 function showTab(tabId) {
