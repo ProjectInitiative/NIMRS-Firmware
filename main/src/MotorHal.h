@@ -2,6 +2,8 @@
 #define MOTOR_HAL_H
 
 #include "driver/mcpwm_prelude.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/stream_buffer.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -23,9 +25,8 @@ public:
 
   // Sensing (Synchronized)
   float getLatestCurrentAdc() const;
-  float getLatestBemfAdc() const;
 
-  // For compatibility with existing MotorTask logic while we transition
+  // For compatibility with existing MotorTask logic
   size_t getAdcSamples(float *buffer, size_t maxLen);
   float getAdcSampleRate() const;
 
@@ -43,9 +44,9 @@ private:
   uint8_t _lastGain;
   float _currentDuty;
 
-  // ISR Captured Values
+  // ISR Communication
+  StreamBufferHandle_t _adcStreamBuffer;
   volatile float _lastCurrentAdc;
-  volatile float _lastBemfAdc;
 
   // Allow ISR to access private members
   friend bool motor_hal_mcpwm_cb(mcpwm_timer_handle_t timer,
