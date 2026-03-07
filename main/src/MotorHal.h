@@ -1,40 +1,56 @@
 #ifndef MOTOR_HAL_H
 #define MOTOR_HAL_H
 
-#include "esp_adc/adc_continuous.h"
+#include "driver/mcpwm_prelude.h"
 #include <stddef.h>
 #include <stdint.h>
+
+// Forward declaration for friend
+class MotorHal;
+extern "C" bool motor_hal_mcpwm_cb(mcpwm_timer_handle_t timer,
+                                   const mcpwm_timer_event_data_t *edata,
+                                   void *user_ctx);
 
 class MotorHal {
 public:
   static MotorHal &getInstance();
 
-  // Initialization
   void init();
-
-  // Motor Control
-  // duty: -1.0 (Full Reverse) to 1.0 (Full Forward). 0.0 = Stop/Brake.
   void setDuty(float duty);
+  void setHardwareGain(uint8_t mode);
+  bool readFault();
+  float getCurrentScalar() const;
 
-  // Hardware Configuration
-  void setHardwareGain(uint8_t mode); // 0=Low, 1=High-Z, 2=High, 3=Med
-  bool readFault();                   // Check DRV8213 fault pin (Active Low)
-  float getCurrentScalar() const;     // Based on GainSel and R_sense=2.4k
+  // Sensing (Synchronized)
+  float getLatestCurrentAdc() const;
+  float getLatestBemfAdc() const;
 
-  // Telemetry / Sensing
-  // Copy latest ADC samples to the provided buffer.
+  // For compatibility with existing MotorTask logic while we transition
   size_t getAdcSamples(float *buffer, size_t maxLen);
-
-  // Get the configured ADC sample rate in Hz
   float getAdcSampleRate() const;
 
 private:
   MotorHal();
 
-  // Internal state
-  float _sampleRate;
+  // New MCPWM V5 Handles
+  mcpwm_timer_handle_t _timer;
+  mcpwm_oper_handle_t _oper;
+  mcpwm_gen_handle_t _genA;
+  mcpwm_gen_handle_t _genB;
+  mcpwm_cmpr_handle_t _cmprA;
+  mcpwm_cmpr_handle_t _cmprB;
+
   uint8_t _lastGain;
-  adc_continuous_handle_t _adcHandle;
+  float _currentDuty;
+
+  // ISR Captured Values
+  volatile float _lastCurrentAdc;
+  volatile float _lastBemfAdc;
+
+  // Allow ISR to access private members
+  friend bool motor_hal_mcpwm_cb(mcpwm_timer_handle_t timer,
+                                 const mcpwm_timer_event_data_t *edata,
+                                 void *user_ctx);
 };
 
 #endif
