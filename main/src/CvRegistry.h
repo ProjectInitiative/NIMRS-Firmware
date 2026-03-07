@@ -127,8 +127,8 @@ static const CvDef CV_DEFS[] = {
     {CV::HARDWARE_GAIN, 1, "Hardware Gain", "0=Low, 1=High-Z (Med), 2=High."},
 
     // Sensorless Motor Control
-    {CV::MOTOR_R_ARM, 200, "Armature R",
-     "Armature Resistance in 10mOhm units (200=2.0 Ohm)."},
+    {CV::MOTOR_R_ARM, 150, "Armature R",
+     "Armature Resistance in 100mOhm units (150=15.0 Ohm)."},
     {CV::MOTOR_KE, 50, "Motor Ke", "Back-EMF Constant (mV/RPM)."},
     {CV::SUPERCAP_ENABLE, 1, "SuperCap Enable",
      "Enable Capacitor Pack (0=Off, 1=On)."},

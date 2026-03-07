@@ -18,6 +18,8 @@ public:
 
   // Hardware Configuration
   void setHardwareGain(uint8_t mode); // 0=Low, 1=High-Z, 2=High, 3=Med
+  bool readFault();                   // Check DRV8213 fault pin (Active Low)
+  float getCurrentScalar() const;     // Based on GainSel and R_sense=2.4k
 
   // Telemetry / Sensing
   // Copy latest ADC samples to the provided buffer.

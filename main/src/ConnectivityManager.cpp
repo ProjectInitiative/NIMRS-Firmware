@@ -375,6 +375,20 @@ void ConnectivityManager::setup() {
     AUTH_CHECK();
     handleCV();
   });
+
+  _server.on("/api/cv/set", HTTP_GET, [this]() {
+    AUTH_CHECK();
+    if (!_server.hasArg("cv") || !_server.hasArg("val")) {
+      _server.send(400, "text/plain", "Missing cv or val");
+      return;
+    }
+    int cv = _server.arg("cv").toInt();
+    int val = _server.arg("val").toInt();
+    DccController::getInstance().getDcc().setCV(cv, val);
+    MotorTask::getInstance().reloadCvs();
+    _server.send(200, "text/plain", "OK");
+  });
+
   /**
    * @api {GET} /api/cv/all Read All CVs
    * @apiGroup Control
@@ -433,6 +447,12 @@ void ConnectivityManager::setup() {
     } else {
       _server.send(405, "text/plain", "Method Not Allowed");
     }
+  });
+
+  _server.on("/api/motor/reset_model", HTTP_POST, [this]() {
+    AUTH_CHECK();
+    MotorTask::getInstance().resetModel();
+    _server.send(200, "application/json", "{\"status\":\"reset\"}");
   });
 
   // API: Motor Calibration
@@ -499,6 +519,7 @@ void ConnectivityManager::setup() {
     doc["voltage"] = status.appliedVoltage;
     doc["rpm"] = status.estimatedRpm;
     doc["ripple_freq"] = status.rippleFreq;
+    doc["learned_r"] = MotorTask::getInstance().getLearnedResistance();
     doc["stalled"] = status.stalled;
 
     String output;

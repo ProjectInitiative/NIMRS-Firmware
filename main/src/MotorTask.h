@@ -29,6 +29,7 @@ public:
     float estimatedRpm;
     float rippleFreq;
     bool stalled;
+    bool hardwareFault;
     float duty;
     uint32_t rawAdc;
   };
@@ -37,6 +38,7 @@ public:
   // Resistance Measurement
   enum class ResistanceState { IDLE, MEASURING, DONE, ERROR };
   void measureResistance();
+  void resetModel();
   ResistanceState getResistanceState() const;
   float getMeasuredResistance() const;
   float getLearnedResistance() const; // Dynamic tracking
@@ -57,6 +59,7 @@ private:
   BemfEstimator _estimator;
   RippleDetector _rippleDetector;
   EmaFilter _currentFilter; // For low speed average (I_avg)
+  EmaFilter _peakFilter;    // For software-based spike filtering (Stall)
 
   // Control State
   uint8_t _targetSpeedStep;
@@ -71,6 +74,7 @@ private:
   float _ki;
   float _trackVoltage;
   float _maxRpm; // Calculated from CVs? Or hardcoded limit?
+  float _vStart;
   uint8_t _cvPwmDither;
 
   // Telemetry

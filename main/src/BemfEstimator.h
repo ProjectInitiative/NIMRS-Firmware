@@ -9,6 +9,7 @@ public:
 
   // Configuration
   void setMotorParams(float rArmature, int poles);
+  void setBemfConstant(float ke); // V/RPM
 
   // Runtime Updates
   void updateLowSpeedData(float vApplied, float iAvg);
@@ -16,6 +17,7 @@ public:
 
   // Calculation
   void calculateEstimate();
+  void reset();
 
   // Output
   float getEstimatedRpm() const;
@@ -40,6 +42,7 @@ private:
   float _bemfConstant;    // V/RPM
   EmaFilter _bemfKFilter; // To smooth the learned Ke
   EmaFilter _rFilter;     // To smooth learned R
+  EmaFilter _rpmFilter;   // To smooth final output
 
   bool _useRipple;
 };

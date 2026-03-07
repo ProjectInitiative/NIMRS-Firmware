@@ -26,6 +26,9 @@ void MotorHal::init() {
   // Default Gain Mode: High-Z (Medium)
   setHardwareGain(1);
 
+  // Fault Monitoring
+  pinMode(Pinout::MOTOR_FAULT, INPUT_PULLUP);
+
   // --- 1. MCPWM Setup ---
   mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, Pinout::MOTOR_IN1);
   mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, Pinout::MOTOR_IN2);
@@ -120,3 +123,22 @@ size_t MotorHal::getAdcSamples(float *buffer, size_t maxLen) {
 }
 
 float MotorHal::getAdcSampleRate() const { return _sampleRate; }
+
+bool MotorHal::readFault() {
+  return digitalRead(Pinout::MOTOR_FAULT) == LOW; // Active Low
+}
+
+float MotorHal::getCurrentScalar() const {
+  // ADC range: 3.3V / 4095 = 0.0008058 V/step
+  const float V_PER_STEP = 3.3f / 4095.0f;
+
+  switch (_lastGain) {
+  case 0:                       // LOW: 0.492 V/A
+    return V_PER_STEP / 0.492f; // ~0.001638
+  case 1:                       // HIGH-Z: 2.520 V/A
+  default:
+    return V_PER_STEP / 2.520f;  // ~0.0003197
+  case 2:                        // HIGH: 11.760 V/A
+    return V_PER_STEP / 11.760f; // ~0.0000685
+  }
+}
