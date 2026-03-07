@@ -35,6 +35,23 @@ void MotorController::loop() {
   lastResState = currentResState;
   // ---------------------------------------------
 
+  // --- Dynamic Resistance Sync ---
+  static unsigned long lastRSync = 0;
+  if (millis() - lastRSync > 10000) { // Every 10 seconds
+    lastRSync = millis();
+    float learnedR = MotorTask::getInstance().getLearnedResistance();
+    uint16_t cvVal = (uint16_t)(learnedR * 100.0f);
+    NmraDcc &dcc = DccController::getInstance().getDcc();
+    // Only update if it changed significantly (> 0.1 Ohm) to save EEPROM life
+    uint16_t currentCv = dcc.getCV(CV::MOTOR_R_ARM);
+    if (abs((int)cvVal - (int)currentCv) > 10) {
+      dcc.setCV(CV::MOTOR_R_ARM, cvVal);
+      Log.printf("MotorController: Synced Dynamic R -> CV%d = %d\n",
+                 CV::MOTOR_R_ARM, cvVal);
+    }
+  }
+  // --------------------------------
+
   // MOMENTUM (CV3)
   // Note: Using CV3 (Accel) for both accel and decel for simplicity as per
   // previous implementation. Ideally CV4 should be used for decel.
@@ -70,18 +87,15 @@ void MotorController::streamTelemetry() {
     lastS = millis();
     SystemState &state = SystemContext::getInstance().getState();
     MotorTask::Status status = MotorTask::getInstance().getStatus();
-
-    // Log format:
-    // [NIMRS_DATA],target_speed,current_speed,pwm_val,current_amps,rpm,raw_adc
-    // pwm_val: 0-1023 (derived from duty)
     int pwm = (int)(fabs(status.duty) * 1023.0f);
 
-    Log.printf("[NIMRS_DATA],%d,%.1f,%d,%.3f,%.3f,%u\n", state.speed,
+    // [NIMRS_DATA],target_speed,current_speed,pwm_val,current_amps,rpm,raw_adc,learned_r
+    Log.printf("[NIMRS_DATA],%d,%.1f,%d,%.3f,%.3f,%lu,%.2f\n", state.speed,
                _currentSpeed, pwm, status.current, status.estimatedRpm,
-               status.rawAdc);
+               (unsigned long)status.rawAdc,
+               MotorTask::getInstance().getLearnedResistance());
   }
 }
-
 void MotorController::stopImmediate() {
   SystemState &state = SystemContext::getInstance().getState();
   state.speed = 0;

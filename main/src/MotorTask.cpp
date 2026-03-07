@@ -185,6 +185,9 @@ MotorTask::ResistanceState MotorTask::getResistanceState() const {
   return _resistanceState;
 }
 float MotorTask::getMeasuredResistance() const { return _measuredResistance; }
+float MotorTask::getLearnedResistance() const {
+  return _estimator.getMeasuredResistance();
+}
 void MotorTask::startTest() {
   if (_testMode)
     return;

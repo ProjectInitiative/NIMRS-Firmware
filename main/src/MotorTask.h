@@ -39,6 +39,7 @@ public:
   void measureResistance();
   ResistanceState getResistanceState() const;
   float getMeasuredResistance() const;
+  float getLearnedResistance() const; // Dynamic tracking
 
   // Test Mode
   void startTest();

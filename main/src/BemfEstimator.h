@@ -20,10 +20,11 @@ public:
   // Output
   float getEstimatedRpm() const;
   float getBemfVoltage() const;
+  float getMeasuredResistance() const;
   bool isStalled() const;
 
 private:
-  float _rArmature; // Ohms
+  float _rArmature; // Current learned/configured resistance
   int _poles;
 
   // Inputs
@@ -35,9 +36,10 @@ private:
   float _vBemf;
   float _estimatedRpm;
 
-  // Internal
+  // Internal Tracking
   float _bemfConstant;    // V/RPM
-  EmaFilter _bemfKFilter; // To smooth the learned K
+  EmaFilter _bemfKFilter; // To smooth the learned Ke
+  EmaFilter _rFilter;     // To smooth learned R
 
   bool _useRipple;
 };
