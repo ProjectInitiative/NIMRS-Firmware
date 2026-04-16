@@ -82,6 +82,7 @@
         inherit (scripts)
           setupProject
           buildFirmware
+          motorSim
           nimrsLogs
           nimrsTelemetry
           ciReady
@@ -217,6 +218,7 @@
             ++ [
               setupProject
               buildFirmware
+              motorSim
             ]
             ++ (mkFormattingTools pkgs)
             ++ [
@@ -279,6 +281,7 @@
                         echo "  agent-check               : Run ci-ready + check for merge conflicts (REQUIRED for Agents)"
                         echo "  treefmt                   : Format all code (C++, JSON, MD)"
                         echo "  generate-api-docs         : Generate API documentation (docs/API.md)"
+                        echo "  motor-sim                 : Run high-fidelity PID control loop simulation"
                         echo "  nix build                 : Clean build of the firmware (sandboxed)"
                         echo "  nix flake check           : Run all checks (formatting, tests, docs)"
           '';

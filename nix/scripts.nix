@@ -242,11 +242,40 @@ let
     python3 tools/check_firmware_size.py build/nimrs-firmware.bin partitions.csv app0
   '';
 
+  motorSim = pkgs.writeShellScriptBin "motor-sim" ''
+    set -e
+    echo "=== Compiling PID Simulator Harness ==="
+    g++ -o build/motor-sim \
+        -I main/src \
+        -I tests/mocks \
+        -I tests/simulator \
+        -DUNIT_TEST \
+        -DSKIP_MOCK_MOTOR_CONTROLLER \
+        tests/test_PID_Simulator.cpp \
+        tests/simulator/MotorSimulator.cpp \
+        tests/mocks/SimulatedMotorHal.cpp \
+        tests/mocks/mocks.cpp \
+        main/src/MotorTask.cpp \
+        main/src/BemfEstimator.cpp \
+        main/src/DspFilters.cpp \
+        main/src/RippleDetector.cpp \
+        main/src/Logger.cpp
+
+    echo "=== Running Simulation ==="
+    ./build/motor-sim | tee build/sim_results.txt
+
+    if [ -f "tools/plot_sim_results.py" ]; then
+        echo "=== Plotting Results ==="
+        python3 tools/plot_sim_results.py build/sim_results.txt
+    fi
+  '';
+
 in
 {
   inherit
     setupProject
     buildFirmware
+    motorSim
     nimrsLogs
     nimrsTelemetry
     ciReady
