@@ -283,7 +283,27 @@
                               chmod +x .git/hooks/pre-commit
                             fi
 
-                            echo "NIMRS-Firmware (ESP-IDF | devenv) — run 'commands' to see available commands"
+                            echo ""
+                            echo "NIMRS-Firmware Development Environment (ESP-IDF Native | devenv)"
+                            echo "------------------------------------------------------------------"
+                            echo ""
+                            echo "Commands available:"
+                            echo "  build-firmware            : Build the firmware (idf.py build wrapper)"
+                            echo "  upload-firmware <PORT|IP> : Upload firmware via Serial or OTA"
+                            echo "  flash-all <PORT>          : Flash bootloader + partition table + app"
+                            echo "  flash-factory <PORT>      : Full chip erase then flash factory image"
+                            echo "  erase-flash <PORT>        : Wipe the entire chip"
+                            echo "  reset-ota <PORT>          : Erase OTA data partition"
+                            echo "  monitor-firmware <PORT|IP>: Monitor logs via Serial (miniterm) or WiFi"
+                            echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
+                            echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
+                            echo "  motor-sim                 : Run high-fidelity PID control loop simulation"
+                            echo "  generate-api-docs         : Generate API documentation (docs/API.md)"
+                            echo "  ci-ready                  : Run formatting + tests + build to verify CI readiness"
+                            echo "  agent-check               : Run ci-ready + check for merge conflicts (REQUIRED)"
+                            echo "  treefmt                   : Format all code (C++, JSON, MD, Python, Nix)"
+                            echo "  nix build                 : Clean sandboxed build of the firmware"
+                            echo "  nix flake check           : Run all checks (formatting, api-docs, tests)"
             '';
 
           };
