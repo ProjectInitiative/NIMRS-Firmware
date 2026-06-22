@@ -193,9 +193,9 @@
                 export PATH="$IDF_PATH/tools:$PATH"
 
                 echo "=== Rust/ESP-IDF toolchain check ==="
-                which rustc && rustc --version
-                which cargo && cargo --version
-                which xtensa-esp32s3-elf-gcc && xtensa-esp32s3-elf-gcc --version 2>&1 | head -1
+                command -v rustc && rustc --version
+                command -v cargo && cargo --version
+                command -v xtensa-esp32s3-elf-gcc && xtensa-esp32s3-elf-gcc --version 2>&1 | head -1
                 echo "IDF_PATH=$IDF_PATH"
                 python3 --version
 

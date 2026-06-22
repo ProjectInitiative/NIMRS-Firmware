@@ -6,6 +6,7 @@
   xz,
   makeWrapper,
   rustup,
+  zlib,
 }:
 
 let
@@ -34,40 +35,55 @@ let
       wrapProgram $out/bin/espup --set SSL_CERT_FILE ${cacert}/etc/ssl/certs/ca-bundle.crt
     '';
   };
+
+  espupToolchain = stdenv.mkDerivation {
+    name = "esp-xtensa-rust-toolchain-raw";
+
+    nativeBuildInputs = [
+      espup-bin
+      cacert
+      rustup
+    ];
+
+    outputHashAlgo = "sha256";
+    outputHashMode = "recursive";
+    outputHash = "sha256-RmjXrtGY15G4tXKhCyR+QnWH3ChpVaPf+t6VEDYiVwg=";
+
+    buildCommand = ''
+      export HOME=$NIX_BUILD_TOP/home
+      export RUSTUP_HOME=$HOME/.rustup
+      export CARGO_HOME=$HOME/.cargo
+      mkdir -p $RUSTUP_HOME $CARGO_HOME $out
+
+      echo "espup: downloading Xtensa Rust toolchain..."
+      espup install \
+        --targets esp32s3 \
+        --export-file /tmp/export-esp.sh
+
+      echo "espup: toolchain installed"
+      ls -la $RUSTUP_HOME/toolchains/esp/bin/ 2>/dev/null | head -15
+
+      if [ -d "$RUSTUP_HOME/toolchains/esp" ]; then
+        cp -r $RUSTUP_HOME/toolchains/esp/* $out/
+      else
+        echo "ERROR: espup did not create expected toolchain directory"
+        find $HOME -type d 2>/dev/null | head -30
+        exit 1
+      fi
+    '';
+  };
 in
 stdenv.mkDerivation {
   name = "esp-xtensa-rust-toolchain";
 
-  nativeBuildInputs = [
-    espup-bin
-    cacert
-    rustup
+  nativeBuildInputs = [ autoPatchelfHook ];
+  buildInputs = [
+    zlib
+    stdenv.cc.cc.lib
   ];
 
-  outputHashAlgo = "sha256";
-  outputHashMode = "recursive";
-  outputHash = "sha256-RmjXrtGY15G4tXKhCyR+QnWH3ChpVaPf+t6VEDYiVwg=";
-
   buildCommand = ''
-    export HOME=$NIX_BUILD_TOP/home
-    export RUSTUP_HOME=$HOME/.rustup
-    export CARGO_HOME=$HOME/.cargo
-    mkdir -p $RUSTUP_HOME $CARGO_HOME $out
-
-    echo "espup: downloading Xtensa Rust toolchain (this will take several minutes)..."
-    espup install \
-      --targets esp32s3 \
-      --export-file /tmp/export-esp.sh
-
-    echo "espup: toolchain installed"
-    ls -la $RUSTUP_HOME/toolchains/esp/bin/ 2>/dev/null | head -15
-
-    if [ -d "$RUSTUP_HOME/toolchains/esp" ]; then
-      cp -r $RUSTUP_HOME/toolchains/esp/* $out/
-    else
-      echo "ERROR: espup did not create expected toolchain directory"
-      find $HOME -type d 2>/dev/null | head -30
-      exit 1
-    fi
+    cp -r ${espupToolchain} $out
+    chmod -R u+w $out
   '';
 }
