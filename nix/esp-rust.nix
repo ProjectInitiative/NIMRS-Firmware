@@ -7,6 +7,7 @@
   makeWrapper,
   rustup,
   zlib,
+  libxml2,
 }:
 
 let
@@ -80,6 +81,7 @@ stdenv.mkDerivation {
   buildInputs = [
     zlib
     stdenv.cc.cc.lib
+    libxml2
   ];
 
   dontUnpack = true;
