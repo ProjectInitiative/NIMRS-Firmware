@@ -274,44 +274,16 @@
             enterShell = ''
                             PATH="$IDF_PATH/tools:$PATH"
 
-                            # Setup pre-commit hook
-                            HOOK_FILE=".git/hooks/pre-commit"
-                            if [ -d .git ] && [ ! -f "$HOOK_FILE" ]; then
+                            if [ -d .git ] && [ ! -f .git/hooks/pre-commit ]; then
                               echo "Installing treefmt pre-commit hook..."
-                              cat > "$HOOK_FILE" <<'PRECOMMIT'
+                              cat > .git/hooks/pre-commit <<'PRECOMMIT'
               #!/bin/sh
-              if ! command -v treefmt >/dev/null 2>&1; then
-                echo "treefmt not found. Are you in the devenv shell?"
-                exit 1
-              fi
-              echo "Running treefmt (pre-commit)..."
-              treefmt --fail-on-change
+              treefmt --fail-on-change || exit 1
               PRECOMMIT
-                              chmod +x "$HOOK_FILE"
+                              chmod +x .git/hooks/pre-commit
                             fi
 
-                            echo "NIMRS-Firmware Development Environment (ESP-IDF Native | devenv)"
-                            echo "------------------------------------------------------------------"
-                            echo "This environment provides a full ESP-IDF toolchain managed by Nix."
-                            echo ""
-
-                            echo "Commands available:"
-                            echo "  build-firmware            : Build the firmware from current directory (wrapper for idf.py build)"
-                            echo "  upload-firmware <PORT|IP> : Upload firmware via Serial (default: app only) or OTA (curl)"
-                            echo "  monitor-firmware <PORT|IP>: Monitor logs via Serial (miniterm) or WiFi (nimrs-logs)"
-                            echo "  flash-all <PORT>          : Flash EVERYTHING via Serial (bootloader + partition table + app)"
-                            echo "  flash-factory <PORT>      : FULL CHIP ERASE then Flash everything (solves filesystem issues)"
-                            echo "  erase-flash <PORT>        : Wipe the entire chip (Factory Reset)"
-                            echo "  reset-ota <PORT>          : Erase OTA data to reset rollback state (enables testing of rollback)"
-                            echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
-                            echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
-                            echo "  ci-ready                  : Run formatting, tests, and build to verify CI readiness"
-                            echo "  agent-check               : Run ci-ready + check for merge conflicts (REQUIRED for Agents)"
-                            echo "  treefmt                   : Format all code (C++, JSON, MD)"
-                            echo "  generate-api-docs         : Generate API documentation (docs/API.md)"
-                            echo "  motor-sim                 : Run high-fidelity PID control loop simulation"
-                            echo "  nix build                 : Clean build of the firmware (sandboxed)"
-                            echo "  nix flake check           : Run all checks (formatting, tests, docs)"
+                            echo "NIMRS-Firmware (ESP-IDF | devenv) — run 'commands' to see available commands"
             '';
 
           };

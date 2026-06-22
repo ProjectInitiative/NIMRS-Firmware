@@ -1,4 +1,26 @@
 { pkgs, ... }:
 {
   cachix.enable = false;
+
+  scripts.commands.exec = ''
+    echo ""
+    echo "Commands available:"
+    echo "  build-firmware            : Build the firmware (idf.py build wrapper)"
+    echo "  upload-firmware <PORT|IP> : Upload via Serial or OTA"
+    echo "  flash-all <PORT>          : Flash bootloader + partition table + app"
+    echo "  flash-factory <PORT>      : Full chip erase then flash"
+    echo "  erase-flash <PORT>        : Wipe entire chip"
+    echo "  reset-ota <PORT>          : Erase OTA data partition"
+    echo "  monitor-firmware <PORT|IP>: Monitor logs via Serial or WiFi"
+    echo "  nimrs-telemetry <IP>      : Stream live motor debug data (WiFi)"
+    echo "  nimrs-logs <IP>           : Stream text logs (WiFi)"
+    echo "  motor-sim                 : Run PID control loop simulation"
+    echo "  generate-api-docs         : Generate docs/API.md"
+    echo "  ci-ready                  : Formatting + tests + build"
+    echo "  agent-check               : ci-ready + merge conflict check (REQUIRED)"
+    echo "  treefmt                   : Format all code"
+    echo "  nix build                 : Clean sandboxed build"
+    echo "  nix flake check           : All checks (formatting, tests, docs)"
+    echo "  commands                  : Show this message"
+  '';
 }
