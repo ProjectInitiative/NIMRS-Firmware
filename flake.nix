@@ -10,6 +10,8 @@
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
+    git-hooks.url = "github:cachix/git-hooks.nix";
+    git-hooks.inputs.nixpkgs.follows = "nixpkgs";
     esp-dev.url = "github:mirrexagon/nixpkgs-esp-dev";
 
     # Arduino Indexes for arduino-nix
