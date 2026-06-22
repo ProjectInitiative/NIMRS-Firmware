@@ -271,19 +271,6 @@
               GIT_HASH = "${gitHash}";
             };
 
-            enterShell = ''
-                            PATH="$IDF_PATH/tools:$PATH"
-
-                            if [ -d .git ] && [ ! -f .git/hooks/pre-commit ]; then
-                              echo "Installing treefmt pre-commit hook..."
-                              cat > .git/hooks/pre-commit <<'PRECOMMIT'
-              #!/bin/sh
-              treefmt --fail-on-change || exit 1
-              PRECOMMIT
-                              chmod +x .git/hooks/pre-commit
-                            fi
-            '';
-
           };
 
           formatter = pkgs.nixfmt;
