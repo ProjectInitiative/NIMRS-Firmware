@@ -81,8 +81,8 @@ stdenv.mkDerivation {
   buildInputs = [
     zlib
     stdenv.cc.cc.lib
-    libxml2
   ];
+  autoPatchelfIgnoreMissingDeps = [ "libxml2.so.2" ];
 
   dontUnpack = true;
   dontConfigure = true;
