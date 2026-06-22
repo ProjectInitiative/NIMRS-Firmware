@@ -10,7 +10,7 @@ let
     pkgs: with pkgs; [
       treefmt
       clang-tools
-      nodePackages.prettier
+      prettier
       nixfmt
       black
       shfmt
