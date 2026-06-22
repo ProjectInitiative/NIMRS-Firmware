@@ -121,7 +121,9 @@
           # Rust / Xtensa Toolchain
           # ---------------------------------------------------------
 
-          espRustToolchain = pkgs.callPackage ./nix/esp-rust.nix { };
+          espRustToolchain = pkgs.callPackage ./nix/esp-rust.nix {
+            inherit (pkgs) rustup;
+          };
         in
         {
           packages = {

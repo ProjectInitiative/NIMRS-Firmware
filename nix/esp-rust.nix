@@ -5,6 +5,7 @@
   autoPatchelfHook,
   xz,
   makeWrapper,
+  rustup,
 }:
 
 let
@@ -40,12 +41,12 @@ stdenv.mkDerivation {
   nativeBuildInputs = [
     espup-bin
     cacert
+    rustup
   ];
 
   outputHashAlgo = "sha256";
   outputHashMode = "recursive";
   outputHash = "";
-  __noChroot = true;
 
   buildCommand = ''
     export HOME=$NIX_BUILD_TOP/home
