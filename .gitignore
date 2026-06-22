@@ -24,3 +24,8 @@ components/
 managed_components/
 main/src/LameJs.h
 .cache/
+
+# devenv
+.devenv/
+.devenv.flake.nix
+.pre-commit-config.yaml
