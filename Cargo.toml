@@ -5,7 +5,7 @@ edition = "2021"
 resolver = "2"
 
 [dependencies]
-esp-idf-sys = { path = "vendor/esp-idf-sys" }
+esp-idf-sys = "0.37"
 log = "0.4"
 env_logger = "0.11"
 anyhow = "1"
