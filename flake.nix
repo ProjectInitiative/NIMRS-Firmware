@@ -176,7 +176,7 @@
               nativeBuildInputs = [
                 espIdfFull
                 espRustToolchain
-                pkgs.clang
+                pkgs.llvmPackages.libclang
                 pkgs.python3
                 pkgs.cmake
                 pkgs.ninja
@@ -188,7 +188,7 @@
                 export HOME=$TMPDIR
                 export IDF_PATH="${espIdfFull}"
                 export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
-                export LIBCLANG_PATH="${pkgs.clang.lib}/lib"
+                export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
                 export MCU="esp32s3"
                 export PATH="$IDF_PATH/tools:$PATH"
 
@@ -326,7 +326,7 @@
               NIMRS_DEPS_PATH = "${nimrsDeps}";
               GIT_HASH = "${gitHash}";
               ESP_IDF_TOOLS_INSTALL_DIR = "fromenv";
-              LIBCLANG_PATH = "${pkgs.clang.lib}/lib";
+              LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
               MCU = "esp32s3";
             };
 
