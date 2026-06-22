@@ -47,7 +47,7 @@ let
 
     outputHashAlgo = "sha256";
     outputHashMode = "recursive";
-    outputHash = "sha256-RmjXrtGY15G4tXKhCyR+QnWH3ChpVaPf+t6VEDYiVwg=";
+    outputHash = "sha256-tzutaUnoIeAsuJMkZ/TzNTnZ6yguo83Tq8LeKNrT4Fs=";
 
     buildCommand = ''
       export HOME=$NIX_BUILD_TOP/home
