@@ -46,7 +46,7 @@ stdenv.mkDerivation {
 
   outputHashAlgo = "sha256";
   outputHashMode = "recursive";
-  outputHash = "";
+  outputHash = "sha256-RmjXrtGY15G4tXKhCyR+QnWH3ChpVaPf+t6VEDYiVwg=";
 
   buildCommand = ''
     export HOME=$NIX_BUILD_TOP/home
