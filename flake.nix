@@ -116,11 +116,20 @@
             ;
 
           espIdfFull = inputs.esp-dev.packages.${system}.esp-idf-full;
+
+          # ---------------------------------------------------------
+          # Rust / Xtensa Toolchain
+          # ---------------------------------------------------------
+
+          espRustToolchain = pkgs.callPackage ./nix/esp-rust.nix { };
         in
         {
           packages = {
             dependencies = nimrsDeps;
             arduino-components = arduinoComponents;
+
+            # Xtensa Rust toolchain (FOD — first build downloads ~500MB)
+            "esp-rust-toolchain" = espRustToolchain;
 
             # Host-side unit tests
             tests = pkgs.stdenv.mkDerivation {
@@ -155,6 +164,51 @@
                 if [ -d tests/bin ]; then
                   find tests/bin -maxdepth 1 -type f -executable -exec cp {} $out/ \;
                 fi
+              '';
+            };
+
+            # Rust firmware (Phase 0 spike)
+            rust-firmware = pkgs.stdenv.mkDerivation {
+              name = "nimrs-firmware-rust";
+              src = ./.;
+              nativeBuildInputs = [
+                espIdfFull
+                espRustToolchain
+                pkgs.clang
+                pkgs.python3
+                pkgs.cmake
+                pkgs.ninja
+                pkgs.pkg-config
+                pkgs.git
+              ];
+              dontConfigure = true;
+              buildPhase = ''
+                export HOME=$TMPDIR
+                export IDF_PATH="${espIdfFull}"
+                export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
+                export LIBCLANG_PATH="${pkgs.clang.lib}/lib"
+                export MCU="esp32s3"
+                export PATH="$IDF_PATH/tools:$PATH"
+
+                echo "=== Rust/ESP-IDF toolchain check ==="
+                which rustc && rustc --version
+                which cargo && cargo --version
+                which xtensa-esp32s3-elf-gcc && xtensa-esp32s3-elf-gcc --version 2>&1 | head -1
+                echo "IDF_PATH=$IDF_PATH"
+                python3 --version
+
+                echo "=== Building Rust firmware ==="
+                cargo build --release --target xtensa-esp32s3-espidf
+              '';
+              installPhase = ''
+                mkdir -p $out
+                if [ -f target/xtensa-esp32s3-espidf/release/nimrs-firmware ]; then
+                  cp target/xtensa-esp32s3-espidf/release/nimrs-firmware $out/
+                fi
+                if [ -f target/xtensa-esp32s3-espidf/release/nimrs-firmware.elf ]; then
+                  cp target/xtensa-esp32s3-espidf/release/nimrs-firmware.elf $out/
+                fi
+                ls -la $out/
               '';
             };
 
@@ -269,6 +323,9 @@
               MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
               NIMRS_DEPS_PATH = "${nimrsDeps}";
               GIT_HASH = "${gitHash}";
+              ESP_IDF_TOOLS_INSTALL_DIR = "fromenv";
+              LIBCLANG_PATH = "${pkgs.clang.lib}/lib";
+              MCU = "esp32s3";
             };
 
           };

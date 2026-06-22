@@ -25,6 +25,10 @@ managed_components/
 main/src/LameJs.h
 .cache/
 
+# Rust
+target/
+.embuild/
+
 # devenv
 .devenv/
 .devenv.flake.nix

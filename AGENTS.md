@@ -10,7 +10,7 @@ All development commands are available directly in the devenv shell. If your she
 
 | Command                       | Description                                             |
 | ----------------------------- | ------------------------------------------------------- |
-| `build-firmware`              | Build firmware via `idf.py build` (wrapper)             |
+| `build-firmware`              | Build firmware via `idf.py build` (wrapper, C++)        |
 | `upload-firmware <PORT\|IP>`  | Upload firmware via Serial or OTA                       |
 | `flash-all <PORT>`            | Flash bootloader + partition table + app via Serial     |
 | `flash-factory <PORT>`        | Erase entire flash then flash factory image             |
@@ -24,8 +24,21 @@ All development commands are available directly in the devenv shell. If your she
 | `ci-ready`                    | Run formatting + tests + build to verify CI readiness   |
 | `agent-check`                 | **(REQUIRED)** Run ci-ready + check for merge conflicts |
 | `treefmt`                     | Format all code (C++, JSON, MD, Python, Nix)            |
-| `nix build`                   | Clean sandboxed build of the firmware                   |
+| `nix build`                   | Clean sandboxed build of the C++ firmware               |
+| `nix build .#rust-firmware`   | Sandboxed Rust firmware build                           |
 | `nix flake check`             | Run all checks (formatting, api-docs, tests)            |
+
+### Rust Commands
+
+| Command                          | Description                              |
+| -------------------------------- | ---------------------------------------- |
+| `cargo build`                    | Build Rust firmware (dev, Xtensa target) |
+| `cargo build --release`          | Build Rust firmware (release, optimized) |
+| `cargo test`                     | Run Rust unit tests (host target)        |
+| `cargo clippy`                   | Run Rust linter                          |
+| `cargo espflash flash`           | Build (release) + flash via USB-Serial   |
+| `cargo espflash monitor`         | Flash + open serial monitor              |
+| `nix build .#esp-rust-toolchain` | Build the Xtensa Rust toolchain FOD      |
 
 Commands can also be run without direnv hooking:
 
@@ -50,3 +63,14 @@ This command enforces:
 5. **Merge Conflicts**: Verifies your branch can merge cleanly into `origin/main`.
 
 **If `agent-check` fails, you are NOT finished. Resolve all errors before proceeding.**
+
+## Rust Migration Notes
+
+The project is undergoing a hybrid C++ → Rust migration (see `docs/rust-migration-feasibility.md`). During the transition:
+
+- **`main/`** — Legacy C++ source tree (still the primary firmware)
+- **`src/`** — Rust source tree (Phase 0 spike, growing over time)
+- **`nix/esp-rust.nix`** — FOD for the Xtensa Rust toolchain (via `espup`)
+- **`.cargo/config.toml`** — Build target (`xtensa-esp32s3-espidf`), linker (`ldproxy`), `build-std`
+
+The Xtensa Rust toolchain FOD (`nix build .#esp-rust-toolchain`) downloads ~500MB on first build. The first invocation will fail with a hash mismatch — copy the reported hash into `nix/esp-rust.nix` `outputHash`, then rebuild. After that, the toolchain is reproducibly cached.
