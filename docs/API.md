@@ -30,6 +30,7 @@ This documentation is automatically generated from the source code.
   - [Get Motor Test Data](#get-motor-test-data)
 - [Status](#status)
   - [System Status](#system-status)
+  - [Get Live Telemetry](#get-live-telemetry)
 - [System](#system)
   - [Root Index](#root-index)
   - [Index HTML](#index-html)
@@ -423,6 +424,14 @@ Retrieves the current system status.
 | Number  | fs_total  | Total filesystem size.         |
 | Number  | fs_used   | Used filesystem size.          |
 | Array   | functions | Array of 29 booleans (F0-F28). |
+
+---
+
+### Get Live Telemetry
+
+`GET /api/telemetry`
+
+Retrieves live motor and system telemetry as JSON.
 
 ---
 
