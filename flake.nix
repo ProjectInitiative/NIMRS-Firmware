@@ -196,7 +196,7 @@
             };
 
             # Suppress devenv auto-generated packages
-            "container-processes" = pkgs.emptyDirectory;
+            "container-processes" = pkgs.lib.mkForce pkgs.emptyDirectory;
           };
 
           checks = {
