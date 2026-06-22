@@ -9,7 +9,7 @@
 
 let
   espup-url = "https://github.com/esp-rs/espup/releases/download/v0.17.1/espup-x86_64-unknown-linux-gnu";
-  espup-hash = "sha256-1kcwrz4camk2cw6p2qjka8mxzmlyaqqmg58vpsfq11xn0yclxrfv";
+  espup-hash = "sha256-2+VOmQe2h4CdvhuVVzFWntbfK1JTYnENZ2JWxcjPnM0=";
 
   espup-bin = stdenv.mkDerivation {
     name = "espup-bin";
