@@ -194,6 +194,9 @@
                 cp build/nimrs-firmware.elf $out/
               '';
             };
+
+            # Suppress devenv auto-generated packages
+            "container-processes" = pkgs.emptyDirectory;
           };
 
           checks = {
