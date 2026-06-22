@@ -82,8 +82,13 @@ stdenv.mkDerivation {
     stdenv.cc.cc.lib
   ];
 
-  buildCommand = ''
-    cp -r ${espupToolchain} $out
+  dontUnpack = true;
+  dontConfigure = true;
+  dontBuild = true;
+
+  installPhase = ''
+    mkdir -p $out
+    cp -r ${espupToolchain}/* $out/
     chmod -R u+w $out
   '';
 }
