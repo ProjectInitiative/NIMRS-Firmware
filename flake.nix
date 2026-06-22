@@ -195,8 +195,9 @@
               '';
             };
 
-            # Suppress devenv auto-generated packages
+            # Suppress devenv auto-generated packages (nixpkgs compat)
             "container-processes" = pkgs.lib.mkForce pkgs.emptyDirectory;
+            "container-shell" = pkgs.lib.mkForce pkgs.emptyDirectory;
           };
 
           checks = {
