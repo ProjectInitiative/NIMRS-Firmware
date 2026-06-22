@@ -298,7 +298,6 @@
               echo "  nix flake check           : Run all checks (formatting, tests, docs)"
             '';
 
-            devenv.root = toString ./.;
           };
 
           formatter = pkgs.nixfmt;
