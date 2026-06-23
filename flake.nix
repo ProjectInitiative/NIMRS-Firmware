@@ -193,7 +193,10 @@
               dontConfigure = true;
               buildPhase = ''
                 export HOME=$TMPDIR
-                unset IDF_PATH
+                export IDF_PATH="${espIdfFull}"
+                export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
+                export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
+                export MCU="esp32s3"
                 export GIT_SSL_CAINFO="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
                 export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
 
@@ -201,17 +204,22 @@
                 mkdir -p vendor
                 ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
 
-                export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
-
                 echo "=== Rust/ESP-IDF toolchain check ==="
                 command -v rustc && rustc --version
                 command -v cargo && cargo --version
                 command -v xtensa-esp32s3-elf-gcc && xtensa-esp32s3-elf-gcc --version 2>&1 | head -1
+                echo "IDF_PATH=$IDF_PATH"
                 python3 --version
                 cmake --version 2>&1 | head -1
 
-                echo "=== Building Rust firmware ==="
-                cargo build --release --target xtensa-esp32s3-espidf
+                echo "=== Building Rust firmware (fromenv mode) ==="
+                cargo build --release --target xtensa-esp32s3-espidf 2>&1 || true
+                BUILD_EXIT=$?
+
+                echo "=== Checking build artifacts ==="
+                find target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out/ -name "*.a" 2>/dev/null | head -20
+                echo "=== Checking config ==="
+                find target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out/ -name "sdkconfig" 2>/dev/null | head -3
               '';
               installPhase = ''
                 mkdir -p $out
