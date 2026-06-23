@@ -213,7 +213,10 @@
                 python3 --version
 
                 echo "=== Building Rust firmware ==="
-                cargo build --release --target xtensa-esp32s3-espidf
+                cargo build --release --target xtensa-esp32s3-espidf --verbose 2>&1
+                echo "=== Checking ESP-IDF build artifacts ==="
+                find target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out/ -name "*.a" 2>/dev/null | head -10
+                echo "=== Checking cargo:rustc-link-* ==="
               '';
               installPhase = ''
                 mkdir -p $out
