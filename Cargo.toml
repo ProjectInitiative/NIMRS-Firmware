@@ -6,9 +6,6 @@ resolver = "2"
 
 [dependencies]
 esp-idf-sys = "0.37"
-log = "0.4"
-env_logger = "0.11"
-anyhow = "1"
 
 [package.metadata.esp-idf-sys]
 esp_idf_tools_install_dir = "fromenv"
