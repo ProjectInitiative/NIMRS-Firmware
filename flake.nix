@@ -198,25 +198,18 @@
                 mkdir -p vendor
                 ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
 
-                export IDF_PATH="${espIdfFull}"
-                export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
-                export LDPROXY_LINKER="xtensa-esp32s3-elf-gcc"
-                export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
-                export MCU="esp32s3"
                 export PATH="$IDF_PATH/tools:$PATH"
+                export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
 
                 echo "=== Rust/ESP-IDF toolchain check ==="
                 command -v rustc && rustc --version
                 command -v cargo && cargo --version
                 command -v xtensa-esp32s3-elf-gcc && xtensa-esp32s3-elf-gcc --version 2>&1 | head -1
-                echo "IDF_PATH=$IDF_PATH"
                 python3 --version
+                cmake --version 2>&1 | head -1
 
                 echo "=== Building Rust firmware ==="
-                cargo build --release --target xtensa-esp32s3-espidf --verbose 2>&1
-                echo "=== Checking ESP-IDF build artifacts ==="
-                find target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out/ -name "*.a" 2>/dev/null | head -10
-                echo "=== Checking cargo:rustc-link-* ==="
+                cargo build --release --target xtensa-esp32s3-espidf
               '';
               installPhase = ''
                 mkdir -p $out
