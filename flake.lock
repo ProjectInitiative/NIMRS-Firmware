@@ -130,6 +130,23 @@
         "type": "github"
       }
     },
+    "esp-idf-sys": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773155923,
+        "narHash": "sha256-4VRzNlPxs0KUztCtK3cPa91EpToyZoyKQqRynIBoh48=",
+        "owner": "esp-rs",
+        "repo": "esp-idf-sys",
+        "rev": "64a75e23bf66b962abc6fde15eb416faca9f27b0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "esp-rs",
+        "ref": "v0.37.2",
+        "repo": "esp-idf-sys",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -408,6 +425,7 @@
         "arduino-nix": "arduino-nix",
         "devenv": "devenv",
         "esp-dev": "esp-dev",
+        "esp-idf-sys": "esp-idf-sys",
         "flake-parts": "flake-parts_2",
         "mk-shell-bin": "mk-shell-bin",
         "nix2container": "nix2container",
