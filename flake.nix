@@ -222,24 +222,22 @@
                   exit 1
                 fi
                 echo "ESP-IDF build output: $ESP_IDF_OUT"
-                echo "=== All .a files ==="
-                find "$ESP_IDF_OUT/build" -name "*.a" | sort
-                echo "=== End .a files ==="
 
+                # Collect all unique library dirs and library names
                 LIB_DIRS=""
-                LIBS=""
+                LIBS_FLAGS=""
                 for a_file in $(find "$ESP_IDF_OUT/build" -name "*.a" | sort); do
                   dir=$(dirname "$a_file")
                   lib=$(basename "$a_file" .a | sed 's/^lib//')
                   case " $LIB_DIRS " in *" $dir "*) ;; *) LIB_DIRS="$LIB_DIRS -L $dir" ;; esac
-                  case " $LIBS " in *" $lib "*) ;; *) LIBS="$LIBS -l static=$lib" ;; esac
+                  case " $LIBS_FLAGS " in *" -l$lib "*) ;; *) LIBS_FLAGS="$LIBS_FLAGS -C link-args=-l$lib" ;; esac
                 done
 
-                echo "=== Pass 2: Link with ESP-IDF (grouped for circular deps) ==="
+                echo "=== Pass 2: Link with ESP-IDF (link-args ordering preserved) ==="
                 cargo rustc --release --target xtensa-esp32s3-espidf -- \
                   $LIB_DIRS \
                   -C link-args=-Wl,--start-group \
-                  $LIBS \
+                  $LIBS_FLAGS \
                   -C link-args=-Wl,--end-group
               '';
               installPhase = ''
