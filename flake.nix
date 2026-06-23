@@ -22,6 +22,12 @@
     arduino-nix = {
       url = "github:clerie/arduino-nix/clerie/arduino-env";
     };
+
+    # Vendored esp-idf-sys for Rust build
+    esp-idf-sys = {
+      url = "github:esp-rs/esp-idf-sys/v0.37.2";
+      flake = false;
+    };
   };
 
   nixConfig = {
@@ -187,6 +193,11 @@
               dontConfigure = true;
               buildPhase = ''
                 export HOME=$TMPDIR
+
+                # Copy vendored esp-idf-sys from flake input
+                mkdir -p vendor
+                ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
+
                 export IDF_PATH="${espIdfFull}"
                 export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
                 export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
