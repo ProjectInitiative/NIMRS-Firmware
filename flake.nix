@@ -193,12 +193,12 @@
               dontConfigure = true;
               buildPhase = ''
                 export HOME=$TMPDIR
+                unset IDF_PATH
 
                 # Copy vendored esp-idf-sys from flake input
                 mkdir -p vendor
                 ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
 
-                export PATH="$IDF_PATH/tools:$PATH"
                 export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
 
                 echo "=== Rust/ESP-IDF toolchain check ==="
