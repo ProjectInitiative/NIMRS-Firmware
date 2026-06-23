@@ -234,7 +234,7 @@
                 done
 
                 echo "=== Pass 2: Link with ESP-IDF via RUSTFLAGS + link-args ==="
-                RUSTFLAGS=""
+                RUSTFLAGS="--cfg espidf_time64 -C link-args=--ldproxy-linker -C link-args=xtensa-esp32s3-elf-gcc"
                 for dir in $LIB_DIRS; do
                   RUSTFLAGS="$RUSTFLAGS $dir"
                 done
