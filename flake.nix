@@ -223,14 +223,14 @@
                 fi
                 echo "ESP-IDF build output: $ESP_IDF_OUT"
 
-                # Collect all unique library dirs and library names
+                # Collect all unique library dirs and library names from main build
                 LIB_DIRS=""
                 LIBS_FLAGS=""
-                for a_file in $(find "$ESP_IDF_OUT/build" -name "*.a" | sort); do
+                for a_file in $(find "$ESP_IDF_OUT/build/esp-idf" -name "*.a" | sort); do
                   dir=$(dirname "$a_file")
                   lib=$(basename "$a_file" .a | sed 's/^lib//')
-                  case " $LIB_DIRS " in *" $dir "*) ;; *) LIB_DIRS="$LIB_DIRS -L $dir" ;; esac
-                  case " $LIBS_FLAGS " in *" -l$lib "*) ;; *) LIBS_FLAGS="$LIBS_FLAGS -C link-args=-l$lib" ;; esac
+                  case "|$LIB_DIRS|" in *"|$dir|"*) ;; *) LIB_DIRS="$LIB_DIRS -L $dir" ;; esac
+                  case "|$LIBS_FLAGS|" in *"|$lib|"*) ;; *) LIBS_FLAGS="$LIBS_FLAGS -C link-args=-l$lib" ;; esac
                 done
 
                 echo "=== Pass 2: Link with ESP-IDF via RUSTFLAGS + link-args ==="
