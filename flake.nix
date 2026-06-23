@@ -223,30 +223,18 @@
                 fi
                 echo "ESP-IDF build output: $ESP_IDF_OUT"
 
+                # Collect all unique library dirs and library names
                 LIB_DIRS=""
-                for dir in $(find "$ESP_IDF_OUT/build" -name "*.a" -exec dirname {} \; | sort -u); do
-                  LIB_DIRS="$LIB_DIRS -L $dir"
-                done
-
-                # Generate link args: collect all library names from .a files
-                # Use --start-group/--end-group for circular deps
                 LIBS=""
                 for a_file in $(find "$ESP_IDF_OUT/build" -name "*.a" | sort); do
-                  basename "$a_file" .a | sed 's/lib//' | while read libname; do
-                    echo "-l static=$libname"
-                  done
-                done
-                LIBS=$(for a_file in $(find "$ESP_IDF_OUT/build" -name "*.a" | sort); do
-                  basename "$a_file" .a | sed 's/lib//'
-                done | tr '\n' ' ')
-                LIBS_FLAGS=""
-                for lib in $LIBS; do
-                  LIBS_FLAGS="$LIBS_FLAGS -l static=$lib"
+                  dir=$(dirname "$a_file")
+                  lib=$(basename "$a_file" .a | sed 's/^lib//')
+                  case " $LIB_DIRS " in *" $dir "*) ;; *) LIB_DIRS="$LIB_DIRS -L $dir" ;; esac
+                  case " $LIBS " in *" $lib "*) ;; *) LIBS="$LIBS -l static=$lib" ;; esac
                 done
 
-                echo "=== Pass 2: Build with ESP-IDF libraries ==="
-                export RUSTFLAGS="$LIB_DIRS $LIBS_FLAGS -C link-args=-Wl,--start-group -C link-args=-Wl,--end-group"
-                cargo build --release --target xtensa-esp32s3-espidf
+                echo "=== Pass 2: Link with ESP-IDF libraries (cargo rustc) ==="
+                cargo rustc --release --target xtensa-esp32s3-espidf -- $LIB_DIRS $LIBS
               '';
               installPhase = ''
                 mkdir -p $out
