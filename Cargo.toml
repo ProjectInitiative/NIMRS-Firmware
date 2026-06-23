@@ -5,7 +5,7 @@ edition = "2021"
 resolver = "2"
 
 [dependencies]
-esp-idf-sys = "0.37"
+esp-idf-sys = { path = "vendor/esp-idf-sys" }
 
 [package.metadata.esp-idf-sys]
 esp_idf_tools_install_dir = "fromenv"
