@@ -183,7 +183,6 @@
                 espIdfFull
                 espRustToolchain
                 pkgs.llvmPackages.libclang
-                pkgs.ldproxy
                 pkgs.python3
                 pkgs.cmake
                 pkgs.ninja
