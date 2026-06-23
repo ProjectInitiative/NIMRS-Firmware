@@ -222,6 +222,9 @@
                   exit 1
                 fi
                 echo "ESP-IDF build output: $ESP_IDF_OUT"
+                echo "=== All .a files ==="
+                find "$ESP_IDF_OUT/build" -name "*.a" | sort
+                echo "=== End .a files ==="
 
                 LIB_DIRS=""
                 LIBS=""
