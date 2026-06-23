@@ -212,14 +212,41 @@
                 python3 --version
                 cmake --version 2>&1 | head -1
 
-                echo "=== Building Rust firmware (fromenv mode) ==="
+                echo "=== Pass 1: Build deps (esp-idf-sys, etc.) ==="
                 cargo build --release --target xtensa-esp32s3-espidf 2>&1 || true
-                BUILD_EXIT=$?
 
-                echo "=== Checking build artifacts ==="
-                find target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out/ -name "*.a" 2>/dev/null | head -20
-                echo "=== Checking config ==="
-                find target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out/ -name "sdkconfig" 2>/dev/null | head -3
+                echo "=== Collecting ESP-IDF library paths ==="
+                ESP_IDF_OUT=$(ls -d target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out 2>/dev/null | head -1)
+                if [ -z "$ESP_IDF_OUT" ]; then
+                  echo "ERROR: cannot find esp-idf-sys build output"
+                  exit 1
+                fi
+                echo "ESP-IDF build output: $ESP_IDF_OUT"
+
+                LIB_DIRS=""
+                for dir in $(find "$ESP_IDF_OUT/build" -name "*.a" -exec dirname {} \; | sort -u); do
+                  LIB_DIRS="$LIB_DIRS -L $dir"
+                done
+
+                # Generate link args: collect all library names from .a files
+                # Use --start-group/--end-group for circular deps
+                LIBS=""
+                for a_file in $(find "$ESP_IDF_OUT/build" -name "*.a" | sort); do
+                  basename "$a_file" .a | sed 's/lib//' | while read libname; do
+                    echo "-l static=$libname"
+                  done
+                done
+                LIBS=$(for a_file in $(find "$ESP_IDF_OUT/build" -name "*.a" | sort); do
+                  basename "$a_file" .a | sed 's/lib//'
+                done | tr '\n' ' ')
+                LIBS_FLAGS=""
+                for lib in $LIBS; do
+                  LIBS_FLAGS="$LIBS_FLAGS -l static=$lib"
+                done
+
+                echo "=== Pass 2: Build with ESP-IDF libraries ==="
+                export RUSTFLAGS="$LIB_DIRS $LIBS_FLAGS -C link-args=-Wl,--start-group -C link-args=-Wl,--end-group"
+                cargo build --release --target xtensa-esp32s3-espidf
               '';
               installPhase = ''
                 mkdir -p $out
