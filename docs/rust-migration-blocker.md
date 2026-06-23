@@ -1,121 +1,102 @@
-# Rust Migration Phase 0 — Blocker Analysis
+# Rust Migration Phase 0 — Blocker RESOLVED
 
 ## Date
 
-2026-06-23
+2026-06-23 (resolved)
 
 ## Status
 
-Blocked at final linking stage.
+**RESOLVED** — Rust firmware builds and links successfully.
 
-## What Works
+## Original Blocker (Incorrect Diagnosis)
 
-- Xtensa Rust toolchain (espup) — FOD cached, reproducible
-- Rust `std` compilation for `xtensa-esp32s3-espidf` target (build-std)
-- All Rust dependencies compile (esp-idf-sys, cmake crate, etc.)
-- `ldproxy` linker correctly configured with `--ldproxy-linker xtensa-esp32s3-elf-gcc`
-- ESP-IDF framework CMake build via `fromenv` mode — produces ALL `.a` libraries
-- Two-pass build approach: first compiles deps, second links with ESP-IDF libraries
+The original blocker doc claimed `force_ldproxy(true)` in esp-idf-sys v0.37.2 "does NOT emit `cargo:rustc-link-*` directives." This was **incorrect**.
 
-## The Blocker
+Reading the embuild source (`embuild/src/build.rs` + `embuild/src/cargo.rs`):
 
-### Symptom
+- `LinkArgs::output()` calls `add_link_arg()` for every arg
+- `add_link_arg()` (`embuild/src/cargo.rs`) emits `cargo:rustc-link-arg=<arg>`
+- esp-idf-sys `build/build.rs:280-283` calls **both** `link_args.propagate()` **and** `link_args.output()`
 
-Linker errors: undefined references to C library functions (`memcpy`, `vprintf`), ROM functions (`esp_rom_printf`), and some cross-component symbols (`systimer_hal_get_counter_value`).
+With `force_ldproxy(true)` + `linker = "ldproxy"` (so `detected_ldproxy = true`), the args include `--ldproxy-linker <gcc>`, `--ldproxy-cwd <cmake_build_dir>`, then all CMake-computed `libdirflags` (`-L`), `libflags` (`-l`), and `linkflags` (`-Wl,...`, `-T <scripts>`, `-u <ROM symbols>`).
 
-### Current Build Phase Implementation
+However: `cargo:rustc-link-arg` from a **dependency's** build script does NOT automatically propagate to the final binary's link. Only `cargo:rustc-link-lib` and `cargo:rustc-link-search` auto-propagate. The `propagate()` method sets metadata (`DEP_ESP_IDF_EMBUILD_LINK_ARGS`), which must be explicitly consumed by the root crate.
 
-```nix
-buildPhase = ''
-  # Pass 1: compile everything (link expected to fail)
-  cargo build --release ... || true
+## Root Cause
 
-  # Collect .a files from esp-idf-sys build output
-  ESP_IDF_OUT=$(ls -d target/.../build/esp-idf-sys-*/out)
-  LIB_DIRS=""  # -L for each unique .a directory
-  LIBS_FLAGS=""  # -C link-args=-l<lib> for each .a
+**The root crate (nimrs-firmware) was missing a `build.rs`** that calls `embuild::espidf::sysenv::output()`. This function (from embuild's `src/espidf.rs:sysenv` module):
 
-  # Pass 2: rebuild with ESP-IDF library flags
-  RUSTFLAGS="--cfg espidf_time64 \
-    -C link-args=--ldproxy-linker -C link-args=xtensa-esp32s3-elf-gcc \
-    $LIB_DIRS \
-    -C link-args=-Wl,--start-group \
-    $LIBS_FLAGS \
-    -C link-args=-Wl,--end-group"
-  cargo build --release --target xtensa-esp32s3-espidf
-'';
-```
+1. Reads `DEP_ESP_IDF_EMBUILD_LINK_ARGS` (metadata set by esp-idf-sys's `propagate()`)
+2. Emits each link arg as `cargo:rustc-link-arg=<arg>` for the **root crate's** link step
 
-Undefined symbols remaining:
-| Symbol | Needed by | Should be in |
-|--------|-----------|-------------|
-| `memcpy` | `libheap.a`, `libnewlib.a` | `newlib` or `compiler-builtins` |
-| `vprintf` | `liblog.a` | `newlib` |
-| `esp_rom_printf` | `libxtensa.a` | `esp_rom` |
-| `systimer_hal_get_counter_value` | `libesp_timer.a` | `hal` or `soc` |
+Without this, the complete CMake-computed link command (libs + linker scripts + `-u` ROM symbols + `-Wl` flags) never reached the final binary's linker invocation.
 
-### Root Cause
+The two-pass workaround (manual RUSTFLAGS injection of `-L`/`-l` flags) only reconstructed libraries from `.a` files, **dropping `linkflags`** entirely. This caused:
+- `esp_rom_printf` — needs `-u` linker flag (in `linkflags`)
+- `memcpy` / `vprintf` — need newlib linker-script conditional includes (in `linkflags`)
+- `systimer_hal_get_counter_value` — needs `-Wl` symbol resolution order
 
-`esp-idf-sys` v0.37.2 build script does not emit `cargo:rustc-link-search` or `cargo:rustc-link-lib` directives when `force_ldproxy(true)` is used. The `.a` files are built by CMake but cargo is not told about them. Our workaround manually injects the library paths/flags via `RUSTFLAGS` + `-C link-args`.
+## The Fix
 
-The `-C link-args` approach avoids the dependency compilation issue (where `-l static=<lib>` would fail for all crates). But some C-level symbols remain unresolved, likely due to:
-
-1. Link order within `--start-group`/`--end-group`
-2. `newlib` conditional compilation excluding certain functions
-3. Missing variant libraries (e.g., ESP32-S3 specific HAL vs generic HAL)
-
-## Attempted Fixes
-
-### Pass 1: Upgrade esp-idf-sys
-
-Latest version is 0.37.2 — no newer version exists.
-
-### Pass 2: Manual library injection via `cargo rustc`
-
-Flags from `--` were NOT reaching the linker. Root cause unclear.
-
-### Pass 3: Manual library injection via `RUSTFLAGS` + `-l static=`
-
-`-l static=` flags poison ALL dependency compilation (even rustc-std-workspace-core). Rustc verifies native library existence during compilation, not just linking.
-
-### Pass 4: Manual library injection via `RUSTFLAGS` + `-C link-args=-l<lib>`
-
-Doesn't poison compilation (only applies at link time). But order of `-C link-args` within the linker invocation is: config flags first, then RUSTFLAGS flags. This CORRECTLY places `--start-group` around the libraries. But `--as-needed` combined with library ordering may still leave some symbols unresolved.
-
-### Pass 5: Main-only libs (skip bootloader debug)
-
-Helped reduce errors but still not fully resolved — C library functions still missing.
-
-## Recommended Unblock Paths
-
-### A. Patch vendored esp-idf-sys to disable force_ldproxy
-
-The `force_ldproxy(true)` call in `cargo_driver.rs` suppresses `cargo:rustc-link-*` output. Patching this to `false` and using a GCC linker directly would let the standard cargo link mechanism work.
+### 1. Added `build.rs` (root crate)
 
 ```rust
-.force_ldproxy(false)
+fn main() {
+    embuild::espidf::sysenv::output();
+}
 ```
 
-This requires modifying the vendored `esp-idf-sys` flake input (fork or overlay).
+This is the exact pattern used by the official [esp-idf-template](https://github.com/esp-rs/esp-idf-template/blob/master/cargo/build.rs).
 
-### B. Use older esp-idf-sys or switch to esp-idf-svc
+### 2. Added embuild as a build-dependency
 
-`esp-idf-svc` v0.50+ might handle linking correctly. But this changes the dependency tree significantly.
+```toml
+[build-dependencies]
+embuild = "0.33"
+```
 
-### C. Add GccRuntime library for missing symbols
+### 3. Simplified `.cargo/config.toml` rustflags
 
-The `-nodefaultlibs` flag means GCC's runtime (libgcc) isn't linked. Adding `-C link-args=-lgcc` and `-C link-args=-lc` after the ESP-IDF libs might resolve the remaining C library symbols.
+Removed redundant `-C link-args=--ldproxy-linker` (embuild now emits these via `cargo:rustc-link-arg`):
 
-### D. Use xtensa-esp32s3-elf-gcc as linker (skip ldproxy)
+```toml
+[target.'cfg(target_os = "espidf")']
+linker = "ldproxy"
+rustflags = ["--cfg", "espidf_time64"]
+```
 
-Using GCC directly instead of ldproxy avoids ldproxy's argument processing. Combine with patching `force_ldproxy(false)` in esp-idf-sys.
+### 4. Removed two-pass build from `flake.nix`
+
+Replaced the complex two-pass buildPhase (Pass 1 compile + Pass 2 link with manual RUSTFLAGS) with a single:
+
+```bash
+cargo build --release --target xtensa-esp32s3-espidf --verbose
+```
+
+### 5. Added espRustToolchain + ldproxy to devenv shell
+
+Added `espRustToolchain` and `pkgs.ldproxy` to the devenv shell packages so `cargo build` in the dev shell uses the nightly Xtensa toolchain.
+
+## Verification
+
+```bash
+nix build .#rust-firmware --option sandbox false --no-link
+```
+
+Produces a valid Xtensa ELF:
+```
+nimrs-firmware: ELF 32-bit LSB executable, Tensilica Xtensa, version 1 (SYSV), statically linked, stripped
+```
+
+## Remaining: Sandboxed Build
+
+`nix build .#rust-firmware` (default sandboxed) still fails because cargo needs network to fetch dependencies from crates.io + the embuild git dependency. To make the sandboxed build work, the cargo dependencies need to be vendored (via `Cargo.lock` + `fetchCargoVendor` or similar). This is a separate hardening step — not related to the linker blocker.
 
 ## Working Configuration Files
 
-- `nix/esp-rust.nix` — Xtensa Rust toolchain FOD
-- `.cargo/config.toml` — target, ldproxy, build-std, sdkconfig defaults
+- `build.rs` — root build script calling `embuild::espidf::sysenv::output()`
+- `Cargo.toml` — embuild 0.33 as `[build-dependencies]`
+- `.cargo/config.toml` — target, ldproxy linker, build-std, sdkconfig defaults
 - `src/main.rs` — minimal blink + println firmware
-- `flake.nix` (rust-firmware package) — two-pass build with library injection
+- `flake.nix` — single-pass build + espRustToolchain in devenv shell
 - `sdkconfig.rust.defaults` — override partition table for Rust build
-- `devenv.nix` — Rust command documentation
-- `AGENTS.md` — Rust migration notes

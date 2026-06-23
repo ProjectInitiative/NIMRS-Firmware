@@ -3,14 +3,7 @@ target = "xtensa-esp32s3-espidf"
 
 [target.'cfg(target_os = "espidf")']
 linker = "ldproxy"
-rustflags = [
-  "--cfg",
-  "espidf_time64",
-  "-C",
-  "link-args=--ldproxy-linker",
-  "-C",
-  "link-args=xtensa-esp32s3-elf-gcc",
-]
+rustflags = ["--cfg", "espidf_time64"]
 
 [unstable]
 build-std = ["std", "panic_abort"]

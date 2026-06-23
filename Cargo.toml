@@ -7,6 +7,9 @@ resolver = "2"
 [dependencies]
 esp-idf-sys = { path = "vendor/esp-idf-sys" }
 
+[build-dependencies]
+embuild = "0.33"
+
 [package.metadata.esp-idf-sys]
 esp_idf_tools_install_dir = "fromenv"
 

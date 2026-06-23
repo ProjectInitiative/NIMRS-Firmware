@@ -212,39 +212,8 @@
                 python3 --version
                 cmake --version 2>&1 | head -1
 
-                echo "=== Pass 1: Build deps (esp-idf-sys, etc.) ==="
-                cargo build --release --target xtensa-esp32s3-espidf 2>&1 || true
-
-                echo "=== Collecting ESP-IDF library paths ==="
-                ESP_IDF_OUT=$(ls -d target/xtensa-esp32s3-espidf/release/build/esp-idf-sys-*/out 2>/dev/null | head -1)
-                if [ -z "$ESP_IDF_OUT" ]; then
-                  echo "ERROR: cannot find esp-idf-sys build output"
-                  exit 1
-                fi
-                echo "ESP-IDF build output: $ESP_IDF_OUT"
-
-                # Collect all unique library dirs and library names from main build
-                LIB_DIRS=""
-                LIBS_FLAGS=""
-                for a_file in $(find "$ESP_IDF_OUT/build/esp-idf" -name "*.a" | sort); do
-                  dir=$(dirname "$a_file")
-                  lib=$(basename "$a_file" .a | sed 's/^lib//')
-                  case "|$LIB_DIRS|" in *"|$dir|"*) ;; *) LIB_DIRS="$LIB_DIRS -L $dir" ;; esac
-                  case "|$LIBS_FLAGS|" in *"|$lib|"*) ;; *) LIBS_FLAGS="$LIBS_FLAGS -C link-args=-l$lib" ;; esac
-                done
-
-                echo "=== Pass 2: Link with ESP-IDF via RUSTFLAGS + link-args ==="
-                RUSTFLAGS="--cfg espidf_time64 -C link-args=--ldproxy-linker -C link-args=xtensa-esp32s3-elf-gcc"
-                for dir in $LIB_DIRS; do
-                  RUSTFLAGS="$RUSTFLAGS $dir"
-                done
-                RUSTFLAGS="$RUSTFLAGS -C link-args=-Wl,--start-group"
-                for lib_flag in $LIBS_FLAGS; do
-                  RUSTFLAGS="$RUSTFLAGS $lib_flag"
-                done
-                RUSTFLAGS="$RUSTFLAGS -C link-args=-Wl,--end-group"
-                export RUSTFLAGS
-                cargo build --release --target xtensa-esp32s3-espidf
+                echo "=== Single-pass build (esp-idf-sys build script + ldproxy emit all link args) ==="
+                cargo build --release --target xtensa-esp32s3-espidf --verbose 2>&1
               '';
               installPhase = ''
                 mkdir -p $out
@@ -340,7 +309,9 @@
             imports = [ ./devenv.nix ];
 
             packages = [
+              espRustToolchain
               espIdfFull
+              pkgs.ldproxy
               setupProject
               buildFirmware
               motorSim
