@@ -177,7 +177,6 @@
                 espIdfFull
                 espRustToolchain
                 pkgs.llvmPackages.libclang
-                pkgs.ldproxy
                 pkgs.python3
                 pkgs.cmake
                 pkgs.ninja
@@ -189,7 +188,6 @@
                 export HOME=$TMPDIR
                 export IDF_PATH="${espIdfFull}"
                 export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
-                export LDPROXY_LINKER="xtensa-esp32s3-elf-gcc"
                 export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
                 export MCU="esp32s3"
                 export PATH="$IDF_PATH/tools:$PATH"
