@@ -1,0 +1,4 @@
+# Override sdkconfig.defaults for Rust build
+# Use default TWO_OTA partition table (no custom partitions.csv needed)
+CONFIG_PARTITION_TABLE_CUSTOM=n
+CONFIG_PARTITION_TABLE_TWO_OTA=y
