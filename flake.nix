@@ -194,6 +194,7 @@
               buildPhase = ''
                 export HOME=$TMPDIR
                 unset IDF_PATH
+                export GIT_SSL_CAINFO="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
 
                 # Copy vendored esp-idf-sys from flake input
                 mkdir -p vendor
