@@ -88,9 +88,18 @@ Produces a valid Xtensa ELF:
 nimrs-firmware: ELF 32-bit LSB executable, Tensilica Xtensa, version 1 (SYSV), statically linked, stripped
 ```
 
-## Remaining: Sandboxed Build
+## Sandboxed Build (RESOLVED)
 
-`nix build .#rust-firmware` (default sandboxed) still fails because cargo needs network to fetch dependencies from crates.io + the embuild git dependency. To make the sandboxed build work, the cargo dependencies need to be vendored (via `Cargo.lock` + `fetchCargoVendor` or similar). This is a separate hardening step — not related to the linker blocker.
+`nix build .#rust-firmware` now works fully sandboxed. The `cargoLock` FOD:
+1. Runs `cargo build` with network access (`--option sandbox false` for the FOD only)
+2. Captures the entire `~/.cargo/registry/` cache (includes `build-std` internal deps like `hashbrown` that aren't in the project's `Cargo.lock`)
+3. Outputs the registry cache + generated `Cargo.lock`
+
+The main `rust-firmware` derivation then:
+- Copies the registry cache to `CARGO_HOME`
+- Uses `cargo build --frozen` (no network, lockfile-as-is)
+
+This handles the subtlety that `build-std` resolves std library dependencies separately from the project's `Cargo.lock` — the vendored crates must include both project deps and std's internal deps.
 
 ## Working Configuration Files
 
@@ -98,5 +107,5 @@ nimrs-firmware: ELF 32-bit LSB executable, Tensilica Xtensa, version 1 (SYSV), s
 - `Cargo.toml` — embuild 0.33 as `[build-dependencies]`
 - `.cargo/config.toml` — target, ldproxy linker, build-std, sdkconfig defaults
 - `src/main.rs` — minimal blink + println firmware
-- `flake.nix` — single-pass build + espRustToolchain in devenv shell
+- `flake.nix` — single-pass build, cargoLock FOD, espRustToolchain in devenv shell
 - `sdkconfig.rust.defaults` — override partition table for Rust build

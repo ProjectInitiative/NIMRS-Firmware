@@ -130,6 +130,39 @@
           espRustToolchain = pkgs.callPackage ./nix/esp-rust.nix {
             inherit (pkgs) rustup;
           };
+
+          # Vendored Rust crates including build-std deps (sandbox-safe).
+          # cargoLock FOD runs cargo build (downloads all deps including std's
+          # internal deps) and captures the entire cargo registry cache.
+          cargoLock = pkgs.stdenv.mkDerivation {
+            name = "cargo-vendored-deps";
+            src = ./.;
+            nativeBuildInputs = [
+              espRustToolchain
+              pkgs.cacert
+            ];
+            buildPhase = ''
+              export HOME=$TMPDIR
+              export GIT_SSL_CAINFO="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+              export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+              mkdir -p vendor
+              ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
+              # Run cargo build to download all deps (including build-std's
+              # internal deps like hashbrown). The build will fail (no ESP-IDF)
+              # but all crates are cached in ~/.cargo/registry/.
+              cargo build --release --target xtensa-esp32s3-espidf 2>&1 || true
+            '';
+            installPhase = ''
+              mkdir -p $out
+              # Capture the full cargo registry cache (includes build-std deps)
+              cp -r $HOME/.cargo/registry $out/registry
+              # Copy the generated Cargo.lock (has correct project dep versions)
+              cp Cargo.lock $out/
+            '';
+            outputHashAlgo = "sha256";
+            outputHashMode = "recursive";
+            outputHash = "sha256-Df0zbD4VoLEybneqQC+V/CtlFjwjk4GeB0/Eoq3kyKE=";
+          };
         in
         {
           packages = {
@@ -138,6 +171,9 @@
 
             # Xtensa Rust toolchain (FOD — first build downloads ~500MB)
             "esp-rust-toolchain" = espRustToolchain;
+
+            # Generated Cargo.lock (uses nightly toolchain for correct std deps)
+            cargoLock = cargoLock;
 
             # Host-side unit tests
             tests = pkgs.stdenv.mkDerivation {
@@ -200,9 +236,16 @@
                 export GIT_SSL_CAINFO="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
                 export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
 
-                # Copy vendored esp-idf-sys from flake input
+                # Copy vendored esp-idf-sys from flake input (gitignored, not in src)
                 mkdir -p vendor
                 ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
+
+                # Set up CARGO_HOME with the cached registry (includes build-std deps)
+                export CARGO_HOME=$TMPDIR/.cargo
+                mkdir -p $CARGO_HOME
+                cp -r ${cargoLock}/registry $CARGO_HOME/registry
+                # Use the generated Cargo.lock (correct versions for nightly toolchain)
+                cp ${cargoLock}/Cargo.lock Cargo.lock
 
                 echo "=== Rust/ESP-IDF toolchain check ==="
                 command -v rustc && rustc --version
@@ -213,7 +256,7 @@
                 cmake --version 2>&1 | head -1
 
                 echo "=== Single-pass build (esp-idf-sys build script + ldproxy emit all link args) ==="
-                cargo build --release --target xtensa-esp32s3-espidf --verbose 2>&1
+                cargo build --frozen --release --target xtensa-esp32s3-espidf --verbose 2>&1
               '';
               installPhase = ''
                 mkdir -p $out
