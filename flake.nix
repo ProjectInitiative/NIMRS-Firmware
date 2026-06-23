@@ -233,12 +233,18 @@
                   case " $LIBS_FLAGS " in *" -l$lib "*) ;; *) LIBS_FLAGS="$LIBS_FLAGS -C link-args=-l$lib" ;; esac
                 done
 
-                echo "=== Pass 2: Link with ESP-IDF (link-args ordering preserved) ==="
-                cargo rustc --release --target xtensa-esp32s3-espidf -- \
-                  $LIB_DIRS \
-                  -C link-args=-Wl,--start-group \
-                  $LIBS_FLAGS \
-                  -C link-args=-Wl,--end-group
+                echo "=== Pass 2: Link with ESP-IDF via RUSTFLAGS + link-args ==="
+                RUSTFLAGS=""
+                for dir in $LIB_DIRS; do
+                  RUSTFLAGS="$RUSTFLAGS $dir"
+                done
+                RUSTFLAGS="$RUSTFLAGS -C link-args=-Wl,--start-group"
+                for lib_flag in $LIBS_FLAGS; do
+                  RUSTFLAGS="$RUSTFLAGS $lib_flag"
+                done
+                RUSTFLAGS="$RUSTFLAGS -C link-args=-Wl,--end-group"
+                export RUSTFLAGS
+                cargo build --release --target xtensa-esp32s3-espidf
               '';
               installPhase = ''
                 mkdir -p $out
