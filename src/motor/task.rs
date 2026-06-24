@@ -214,7 +214,8 @@ impl MotorTaskInner {
                 self.current_duty = 0.0;
                 if avg_current > 0.01 {
                     self.measured_resistance = 3.0 / avg_current;
-                    self.estimator.set_motor_params(self.measured_resistance, -1);
+                    self.estimator
+                        .set_motor_params(self.measured_resistance, -1);
                     self.resistance_state = ResistanceState::Done;
                 } else {
                     self.resistance_state = ResistanceState::Error;
@@ -239,7 +240,8 @@ impl MotorTaskInner {
 
         // Three-zone motor control
         let v_applied_now = self.track_voltage * self.current_duty.abs();
-        self.estimator.update_low_speed_data(v_applied_now, avg_current);
+        self.estimator
+            .update_low_speed_data(v_applied_now, avg_current);
         self.estimator.update_ripple_freq(ripple_freq);
         self.estimator.calculate_estimate();
         let actual_rpm = self.estimator.get_estimated_rpm();
@@ -359,7 +361,8 @@ pub fn start() {
     unsafe {
         let mut task_handle: TaskHandle_t = core::ptr::null_mut();
         extern "C" fn task_entry(param: *mut core::ffi::c_void) {
-            let mtx: &'static Mutex<MotorTaskInner> = unsafe { &*(param as *const Mutex<MotorTaskInner>) };
+            let mtx: &'static Mutex<MotorTaskInner> =
+                unsafe { &*(param as *const Mutex<MotorTaskInner>) };
             let mut last_wake = unsafe { xTaskGetTickCount() };
             loop {
                 unsafe { xTaskDelayUntil(&mut last_wake, 20) };
@@ -369,7 +372,8 @@ pub fn start() {
             }
         }
         static TASK_NAME: [u8; 10] = *b"MotorTask\0";
-        let task_ptr = MOTOR_TASK.get().unwrap() as *const Mutex<MotorTaskInner> as *mut core::ffi::c_void;
+        let task_ptr =
+            MOTOR_TASK.get().unwrap() as *const Mutex<MotorTaskInner> as *mut core::ffi::c_void;
         xTaskCreatePinnedToCore(
             Some(task_entry),
             TASK_NAME.as_ptr(),

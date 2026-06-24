@@ -55,8 +55,14 @@ mod tests {
         assert_eq!(assets.assets[0].r#type, "momentary");
         assert_eq!(assets.assets[0].files.intro.as_deref(), Some("horn.wav"));
         assert!(assets.assets[0].files.r#loop.is_none());
-        assert_eq!(assets.assets[1].files.r#loop.as_deref(), Some("engine_loop.wav"));
-        assert_eq!(assets.assets[1].files.outro.as_deref(), Some("engine_stop.wav"));
+        assert_eq!(
+            assets.assets[1].files.r#loop.as_deref(),
+            Some("engine_loop.wav")
+        );
+        assert_eq!(
+            assets.assets[1].files.outro.as_deref(),
+            Some("engine_stop.wav")
+        );
     }
 
     #[test]

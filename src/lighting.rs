@@ -55,9 +55,17 @@ impl LightingController {
             };
 
             let phys_val = if active {
-                if INVERT_OUTPUTS { 0 } else { 1 }
+                if INVERT_OUTPUTS {
+                    0
+                } else {
+                    1
+                }
             } else {
-                if INVERT_OUTPUTS { 1 } else { 0 }
+                if INVERT_OUTPUTS {
+                    1
+                } else {
+                    0
+                }
             };
             unsafe {
                 gpio_set_level(pin as i32, phys_val);

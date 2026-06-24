@@ -106,7 +106,10 @@ impl MotorHalInner {
         };
 
         gpio_set_direction(pinout::MOTOR_FAULT as i32, gpio_mode_t_GPIO_MODE_INPUT);
-        gpio_set_pull_mode(pinout::MOTOR_FAULT as i32, gpio_pull_mode_t_GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode(
+            pinout::MOTOR_FAULT as i32,
+            gpio_pull_mode_t_GPIO_PULLUP_ONLY,
+        );
 
         hal.set_hardware_gain(1);
         hal.set_duty(0.0);
@@ -219,7 +222,10 @@ impl MotorHalInner {
                 }
                 1 => {
                     gpio_set_direction(pinout::MOTOR_GAIN_SEL as i32, gpio_mode_t_GPIO_MODE_INPUT);
-                    gpio_set_pull_mode(pinout::MOTOR_GAIN_SEL as i32, gpio_pull_mode_t_GPIO_FLOATING);
+                    gpio_set_pull_mode(
+                        pinout::MOTOR_GAIN_SEL as i32,
+                        gpio_pull_mode_t_GPIO_FLOATING,
+                    );
                 }
                 2 => {
                     gpio_set_direction(pinout::MOTOR_GAIN_SEL as i32, gpio_mode_t_GPIO_MODE_OUTPUT);
@@ -256,6 +262,7 @@ impl MotorHalInner {
                 0,
             );
             received / core::mem::size_of::<f32>()
+        }
     }
 }
 
@@ -295,8 +302,7 @@ unsafe extern "C" fn motor_hal_mcpwm_cb(
             let raw = unsafe { adc1_get_raw(5) }; // ADC1_CHANNEL_5
             let val = raw as f32;
             if let Some(h) = MOTOR_HAL.get() {
-                h.last_current_adc
-                    .store(val.to_bits(), Ordering::Relaxed);
+                h.last_current_adc.store(val.to_bits(), Ordering::Relaxed);
                 if !h.stream_buf.is_null() {
                     unsafe {
                         let mut wakeup: i32 = 0;

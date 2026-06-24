@@ -78,9 +78,8 @@ impl BemfEstimator {
             0.0
         };
 
-        let physically_stalled = self.v_applied > 0.5
-            && self.i_avg > 0.01
-            && self.i_avg > i_stall_theoretical * 0.98;
+        let physically_stalled =
+            self.v_applied > 0.5 && self.i_avg > 0.01 && self.i_avg > i_stall_theoretical * 0.98;
 
         let v_drop = self.i_avg * self.r_armature;
         self.v_bemf = self.v_applied - v_drop;
@@ -100,8 +99,7 @@ impl BemfEstimator {
             0.0
         };
 
-        let ripple_valid =
-            ripple_rpm > 0.0 && self.i_avg > 0.20 && self.v_applied > 3.0;
+        let ripple_valid = ripple_rpm > 0.0 && self.i_avg > 0.20 && self.v_applied > 3.0;
 
         let raw_estimate;
         if ripple_valid {
@@ -190,7 +188,11 @@ mod tests {
         est.update_ripple_freq(110.0);
         est.calculate_estimate();
         let rpm = est.get_estimated_rpm();
-        assert!(rpm > 30.0 && rpm < 50.0, "rpm={} not in expected range", rpm);
+        assert!(
+            rpm > 30.0 && rpm < 50.0,
+            "rpm={} not in expected range",
+            rpm
+        );
     }
 
     #[test]
