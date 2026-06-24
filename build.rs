@@ -8,9 +8,8 @@ fn main() {
     b.compiler("xtensa-esp32s3-elf-gcc");
     b.include("vendor/libhelix");
 
-    // Disable assembly optimizations (no Xtensa support in helx assembly.h)
-    b.define("NO_ASSEMBLY", None);
-    b.define("ARM", None); // Preferred word size hint for helx types
+    // ESP32 platform enables the generic C fall backs in assembly.h
+    b.define("ESP32", None);
 
     // ESP-IDF required compile flags
     b.flag("-Os");
@@ -18,8 +17,8 @@ fn main() {
     b.flag("-Wno-unused-variable");
     b.flag("-Wno-unused-function");
     b.flag("-Wno-error");
-    b.cargo_metadata(true);
 
+    // Core helix decoder source files
     let sources = [
         "vendor/libhelix/mp3dec.c",
         "vendor/libhelix/bitstream.c",
@@ -36,11 +35,14 @@ fn main() {
         "vendor/libhelix/stproc.c",
         "vendor/libhelix/subband.c",
         "vendor/libhelix/trigtabs.c",
+        // Com pat shim that replaces arduino-libhelix's memory management
+        "vendor/libhelix/helix_compat.c",
     ];
 
     for src in &sources {
         b.file(src);
     }
 
+    // Remove the arduino-dependent memory C++ file from include path
     b.compile("libhelix-mp3.a");
 }
