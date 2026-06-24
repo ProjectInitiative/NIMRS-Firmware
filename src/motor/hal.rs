@@ -36,12 +36,12 @@ impl MotorHalInner {
         let stream_buf = {
             extern "C" {
                 fn xStreamBufferGenericCreate(
-                    xBufferSizeBytes: u32,
-                    xTriggerLevelBytes: u32,
+                    xBufferSizeBytes: usize,
+                    xTriggerLevelBytes: usize,
                     xIsr: u8,
                 ) -> StreamBufferHandle_t;
             }
-            xStreamBufferGenericCreate(4096, core::mem::size_of::<f32>() as u32, 0)
+            xStreamBufferGenericCreate(4096, core::mem::size_of::<f32>(), 0)
         };
 
         adc1_config_width(3); // ADC_WIDTH_BIT_12
@@ -49,7 +49,7 @@ impl MotorHalInner {
 
         let mut tc: mcpwm_timer_config_t = core::mem::zeroed();
         tc.group_id = 0;
-        tc.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
+        tc.clk_src = 0; // MCPWM_TIMER_CLK_SRC_DEFAULT
         tc.resolution_hz = 1_000_000;
         tc.count_mode = mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP_DOWN;
         tc.period_ticks = 25;
@@ -132,8 +132,8 @@ impl MotorHalInner {
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
                 };
                 for g in [p.gen_a, p.gen_b] {
-                    mcpwm_generator_set_action_on_timer_event(g, &ah as *const _);
-                    mcpwm_generator_set_action_on_timer_event(g, &ahd as *const _);
+                    mcpwm_generator_set_action_on_timer_event(g, ah);
+                    mcpwm_generator_set_action_on_timer_event(g, ahd);
                 }
             } else if dp > 0.0 {
                 mcpwm_comparator_set_compare_value(p.cmpr_a, cv);
@@ -147,15 +147,15 @@ impl MotorHalInner {
                     event: mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW,
                 };
-                mcpwm_generator_set_action_on_timer_event(p.gen_b, &al as *const _);
-                mcpwm_generator_set_action_on_timer_event(p.gen_b, &ald as *const _);
+                mcpwm_generator_set_action_on_timer_event(p.gen_b, al);
+                mcpwm_generator_set_action_on_timer_event(p.gen_b, ald);
 
                 let ah = mcpwm_gen_timer_event_action_t {
                     direction: mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP,
                     event: mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
                 };
-                mcpwm_generator_set_action_on_timer_event(p.gen_a, &ah as *const _);
+                mcpwm_generator_set_action_on_timer_event(p.gen_a, ah);
 
                 let cup = mcpwm_gen_compare_event_action_t {
                     direction: mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP,
@@ -167,8 +167,8 @@ impl MotorHalInner {
                     comparator: p.cmpr_a,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
                 };
-                mcpwm_generator_set_action_on_compare_event(p.gen_a, &cup as *const _);
-                mcpwm_generator_set_action_on_compare_event(p.gen_a, &cdown as *const _);
+                mcpwm_generator_set_action_on_compare_event(p.gen_a, cup);
+                mcpwm_generator_set_action_on_compare_event(p.gen_a, cdown);
             } else {
                 mcpwm_comparator_set_compare_value(p.cmpr_b, cv);
                 let al = mcpwm_gen_timer_event_action_t {
@@ -181,15 +181,15 @@ impl MotorHalInner {
                     event: mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW,
                 };
-                mcpwm_generator_set_action_on_timer_event(p.gen_a, &al as *const _);
-                mcpwm_generator_set_action_on_timer_event(p.gen_a, &ald as *const _);
+                mcpwm_generator_set_action_on_timer_event(p.gen_a, al);
+                mcpwm_generator_set_action_on_timer_event(p.gen_a, ald);
 
                 let ah = mcpwm_gen_timer_event_action_t {
                     direction: mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP,
                     event: mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
                 };
-                mcpwm_generator_set_action_on_timer_event(p.gen_b, &ah as *const _);
+                mcpwm_generator_set_action_on_timer_event(p.gen_b, ah);
 
                 let cup = mcpwm_gen_compare_event_action_t {
                     direction: mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP,
@@ -201,8 +201,8 @@ impl MotorHalInner {
                     comparator: p.cmpr_b,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
                 };
-                mcpwm_generator_set_action_on_compare_event(p.gen_b, &cup as *const _);
-                mcpwm_generator_set_action_on_compare_event(p.gen_b, &cdown as *const _);
+                mcpwm_generator_set_action_on_compare_event(p.gen_b, cup);
+                mcpwm_generator_set_action_on_compare_event(p.gen_b, cdown);
             }
         }
     }
@@ -247,7 +247,7 @@ impl MotorHalInner {
         if self.stream_buf.is_null() {
             return 0;
         }
-        let nbytes = (buffer.len() * core::mem::size_of::<f32>()) as u32;
+        let nbytes = buffer.len() * core::mem::size_of::<f32>();
         unsafe {
             let received = xStreamBufferReceive(
                 self.stream_buf,
@@ -255,8 +255,7 @@ impl MotorHalInner {
                 nbytes,
                 0,
             );
-            (received as usize / core::mem::size_of::<f32>()) as usize
-        }
+            received / core::mem::size_of::<f32>()
     }
 }
 
@@ -300,12 +299,12 @@ unsafe extern "C" fn motor_hal_mcpwm_cb(
                     .store(val.to_bits(), Ordering::Relaxed);
                 if !h.stream_buf.is_null() {
                     unsafe {
-                        let mut wakeup: isize = 0;
+                        let mut wakeup: i32 = 0;
                         xStreamBufferSendFromISR(
                             h.stream_buf,
                             &val as *const f32 as *const core::ffi::c_void,
-                            core::mem::size_of::<f32>() as u32,
-                            &mut wakeup as *mut isize,
+                            core::mem::size_of::<f32>(),
+                            &mut wakeup as *mut i32,
                         );
                     }
                 }
