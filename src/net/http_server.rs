@@ -37,9 +37,26 @@ impl HttpServer {
         method: httpd_method_t,
         handler: unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t,
     ) {
-        let uri_c = std::ffi::CString::new(uri).unwrap();
+        // Leak the CString so the pointer remains valid for the HTTP server's lifetime
+        let uri_c = std::ffi::CString::new(uri).unwrap().into_raw();
         let mut reg: httpd_uri_t = unsafe { core::mem::zeroed() };
-        reg.uri = uri_c.as_ptr();
+        reg.uri = uri_c;
+        reg.method = method;
+        let h: Option<unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t> = Some(handler);
+        reg.handler = h;
+        reg.user_ctx = core::ptr::null_mut();
+        unsafe { httpd_register_uri_handler(self.handle, &reg) };
+    }
+
+    fn reg(
+        &self,
+        uri: &str,
+        method: httpd_method_t,
+        handler: unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t,
+    ) {
+        let uri_c = std::ffi::CString::new(uri).unwrap().into_raw();
+        let mut reg: httpd_uri_t = unsafe { core::mem::zeroed() };
+        reg.uri = uri_c;
         reg.method = method;
         let h: Option<unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t> = Some(handler);
         reg.handler = h;
@@ -86,9 +103,9 @@ impl HttpServer {
     }
 
     fn register_not_found(&self) {
-        let uri_c = std::ffi::CString::new("*").unwrap();
+        let uri_c = std::ffi::CString::new("*").unwrap().into_raw();
         let mut reg: httpd_uri_t = unsafe { core::mem::zeroed() };
-        reg.uri = uri_c.as_ptr();
+        reg.uri = uri_c;
         reg.method = 1;
         reg.handler = Some(not_found_handler);
         reg.user_ctx = core::ptr::null_mut();
