@@ -17,6 +17,7 @@ libc = "0.2"
 
 [build-dependencies]
 embuild = "0.33"
+cc = "1"
 
 [package.metadata.esp-idf-sys]
 esp_idf_tools_install_dir = "fromenv"
