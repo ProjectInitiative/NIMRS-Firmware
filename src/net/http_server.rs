@@ -48,22 +48,6 @@ impl HttpServer {
         unsafe { httpd_register_uri_handler(self.handle, &reg) };
     }
 
-    fn reg(
-        &self,
-        uri: &str,
-        method: httpd_method_t,
-        handler: unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t,
-    ) {
-        let uri_c = std::ffi::CString::new(uri).unwrap().into_raw();
-        let mut reg: httpd_uri_t = unsafe { core::mem::zeroed() };
-        reg.uri = uri_c;
-        reg.method = method;
-        let h: Option<unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t> = Some(handler);
-        reg.handler = h;
-        reg.user_ctx = core::ptr::null_mut();
-        unsafe { httpd_register_uri_handler(self.handle, &reg) };
-    }
-
     fn register_static_routes(&self) {
         // Web UI
         self.reg("/", 1, static_index);

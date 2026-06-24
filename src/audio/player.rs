@@ -11,11 +11,10 @@ impl AudioPlayer {
 
             let mut tx_handle: i2s_chan_handle_t = core::ptr::null_mut();
             let mut chan_cfg: i2s_chan_config_t = core::mem::zeroed();
-            chan_cfg.id = I2S_NUM_0;
-            chan_cfg.role = I2S_ROLE_MASTER;
+            chan_cfg.id = 0; // I2S_NUM_0
+            chan_cfg.role = 0; // I2S_ROLE_MASTER
             chan_cfg.dma_desc_num = 6;
             chan_cfg.dma_frame_num = 256;
-            chan_cfg.auto_clear = true;
 
             let ret = i2s_new_channel(&chan_cfg, &mut tx_handle, core::ptr::null_mut());
             if ret != ESP_OK as i32 || tx_handle.is_null() {
@@ -25,11 +24,11 @@ impl AudioPlayer {
 
             let mut clk_cfg: i2s_std_clk_config_t = core::mem::zeroed();
             clk_cfg.sample_rate_hz = 44100;
-            clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_256;
+            clk_cfg.mclk_multiple = 3; // I2S_MCLK_MULTIPLE_256
 
             let mut slot_cfg: i2s_std_slot_config_t = core::mem::zeroed();
-            slot_cfg.slot_mode = I2S_SLOT_MODE_MONO;
-            slot_cfg.slot_mask = I2S_STD_SLOT_LEFT;
+            slot_cfg.slot_mode = 1; // I2S_SLOT_MODE_MONO
+            slot_cfg.slot_mask = 4; // I2S_STD_SLOT_LEFT
             slot_cfg.ws_width = 16;
             slot_cfg.bit_shift = true;
 
@@ -37,8 +36,8 @@ impl AudioPlayer {
             gpio_cfg.bclk = 38;
             gpio_cfg.ws = 36;
             gpio_cfg.dout = 37;
-            gpio_cfg.din = I2S_GPIO_UNUSED;
-            gpio_cfg.mclk = I2S_GPIO_UNUSED;
+            gpio_cfg.din = -1; // I2S_GPIO_UNUSED
+            gpio_cfg.mclk = -1; // I2S_GPIO_UNUSED
 
             let std_cfg = i2s_std_config_t {
                 clk_cfg,

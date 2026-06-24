@@ -110,8 +110,7 @@ pub fn scan_json() -> String {
                 count = SCAN_MAX_APS;
             }
 
-            let mut records: Vec<wifi_ap_record_t> =
-                vec![unsafe { core::mem::zeroed() }; count as usize];
+            let mut records: Vec<wifi_ap_record_t> = vec![core::mem::zeroed(); count as usize];
 
             if esp_wifi_scan_get_ap_records(&mut count, records.as_mut_ptr()) == ESP_OK as i32 {
                 for (i, ap) in records.iter().enumerate() {
