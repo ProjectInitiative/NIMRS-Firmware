@@ -4,6 +4,24 @@ fn main() {
         return;
     }
 
+    // Re-emit the ESP-IDF linker arguments that esp-idf-sys's build script
+    // propagated. The embuild 0.33.1 crate emits `cargo:rustc-link-arg=`
+    // which only applies to lib targets on nightly >= 1.95. We need
+    // `cargo:rustc-link-arg-bins=` for the final binary.
+    // The env var DEP_ESP_IDF_<LINK_ARGS_VAR> holds the propagated args.
+    // embuild uses LINK_ARGS_VAR = "LINK_ARGS"
+    if let Ok(link_args) = std::env::var("DEP_ESP_IDF_LINK_ARGS") {
+        // The args are joined with spaces (unix-style by embuild's cli::join_unix_args)
+        // We need to split them and emit each one as a separate cargo:rustc-link-arg-bins
+        for arg in shell_split(&link_args) {
+            println!("cargo:rustc-link-arg-bins={}", arg);
+        }
+    } else {
+        // Fallback: emit the ldproxy linker arg directly
+        println!("cargo:rustc-link-arg-bins=--ldproxy-linker=xtensa-esp32s3-elf-gcc");
+    }
+
+    // Compile the helix MP3 decoder C sources for Rust FFI
     let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let cc = "xtensa-esp32s3-elf-gcc";
 
@@ -61,4 +79,26 @@ fn main() {
     assert!(status.success(), "ld -r failed");
 
     println!("cargo:rustc-link-arg-bins={}", combined.to_str().unwrap());
+}
+
+/// Simple shell-like argument splitter (handles quotes and spaces)
+fn shell_split(s: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut current = String::new();
+    let mut in_quote = false;
+    for c in s.chars() {
+        match c {
+            '"' => in_quote = !in_quote,
+            ' ' if !in_quote => {
+                if !current.is_empty() {
+                    args.push(std::mem::take(&mut current));
+                }
+            }
+            _ => current.push(c),
+        }
+    }
+    if !current.is_empty() {
+        args.push(current);
+    }
+    args
 }

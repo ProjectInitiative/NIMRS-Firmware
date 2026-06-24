@@ -244,9 +244,6 @@
                 python3 --version
                 cmake --version 2>&1 | head -1
 
-                # Tell ldproxy where the real Xtensa linker is
-                export LD_PROXY_LINKER="${pkgs.xtensa-esp-elf-gcc}/bin/xtensa-esp32s3-elf-gcc"
-
                 echo "=== Single-pass build (esp-idf-sys build script + ldproxy emit all link args) ==="
                 cargo build --frozen --release --target xtensa-esp32s3-espidf --verbose 2>&1
               '';
