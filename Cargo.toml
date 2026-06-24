@@ -10,6 +10,7 @@ edition = "2021"
 [dependencies]
 esp-idf-sys = { path = "vendor/esp-idf-sys" }
 nimrs-core = { path = "crates/core" }
+log = "0.4"
 
 [build-dependencies]
 embuild = "0.33"

@@ -1,3 +1,6 @@
+mod motor;
+mod lighting;
+
 fn main() {
     esp_idf_sys::link_patches();
     println!("NIMRS-Firmware (Rust) starting up...");
