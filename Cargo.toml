@@ -1,11 +1,15 @@
+[workspace]
+members = ["crates/core", "."]
+resolver = "2"
+
 [package]
 name = "nimrs-firmware"
 version = "0.1.0"
 edition = "2021"
-resolver = "2"
 
 [dependencies]
 esp-idf-sys = { path = "vendor/esp-idf-sys" }
+nimrs-core = { path = "crates/core" }
 
 [build-dependencies]
 embuild = "0.33"

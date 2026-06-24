@@ -32,6 +32,7 @@ However: `cargo:rustc-link-arg` from a **dependency's** build script does NOT au
 Without this, the complete CMake-computed link command (libs + linker scripts + `-u` ROM symbols + `-Wl` flags) never reached the final binary's linker invocation.
 
 The two-pass workaround (manual RUSTFLAGS injection of `-L`/`-l` flags) only reconstructed libraries from `.a` files, **dropping `linkflags`** entirely. This caused:
+
 - `esp_rom_printf` — needs `-u` linker flag (in `linkflags`)
 - `memcpy` / `vprintf` — need newlib linker-script conditional includes (in `linkflags`)
 - `systimer_hal_get_counter_value` — needs `-Wl` symbol resolution order
@@ -84,6 +85,7 @@ nix build .#rust-firmware --option sandbox false --no-link
 ```
 
 Produces a valid Xtensa ELF:
+
 ```
 nimrs-firmware: ELF 32-bit LSB executable, Tensilica Xtensa, version 1 (SYSV), statically linked, stripped
 ```
@@ -91,11 +93,13 @@ nimrs-firmware: ELF 32-bit LSB executable, Tensilica Xtensa, version 1 (SYSV), s
 ## Sandboxed Build (RESOLVED)
 
 `nix build .#rust-firmware` now works fully sandboxed. The `cargoLock` FOD:
+
 1. Runs `cargo build` with network access (`--option sandbox false` for the FOD only)
 2. Captures the entire `~/.cargo/registry/` cache (includes `build-std` internal deps like `hashbrown` that aren't in the project's `Cargo.lock`)
 3. Outputs the registry cache + generated `Cargo.lock`
 
 The main `rust-firmware` derivation then:
+
 - Copies the registry cache to `CARGO_HOME`
 - Uses `cargo build --frozen` (no network, lockfile-as-is)
 

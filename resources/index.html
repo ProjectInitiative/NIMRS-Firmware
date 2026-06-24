@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIMRS Decoder</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="lame.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>NIMRS Decoder</h1>
+                <div id="connection-status" class="status-indicator disconnected" title="Connection Status"></div>
+            </div>
+        </header>
+
+        <nav>
+            <button class="nav-btn" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="showTab('telemetry')">Telemetry</button>
+            <button class="nav-btn" onclick="showTab('cvs')">CVs</button>
+            <button class="nav-btn" onclick="showTab('files')">Files</button>
+            <button class="nav-btn" onclick="showTab('logs')">Logs</button>
+            <button class="nav-btn" onclick="showTab('debug')">Debug</button>
+            <button class="nav-btn" onclick="showTab('system')">System</button>
+        </nav>
+
+        <main>
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content">
+                <div class="dashboard-grid">
+                    <div class="card-group">
+                        <div class="card mini-card">
+                            <h3>Addr</h3>
+                            <div class="value" id="dcc-address">--</div>
+                        </div>
+                        <div class="card mini-card">
+                            <h3>Speed</h3>
+                            <div class="value" id="dcc-speed">0</div>
+                        </div>
+                        <div class="card mini-card">
+                            <h3>Dir</h3>
+                            <div class="value" id="dcc-direction">--</div>
+                        </div>
+                         <div class="card mini-card">
+                            <h3>Uptime</h3>
+                            <div class="value" id="uptime">0s</div>
+                        </div>
+                    </div>
+
+                    <div class="card control-card">
+                        <h3>Throttle</h3>
+                        <div class="slider-container">
+                            <input type="range" id="speed-slider" min="0" max="126" value="0" class="slider" onchange="setSpeed(this.value)" oninput="updateSpeedDisplay(this.value)">
+                            <div class="slider-labels">
+                                <span>STOP</span>
+                                <span id="speed-display" class="highlight">0</span>
+                                <span>MAX</span>
+                            </div>
+                        </div>
+                        <div class="control-actions">
+                            <button id="dir-btn" class="btn large" onclick="toggleDir()">FWD</button>
+                            <button class="btn danger large" onclick="sendAction('stop')">STOP</button>
+                            <button class="btn primary large" onclick="sendAction('toggle_lights')">Lights</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Functions</h3>
+                        <div id="func-grid" class="func-grid">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Telemetry Tab -->
+            <section id="telemetry" class="tab-content">
+                <div class="card" style="min-height: 400px; background: #000;">
+                    <div class="card-header">
+                        <h3>Live Motor Telemetry</h3>
+                    </div>
+                    <canvas id="telemetryChart"></canvas>
+                </div>
+            </section>
+
+            <!-- CV Tab -->
+            <section id="cvs" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>CV Configuration</h3>
+                        <div class="search-box">
+                            <input type="text" id="cv-search" placeholder="Search CVs..." onkeyup="renderCVTable()">
+                            <button class="btn small" onclick="loadAllCVs()">Reload</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="cv-table">
+                            <thead><tr><th style="width:50px">CV</th><th>Name</th><th>Value</th><th>Description</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="custom-cv-box">
+                        <h4>Custom Access</h4>
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" id="custom-cv" placeholder="CV #" style="width:80px">
+                            <input type="number" id="custom-val" placeholder="Value" style="width:80px">
+                            <button class="btn small" onclick="rwCustomCV('read')">Read</button>
+                            <button class="btn small primary" onclick="rwCustomCV('write')">Write</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- File Manager Tab -->
+            <section id="files" class="tab-content">
+                <div class="card quota-card">
+                    <h3>Storage Usage</h3>
+                    <div class="quota-container">
+                        <div id="quota-bar" class="quota-bar"><div id="quota-fill"></div></div>
+                        <p id="quota-text">Loading...</p>
+                    </div>
+                </div>
+
+                <div class="file-manager">
+                    <div class="card upload-card">
+                        <h3>Upload</h3>
+                        <form id="upload-form">
+                            <input type="file" id="file-input" multiple required>
+                            <label class="checkbox-label"><input type="checkbox" id="compress-mp3"> Compress .wav to .mp3</label>
+                            <button type="submit" class="btn primary full-width">Upload</button>
+                        </form>
+                        <div id="upload-status"></div>
+                    </div>
+
+                    <div class="card file-list-card">
+                        <div class="card-header">
+                            <h3>Files</h3>
+                            <div class="table-controls">
+                                <button class="btn small" onclick="loadFiles()">Refresh</button>
+                                <button class="btn small danger" onclick="deleteSelected()">Delete Selected</button>
+                                <button class="btn small danger" onclick="formatFileSystem()" title="Wipe all files">Format FS</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table id="file-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:30px"><input type="checkbox" onclick="toggleAll(this)"></th>
+                                        <th>Name</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logs Tab -->
+            <section id="logs" class="tab-content">
+                <div class="log-controls">
+                    <div class="control-group">
+                        <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+                        <select id="log-type-filter" onchange="pollLogs()">
+                            <option value="">System Logs</option>
+                            <option value="data">Telemetry Data</option>
+                            <option value="debug">DCC Debug</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label><input type="checkbox" id="debug-logs" onchange="toggleDebugLogs(this)"> Debug Level</label>
+                        <button class="btn small" onclick="clearLogs()">Clear</button>
+                    </div>
+                </div>
+                <div id="log-viewer" class="terminal"></div>
+            </section>
+
+            <!-- Debug Tab -->
+            <section id="debug" class="tab-content">
+                <div class="card">
+                    <h3>Motor Self-Test</h3>
+                    <p>Runs a 3-second motor profile. Ensure track is clear.</p>
+                    <button class="btn warning" onclick="runMotorTest()">Run Test (3s)</button>
+                    <div class="result-box">
+                        <textarea id="test-results" readonly placeholder="Results will appear here..."></textarea>
+                        <button class="btn small" onclick="copyTestResults()">Copy JSON</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Motor Calibration</h3>
+                    <p>Measure Armature Resistance (R).</p>
+                    <ol style="padding-left: 20px; color: var(--text-muted);">
+                        <li>Ensure loco is on powered track.</li>
+                        <li><b>HOLD THE WHEELS FIRMLY</b> to prevent rotation (STALL).</li>
+                        <li>Press Measure. The motor will hum for 1 second.</li>
+                    </ol>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <button class="btn warning" onclick="measureResistance()">Measure Resistance</button>
+                        <div id="res-status" style="font-weight: bold;"></div>
+                    </div>
+
+                    <div style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                        <h4>Manual Measurement</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            Alternatively, measure resistance directly across Motor pins (18 & 19) or commutator with decoder removed.
+                            <br>
+                            Enter result in <b>CV 149</b> (1 unit = 0.01 Ohms). E.g., 10.5 Ohms = 1050.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Tab -->
+            <section id="system" class="tab-content">
+                <div class="card">
+                    <h3>System Information</h3>
+                    <div class="info-grid">
+                        <div><strong>Version:</strong> <span id="sys-version">--</span></div>
+                        <div><strong>Build:</strong> <span id="sys-hash">--</span></div>
+                        <div><strong>WiFi:</strong> <span id="wifi-details">--</span></div>
+                        <div><strong>Hostname:</strong> <span id="sys-hostname">--</span></div>
+                    </div>
+                </div>
+
+                <details class="settings-group">
+                    <summary>WiFi Settings</summary>
+                    <div class="settings-content">
+                        <form id="wifi-form" onsubmit="saveWifi(event)">
+                            <div class="form-group">
+                                <label>SSID</label>
+                                <div class="input-group">
+                                    <input type="text" id="wifi-ssid" required>
+                                    <button type="button" class="btn secondary" onclick="scanWifi()">Scan</button>
+                                </div>
+                            </div>
+                            <div id="scan-results" class="scan-results"></div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <div class="input-group">
+                                    <input type="password" id="wifi-pass" required>
+                                    <button type="button" class="btn secondary" onclick="togglePass(this)">Show</button>
+                                </div>
+                            </div>
+                            <div class="actions">
+                                <button type="submit" class="btn primary">Save & Connect</button>
+                                <button type="button" class="btn danger" onclick="resetWifi()">Reset to AP</button>
+                            </div>
+                        </form>
+                    </div>
+                </details>
+
+                <details class="settings-group">
+                    <summary>Device Settings</summary>
+                    <div class="settings-content">
+                        <label>Device Name</label>
+                        <div class="input-group">
+                             <input type="text" id="config-hostname" placeholder="NIMRS-Decoder">
+                             <button class="btn primary" onclick="saveHostname()">Save</button>
+                        </div>
+                        <p class="hint">Changes require restart.</p>
+                    </div>
+                </details>
+
+                <details class="settings-group">
+                    <summary>Security</summary>
+                    <div class="settings-content">
+                        <form id="auth-form" onsubmit="saveAuth(event)">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="web-user" placeholder="admin">
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <div class="input-group">
+                                    <input type="password" id="web-pass" placeholder="admin">
+                                    <button type="button" class="btn secondary" onclick="togglePass(this, 'web-pass')">Show</button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn primary">Update Credentials</button>
+                        </form>
+                        <p class="hint">Leave blank to disable authentication.</p>
+                    </div>
+                </details>
+
+                <details class="settings-group">
+                    <summary>Firmware Update</summary>
+                    <div class="settings-content">
+                        <form method="POST" action="/update" enctype="multipart/form-data">
+                            <input type="file" name="update" class="file-input-btn">
+                            <button type="submit" class="btn warning">Update Firmware</button>
+                        </form>
+                    </div>
+                </details>
+            </section>
+        </main>
+    </div>
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+</body>
+</html>
