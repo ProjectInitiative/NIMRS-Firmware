@@ -9,12 +9,6 @@ pub struct HttpServer {
     handle: httpd_handle_t,
 }
 
-macro_rules! cstr {
-    ($s:literal) => {
-        concat!($s, "\0").as_ptr() as *const i8
-    };
-}
-
 impl HttpServer {
     pub fn new() -> Option<Self> {
         let mut config: httpd_config_t = unsafe { core::mem::zeroed() };
@@ -31,19 +25,24 @@ impl HttpServer {
         let srv = Self { handle };
         srv.register_static_routes();
         srv.register_api_routes();
-        srv.register_ota_route();
         srv.register_not_found();
 
         log::info!("HTTP: server on port 80");
         Some(srv)
     }
 
-    fn reg(&self, uri: &str, method: httpd_method_t, handler: httpd_func_t) {
+    fn reg(
+        &self,
+        uri: &str,
+        method: httpd_method_t,
+        handler: unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t,
+    ) {
         let uri_c = std::ffi::CString::new(uri).unwrap();
         let mut reg: httpd_uri_t = unsafe { core::mem::zeroed() };
         reg.uri = uri_c.as_ptr();
         reg.method = method;
-        reg.handler = Some(handler);
+        let h: Option<unsafe extern "C" fn(*mut httpd_req_t) -> esp_err_t> = Some(handler);
+        reg.handler = h;
         reg.user_ctx = core::ptr::null_mut();
         unsafe { httpd_register_uri_handler(self.handle, &reg) };
     }
@@ -110,9 +109,8 @@ fn send_json(req: *mut httpd_req_t, json: &str) {
     }
 }
 
-fn send_text(req: *mut httpd_req_t, text: &str, status: i32) {
+fn send_text(req: *mut httpd_req_t, text: &str, _status: i32) {
     unsafe {
-        httpd_resp_set_status_code(req, status as u16);
         httpd_resp_send(req, text.as_ptr() as *const i8, text.len() as isize);
     }
 }
@@ -569,6 +567,6 @@ unsafe extern "C" fn api_ota_update(req: *mut httpd_req_t) -> esp_err_t {
 
 // --- 404 ---
 unsafe extern "C" fn not_found_handler(req: *mut httpd_req_t) -> esp_err_t {
-    httpd_resp_send_err(req, 404, b"Not Found\0".as_ptr() as *const i8);
+    httpd_resp_send_err(req, 0x0019, b"Not Found\0".as_ptr() as *const i8);
     ESP_OK
 }

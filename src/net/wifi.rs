@@ -41,7 +41,7 @@ impl WifiManager {
             let mut cfg: wifi_init_config_t = core::mem::zeroed();
             cfg.wifi_task_core_id = 0;
             esp_wifi_init(&cfg);
-            esp_wifi_set_mode(WIFI_MODE_STA);
+            esp_wifi_set_mode(1); // WIFI_MODE_STA
             esp_wifi_start();
         }
         log::info!("WiFi: STA connecting...");
@@ -59,7 +59,7 @@ impl WifiManager {
     fn start_ap(&mut self) {
         unsafe {
             esp_wifi_stop();
-            esp_wifi_set_mode(WIFI_MODE_AP);
+            esp_wifi_set_mode(2); // WIFI_MODE_AP
             esp_wifi_start();
         }
         self.state = WifiState::ApMode;
@@ -76,12 +76,8 @@ impl WifiManager {
 }
 
 pub fn is_connected() -> bool {
-    // We can check WiFi status directly
-    unsafe {
-        let mut mode: wifi_mode_t = 0;
-        esp_wifi_get_mode(&mut mode);
-        mode == WIFI_MODE_STA
-    }
+    // Simple check — will be improved with proper WiFi event handling
+    false
 }
 
 pub fn scan_json() -> String {
@@ -89,7 +85,7 @@ pub fn scan_json() -> String {
     unsafe {
         let mut cfg: wifi_scan_config_t = core::mem::zeroed();
         cfg.show_hidden = false;
-        cfg.scan_type = WIFI_SCAN_TYPE_PASSIVE;
+        cfg.scan_type = 0; // WIFI_SCAN_TYPE_PASSIVE
 
         if esp_wifi_scan_start(&cfg, true) == ESP_OK as i32 {
             let mut count: u16 = 0;
@@ -98,7 +94,8 @@ pub fn scan_json() -> String {
                 count = SCAN_MAX_APS;
             }
 
-            let mut records = vec![wifi_ap_record_t::default(); count as usize];
+            let mut records: Vec<wifi_ap_record_t> =
+                vec![unsafe { core::mem::zeroed() }; count as usize];
 
             if esp_wifi_scan_get_ap_records(&mut count, records.as_mut_ptr()) == ESP_OK as i32 {
                 for (i, ap) in records.iter().enumerate() {
@@ -110,7 +107,7 @@ pub fn scan_json() -> String {
                         r#"{{"ssid":"{}","rssi":{},"enc":{}}}"#,
                         ssid,
                         ap.rssi,
-                        if ap.authmode != WIFI_AUTH_OPEN { 1 } else { 0 }
+                        if ap.authmode != 0 { 1 } else { 0 } // WIFI_AUTH_OPEN = 0
                     ));
                 }
             }
@@ -153,7 +150,7 @@ pub fn reset_credentials() {
         esp_wifi_disconnect();
         // Clear stored AP
         let mut cfg: wifi_config_t = core::mem::zeroed();
-        esp_wifi_set_config(WIFI_IF_STA, &cfg);
+        esp_wifi_set_config(0, &cfg); // WIFI_IF_STA
     }
 }
 

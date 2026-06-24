@@ -7,11 +7,11 @@ use crate::boot;
 use crate::motor::hal;
 
 extern "C" {
-    fn dcc_init(pin: u8, mfr: u8, ver: u8, flags: u8);
-    fn dcc_process() -> u8;
-    fn dcc_get_cv(cv: u16) -> u8;
-    fn dcc_set_cv(cv: u16, value: u8) -> u8;
-    fn dcc_get_addr() -> u16;
+    pub fn dcc_init(pin: u8, mfr: u8, ver: u8, flags: u8);
+    pub fn dcc_process() -> u8;
+    pub fn dcc_get_cv(cv: u16) -> u8;
+    pub fn dcc_set_cv(cv: u16, value: u8) -> u8;
+    pub fn dcc_get_addr() -> u16;
 }
 
 pub fn setup() {
