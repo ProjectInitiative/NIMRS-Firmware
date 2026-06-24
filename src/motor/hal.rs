@@ -44,12 +44,12 @@ impl MotorHalInner {
             xStreamBufferGenericCreate(4096, core::mem::size_of::<f32>() as u32, 0)
         };
 
-        adc1_config_width(ADC_WIDTH_BIT_12);
-        adc1_config_channel_atten(ADC1_CHANNEL_5, ADC_ATTEN_DB_12);
+        adc1_config_width(3); // ADC_WIDTH_BIT_12
+        adc1_config_channel_atten(5, 3); // ADC1_CHANNEL_5, ADC_ATTEN_DB_12
 
         let mut tc: mcpwm_timer_config_t = core::mem::zeroed();
         tc.group_id = 0;
-        tc.clk_src = mcpwm_timer_clock_source_t_MCPWM_TIMER_CLK_SRC_DEFAULT;
+        tc.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
         tc.resolution_hz = 1_000_000;
         tc.count_mode = mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP_DOWN;
         tc.period_ticks = 25;
@@ -64,7 +64,7 @@ impl MotorHalInner {
         check(mcpwm_operator_connect_timer(oper, timer));
 
         let mut cc: mcpwm_comparator_config_t = core::mem::zeroed();
-        cc.flags.set_update_cmp_on_tez(true);
+        cc.flags.set_update_cmp_on_tez(1);
         let mut ca = core::ptr::null_mut();
         let mut cb = core::ptr::null_mut();
         check(mcpwm_new_comparator(oper, &cc as *const _, &mut ca));
@@ -255,7 +255,7 @@ impl MotorHalInner {
                 nbytes,
                 0,
             );
-            (received / core::mem::size_of::<f32>() as u32) as usize
+            (received as usize / core::mem::size_of::<f32>()) as usize
         }
     }
 }
@@ -293,7 +293,7 @@ unsafe extern "C" fn motor_hal_mcpwm_cb(
 ) -> bool {
     if let Some(ed) = unsafe { edata.as_ref() } {
         if ed.count_value == 0 {
-            let raw = unsafe { adc1_get_raw(ADC1_CHANNEL_5) };
+            let raw = unsafe { adc1_get_raw(5) }; // ADC1_CHANNEL_5
             let val = raw as f32;
             if let Some(h) = MOTOR_HAL.get() {
                 h.last_current_adc

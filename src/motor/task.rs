@@ -6,7 +6,7 @@ use nimrs_core::motor::bemf::BemfEstimator;
 use nimrs_core::motor::dsp::EmaFilter;
 use nimrs_core::motor::ripple::RippleDetector;
 
-use super::hal::MotorHal;
+use super::hal;
 
 static MOTOR_TASK: OnceLock<Mutex<MotorTaskInner>> = OnceLock::new();
 
@@ -125,9 +125,8 @@ impl MotorTaskInner {
     }
 
     fn process_tick(&mut self) {
-        let hal = MotorHal::get_instance();
-        let scalar = hal.get_current_scalar();
-        let samples = hal.get_adc_samples(&mut self.adc_buffer);
+        let scalar = hal::get_current_scalar();
+        let samples = hal::get_adc_samples(&mut self.adc_buffer);
 
         let (avg_current, raw_max_adc, ripple_freq) = if samples > 0 {
             let mut sum_current = 0.0f32;
@@ -153,7 +152,7 @@ impl MotorTaskInner {
                 *s *= scalar;
             }
             self.ripple_detector
-                .process_buffer(&self.adc_buffer[..samples], hal.get_adc_sample_rate());
+                .process_buffer(&self.adc_buffer[..samples], hal::get_adc_sample_rate());
             let rfreq = self.ripple_detector.get_frequency();
 
             (avg, max_sample as u32, rfreq)
@@ -221,7 +220,7 @@ impl MotorTaskInner {
                     self.resistance_state = ResistanceState::Error;
                 }
             }
-            hal.set_duty(self.current_duty);
+            hal::set_duty(self.current_duty);
             self.status.current = avg_current;
             self.status.duty = self.current_duty;
             self.status.applied_voltage = 3.0;
@@ -231,7 +230,7 @@ impl MotorTaskInner {
             || self.resistance_state == ResistanceState::Error
         {
             self.current_duty = 0.0;
-            hal.set_duty(0.0);
+            hal::set_duty(0.0);
             if (now_ms - self.resistance_start_time) > 5000 {
                 self.resistance_state = ResistanceState::Idle;
             }
@@ -317,14 +316,14 @@ impl MotorTaskInner {
             self.current_duty = duty;
         }
 
-        hal.set_duty(self.current_duty);
+        hal::set_duty(self.current_duty);
 
         self.status.applied_voltage = self.track_voltage * self.current_duty.abs();
         self.status.current = avg_current;
         self.status.estimated_rpm = actual_rpm;
         self.status.ripple_freq = ripple_freq;
         self.status.stalled = low_speed_stall || self.estimator.is_stalled();
-        self.status.hardware_fault = hal.read_fault();
+        self.status.hardware_fault = hal::read_fault();
         self.status.is_moving = ripple_confirm;
         self.status.duty = self.current_duty;
         self.status.raw_adc = raw_max_adc;
@@ -360,23 +359,24 @@ pub fn start() {
     unsafe {
         let mut task_handle: TaskHandle_t = core::ptr::null_mut();
         extern "C" fn task_entry(param: *mut core::ffi::c_void) {
-            let mtx = param as *mut Mutex<MotorTaskInner>;
-            let mut last_wake = xTaskGetTickCount();
+            let mtx: &'static Mutex<MotorTaskInner> = unsafe { &*(param as *const Mutex<MotorTaskInner>) };
+            let mut last_wake = unsafe { xTaskGetTickCount() };
             loop {
-                xTaskDelayUntil(&mut last_wake, 20);
-                if let Ok(mut inner) = (*mtx).lock() {
+                unsafe { xTaskDelayUntil(&mut last_wake, 20) };
+                if let Ok(mut inner) = mtx.lock() {
                     inner.process_tick();
                 }
             }
         }
         static TASK_NAME: [u8; 10] = *b"MotorTask\0";
+        let task_ptr = MOTOR_TASK.get().unwrap() as *const Mutex<MotorTaskInner> as *mut core::ffi::c_void;
         xTaskCreatePinnedToCore(
             Some(task_entry),
-            TASK_NAME.as_ptr() as *const core::ffi::c_char,
+            TASK_NAME.as_ptr(),
             4096,
-            MOTOR_TASK.get() as *const _ as *mut core::ffi::c_void,
+            task_ptr,
             10,
-            &mut task_handle as *mut _,
+            &mut task_handle,
             1,
         );
     }
