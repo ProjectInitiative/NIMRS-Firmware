@@ -48,7 +48,7 @@ impl WifiManager {
     fn start_ap(&mut self) {
         unsafe {
             esp_wifi_stop();
-            esp_wifi_set_mode(WIFI_MODE_AP);
+            esp_wifi_set_mode(2); // WIFI_MODE_AP
             esp_wifi_start();
         }
         self.state = WifiState::ApMode;

@@ -21,7 +21,7 @@ impl HttpServer {
         let mut reg: httpd_uri_t = unsafe { core::mem::zeroed() };
         // Need to set up a basic handler to test
         let uri = b"/api/status\0";
-        reg.uri = uri.as_ptr() as *const i8;
+        reg.uri = uri.as_ptr();
         reg.method = 1;
         reg.handler = Some(status_handler);
         reg.user_ctx = core::ptr::null_mut();
@@ -45,11 +45,7 @@ impl Drop for HttpServer {
 unsafe extern "C" fn status_handler(req: *mut httpd_req_t) -> esp_err_t {
     let json = b"{\"status\":\"ok\"}\0";
     let ctype = b"application/json\0";
-    httpd_resp_set_type(req, ctype.as_ptr() as *const i8);
-    httpd_resp_send(
-        req,
-        json.as_ptr() as *const i8,
-        json.len() as isize - 1,
-    );
+    httpd_resp_set_type(req, ctype.as_ptr());
+    httpd_resp_send(req, json.as_ptr(), json.len() as isize - 1);
     ESP_OK
 }

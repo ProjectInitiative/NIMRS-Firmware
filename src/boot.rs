@@ -44,12 +44,12 @@ pub fn did_rollback() -> bool {
     unsafe {
         let mut handle: nvs_handle_t = 0;
         if nvs_open(
-            "bootloop\0".as_ptr() as *const i8,
+            "bootloop\0".as_ptr(),
             0,
             &mut handle,
         ) == ESP_OK as i32
         {
-            nvs_get_u8(handle, "rolledback\0".as_ptr() as *const i8, &mut val);
+            nvs_get_u8(handle, "rolledback\0".as_ptr(), &mut val);
             nvs_close(handle);
         }
     }
@@ -60,13 +60,13 @@ pub fn clear_rollback() {
     unsafe {
         let mut handle: nvs_handle_t = 0;
         if nvs_open(
-            "bootloop\0".as_ptr() as *const i8,
+            "bootloop\0".as_ptr(),
             1,
             &mut handle,
         ) == ESP_OK as i32
         {
-            nvs_set_u8(handle, "rolledback\0".as_ptr() as *const i8, 0);
-            nvs_set_u8(handle, "acknowledged\0".as_ptr() as *const i8, 1);
+            nvs_set_u8(handle, "rolledback\0".as_ptr(), 0);
+            nvs_set_u8(handle, "acknowledged\0".as_ptr(), 1);
             nvs_commit(handle);
             nvs_close(handle);
         }
