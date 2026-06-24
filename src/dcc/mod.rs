@@ -6,10 +6,6 @@ use nimrs_core::pinout;
 use crate::boot;
 use crate::motor::hal;
 
-// CV storage backed by NVS (namespace "cvs")
-use esp_idf_sys::*;
-use nimrs_core::cv;
-
 const NVS_NAMESPACE: &[u8] = b"cvs\0";
 
 fn nvs_write_cv(cv: u16, value: u8) {
@@ -71,32 +67,6 @@ pub fn setup() {
 
 pub fn loop_once() {
     // DCC processing — will read DCC packets from track pins via GPIO interrupt
-}
-
-pub fn setup() {
-    unsafe {
-        gpio_reset_pin(pinout::SUPERCAP_CTRL as i32);
-        gpio_set_direction(pinout::SUPERCAP_CTRL as i32, gpio_mode_t_GPIO_MODE_OUTPUT);
-        gpio_set_drive_capability(
-            pinout::SUPERCAP_CTRL as i32,
-            gpio_drive_cap_t_GPIO_DRIVE_CAP_3,
-        );
-
-        let sc_enable = dcc_get_cv(cv::SUPERCAP_ENABLE);
-        gpio_set_level(
-            pinout::SUPERCAP_CTRL as i32,
-            if sc_enable > 0 { 0 } else { 1 },
-        );
-
-        dcc_init(pinout::TRACK_LEFT_3V3, 13, 10, 0x02);
-        log::info!("DCC: Listening on pin {}", pinout::TRACK_LEFT_3V3);
-    }
-}
-
-pub fn loop_once() {
-    unsafe {
-        dcc_process();
-    }
 }
 
 #[no_mangle]
