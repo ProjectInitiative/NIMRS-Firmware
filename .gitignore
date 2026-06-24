@@ -14,7 +14,7 @@ tests/bin/
 
 # Local config (keep example tracked)
 config.h
-vendor/
+vendor/esp-idf-sys/
 arduino_data/
 Arduino/
 
