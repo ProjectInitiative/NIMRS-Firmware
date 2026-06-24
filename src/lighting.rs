@@ -33,7 +33,7 @@ impl LightingController {
         let functions = [false; 29];
         let direction = true;
 
-        let drive_output = |name: &str, pin: u8, f_map: u8, is_front: bool, is_rear: bool| {
+        let drive_output = |_name: &str, pin: u8, f_map: u8, is_front: bool, is_rear: bool| {
             let active = if f_map < 29 {
                 if f_map == 0 {
                     if functions[0] {

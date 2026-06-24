@@ -363,15 +363,16 @@ pub fn start() {
             let mtx = param as *mut Mutex<MotorTaskInner>;
             let mut last_wake = xTaskGetTickCount();
             loop {
-                vTaskDelayUntil(&mut last_wake, pdMS_TO_TICKS(20));
+                xTaskDelayUntil(&mut last_wake, 20);
                 if let Ok(mut inner) = (*mtx).lock() {
                     inner.process_tick();
                 }
             }
         }
+        static TASK_NAME: [u8; 10] = *b"MotorTask\0";
         xTaskCreatePinnedToCore(
             Some(task_entry),
-            b"MotorTask\0".as_ptr() as *const i8,
+            TASK_NAME.as_ptr() as *const core::ffi::c_char,
             4096,
             MOTOR_TASK.get() as *const _ as *mut core::ffi::c_void,
             10,
