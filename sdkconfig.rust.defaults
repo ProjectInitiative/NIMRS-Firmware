@@ -1,8 +1,7 @@
 # Override sdkconfig.defaults for Rust build
-# Use custom partition table for SPIFFS support
-CONFIG_PARTITION_TABLE_CUSTOM=y
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
-CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+# Use default TWO_OTA partition table (SPIFFS init will gracefully fail)
+CONFIG_PARTITION_TABLE_CUSTOM=n
+CONFIG_PARTITION_TABLE_TWO_OTA=y
 
 # Enable driver components for MCPWM, ADC, GPIO
 CONFIG_ESP_DRIVER_MCPWM_ENABLED=y
