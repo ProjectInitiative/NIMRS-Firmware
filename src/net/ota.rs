@@ -13,7 +13,7 @@ pub fn start_update() -> bool {
         let ret = esp_ota_begin(
             UPDATE_PARTITION,
             IMAGE_MAX_SIZE as usize,
-            &mut OTA_HANDLE as *mut _,
+            &raw mut OTA_HANDLE,
         );
         if ret != ESP_OK as i32 {
             log::error!("OTA: begin failed: {}", ret);

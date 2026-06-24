@@ -106,7 +106,7 @@ fn process_pulse(dt: u32) {
                         let len = PACKET_BYTE_IDX;
                         PACKET_BYTE_IDX = 0;
                         DECODER_STATE = DecoderState::Idle;
-                        decode_packet(&PACKET, len);
+                        decode_packet(&raw const PACKET, len);
                     }
                 } else {
                     // Invalid state
@@ -117,10 +117,11 @@ fn process_pulse(dt: u32) {
     }
 }
 
-fn decode_packet(packet: &[u8; 16], len: usize) {
+fn decode_packet(packet: *const [u8; 16], len: usize) {
     if len < 3 || len > 14 {
         return;
     }
+    let packet = unsafe { &*packet };
     // Byte 0: Address
     // Byte 1: Instruction (speed/direction/functions)
     // Byte 2+: Data
