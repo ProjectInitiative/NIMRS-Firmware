@@ -56,6 +56,15 @@ pub fn did_rollback() -> bool {
     val != 0
 }
 
+pub fn perform_factory_reset() {
+    // Reset CVs to defaults by calling notifyCVResetFactoryDefault
+    log::info!("!!! FACTORY RESET TRIGGERED !!!");
+    crate::dcc::notifyCVResetFactoryDefault();
+    log::info!("Factory Reset: Complete. Rebooting...");
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    unsafe { esp_idf_sys::esp_restart(); }
+}
+
 pub fn clear_rollback() {
     unsafe {
         let mut handle: nvs_handle_t = 0;

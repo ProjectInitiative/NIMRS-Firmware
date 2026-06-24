@@ -4,6 +4,8 @@ mod logger;
 mod boot;
 mod ota_overrides;
 mod net;
+mod dcc;
+mod audio;
 
 fn main() {
     esp_idf_sys::link_patches();

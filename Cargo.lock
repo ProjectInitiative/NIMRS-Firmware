@@ -818,6 +818,7 @@ dependencies = [
  "esp-idf-sys",
  "log",
  "nimrs-core",
+ "once_cell",
 ]
 
 [[package]]
