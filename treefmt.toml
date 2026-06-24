@@ -1,7 +1,7 @@
-[formatter.clang-format]
-command = "clang-format"
-options = ["-i"]
-includes = ["*.cpp", "*.h", "*.ino"]
+[formatter.rustfmt]
+command = "rustfmt"
+options = ["--edition", "2021"]
+includes = ["*.rs"]
 
 [formatter.prettier]
 command = "prettier"

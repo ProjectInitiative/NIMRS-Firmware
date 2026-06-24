@@ -1,4 +1,4 @@
-pub mod wifi;
+pub mod fs;
 pub mod http_server;
 pub mod ota;
-pub mod fs;
+pub mod wifi;

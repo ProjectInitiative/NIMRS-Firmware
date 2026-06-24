@@ -6,39 +6,25 @@ As an automated agent, you are operating in a hermetic development environment p
 
 The repository environment is automatically loaded via `direnv`. Ensure you have run `direnv allow` in the project root.
 
-All development commands are available directly in the devenv shell. If your shell is hooked via `direnv`, they are already in your PATH:
+All development commands are available directly in the devenv shell:
 
 | Command                       | Description                                             |
 | ----------------------------- | ------------------------------------------------------- |
-| `build-firmware`              | Build firmware via `idf.py build` (wrapper, C++)        |
+| `cargo build`                 | Build Rust firmware (dev, Xtensa target)                |
+| `cargo build --release`       | Build Rust firmware (release, optimized)                |
+| `cargo test`                  | Run unit tests (host target)                            |
+| `cargo clippy`                | Run Rust linter                                         |
+| `cargo fmt --check`           | Check Rust formatting                                   |
+| `cargo espflash flash`        | Build (release) + flash via USB-Serial                  |
+| `cargo espflash monitor`      | Flash + open serial monitor                             |
 | `upload-firmware <PORT\|IP>`  | Upload firmware via Serial or OTA                       |
 | `flash-all <PORT>`            | Flash bootloader + partition table + app via Serial     |
-| `flash-factory <PORT>`        | Erase entire flash then flash factory image             |
 | `erase-flash <PORT>`          | Wipe the entire chip                                    |
-| `reset-ota <PORT>`            | Erase OTA data partition to reset rollback state        |
 | `monitor-firmware <PORT\|IP>` | Monitor logs via Serial (miniterm) or WiFi (nimrs-logs) |
 | `nimrs-telemetry <IP>`        | Stream live motor debug data (WiFi)                     |
 | `nimrs-logs <IP>`             | Stream text logs (WiFi)                                 |
-| `motor-sim`                   | Run high-fidelity PID control loop simulation           |
-| `generate-api-docs`           | Generate API documentation at `docs/API.md`             |
-| `ci-ready`                    | Run formatting + tests + build to verify CI readiness   |
-| `agent-check`                 | **(REQUIRED)** Run ci-ready + check for merge conflicts |
-| `treefmt`                     | Format all code (C++, JSON, MD, Python, Nix)            |
-| `nix build`                   | Clean sandboxed build of the C++ firmware               |
-| `nix build .#rust-firmware`   | Sandboxed Rust firmware build                           |
-| `nix flake check`             | Run all checks (formatting, api-docs, tests)            |
-
-### Rust Commands
-
-| Command                          | Description                              |
-| -------------------------------- | ---------------------------------------- |
-| `cargo build`                    | Build Rust firmware (dev, Xtensa target) |
-| `cargo build --release`          | Build Rust firmware (release, optimized) |
-| `cargo test`                     | Run Rust unit tests (host target)        |
-| `cargo clippy`                   | Run Rust linter                          |
-| `cargo espflash flash`           | Build (release) + flash via USB-Serial   |
-| `cargo espflash monitor`         | Flash + open serial monitor              |
-| `nix build .#esp-rust-toolchain` | Build the Xtensa Rust toolchain FOD      |
+| `nix build`                   | Sandboxed Rust firmware build                           |
+| `nix flake check`             | Run all checks (formatting, tests, docs, build)         |
 
 Commands can also be run without direnv hooking:
 
@@ -64,13 +50,19 @@ This command enforces:
 
 **If `agent-check` fails, you are NOT finished. Resolve all errors before proceeding.**
 
-## Rust Migration Notes
+## Rust Firmware
 
-The project is undergoing a hybrid C++ → Rust migration (see `docs/rust-migration-feasibility.md`). During the transition:
+The firmware is now fully written in Rust. Key crates:
 
-- **`main/`** — Legacy C++ source tree (still the primary firmware)
-- **`src/`** — Rust source tree (Phase 0 spike, growing over time)
-- **`nix/esp-rust.nix`** — FOD for the Xtensa Rust toolchain (via `espup`)
-- **`.cargo/config.toml`** — Build target (`xtensa-esp32s3-espidf`), linker (`ldproxy`), `build-std`
+- **`nimrs-core`** (`crates/core/`) — Pure logic (DSP, BEMF, ripple, CV, pinout, context, web assets, audio assets)
+- **`nimrs-firmware`** (`src/`) — ESP-IDF binary (HAL, motor control, lighting, WiFi, HTTP, DCC, audio)
 
-The Xtensa Rust toolchain FOD (`nix build .#esp-rust-toolchain`) downloads ~500MB on first build. The first invocation will fail with a hash mismatch — copy the reported hash into `nix/esp-rust.nix` `outputHash`, then rebuild. After that, the toolchain is reproducibly cached.
+### Build Artifacts
+
+- `nix build` produces `result/nimrs-firmware` — ELF 32-bit LSB executable, Tensilica Xtensa
+- `cargo build --release` produces `target/xtensa-esp32s3-espidf/release/nimrs-firmware`
+
+### Testing
+
+- `cargo test -p nimrs-core` runs all pure-logic unit tests on the host target
+- Cross-compilation verification via `nix build .#rust-firmware` or `nix build`

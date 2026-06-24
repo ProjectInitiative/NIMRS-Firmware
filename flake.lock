@@ -1,37 +1,5 @@
 {
   "nodes": {
-    "arduino-indexes": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1782087827,
-        "narHash": "sha256-SDqKyiqRg0q1s9GjTk114U71YZQIiKd7MvOvcS9SByk=",
-        "owner": "bouk",
-        "repo": "arduino-indexes",
-        "rev": "4182e22ff390ee99edcbad700d48caf9fb2101ac",
-        "type": "github"
-      },
-      "original": {
-        "owner": "bouk",
-        "repo": "arduino-indexes",
-        "type": "github"
-      }
-    },
-    "arduino-nix": {
-      "locked": {
-        "lastModified": 1760702729,
-        "narHash": "sha256-wNtHhM2YyR+01mqNDCQjUscNOxkIbPbC8zsfpzFAeTg=",
-        "owner": "clerie",
-        "repo": "arduino-nix",
-        "rev": "2fe354b7eb0083ee76c8578446057eaffcbb2784",
-        "type": "github"
-      },
-      "original": {
-        "owner": "clerie",
-        "ref": "clerie/arduino-env",
-        "repo": "arduino-nix",
-        "type": "github"
-      }
-    },
     "cachix": {
       "inputs": {
         "devenv": [
@@ -421,8 +389,6 @@
     },
     "root": {
       "inputs": {
-        "arduino-indexes": "arduino-indexes",
-        "arduino-nix": "arduino-nix",
         "devenv": "devenv",
         "esp-dev": "esp-dev",
         "esp-idf-sys": "esp-idf-sys",

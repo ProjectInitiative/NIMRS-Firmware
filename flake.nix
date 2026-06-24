@@ -12,17 +12,6 @@
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
     esp-dev.url = "github:mirrexagon/nixpkgs-esp-dev";
 
-    # Arduino Indexes for arduino-nix
-    arduino-indexes = {
-      url = "github:bouk/arduino-indexes";
-      flake = false;
-    };
-
-    # Arduino Nix with Env patch
-    arduino-nix = {
-      url = "github:clerie/arduino-nix/clerie/arduino-env";
-    };
-
     # Vendored esp-idf-sys for Rust build
     esp-idf-sys = {
       url = "github:esp-rs/esp-idf-sys/v0.37.2";
@@ -271,39 +260,48 @@
             };
 
             default = pkgs.stdenv.mkDerivation {
-              pname = "nimrs-firmware";
-              version = "0.1.0";
+              name = "nimrs-firmware-rust";
               src = ./.;
               nativeBuildInputs = [
                 espIdfFull
-                setupProject
+                espRustToolchain
+                pkgs.llvmPackages.libclang
+                pkgs.ldproxy
+                pkgs.python3
+                pkgs.cmake
+                pkgs.ninja
+                pkgs.pkg-config
+                pkgs.git
               ];
-              IDF_TARGET = "esp32s3";
-
-              # Export paths for CMake and setup-project
-              LAMEJS_PATH = "${lamejs}";
-              ARDUINO_COMPONENTS_PATH = "${arduinoComponents}";
-              MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
-              NIMRS_DEPS_PATH = "${nimrsDeps}";
-              GIT_HASH = "${gitHash}";
-
-              configurePhase = ''
-                export HOME=$TMPDIR
-                setup-project
-              '';
+              dontConfigure = true;
               buildPhase = ''
-                export IDF_COMPONENT_MANAGER=1
-                export IDF_COMPONENT_MANAGER_OFFLINE=1
-                idf.py build
-                echo "=== Checking Firmware Size ==="
-                python3 tools/check_firmware_size.py build/nimrs-firmware.bin partitions.csv app0
+                export HOME=$TMPDIR
+                export IDF_PATH="${espIdfFull}"
+                export ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
+                export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
+                export MCU="esp32s3"
+                export GIT_SSL_CAINFO="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+
+                mkdir -p vendor
+                ln -s ${inputs.esp-idf-sys} vendor/esp-idf-sys
+
+                export CARGO_HOME=$TMPDIR/.cargo
+                mkdir -p $CARGO_HOME
+                cp -r ${cargoLock}/registry $CARGO_HOME/registry
+                cp ${cargoLock}/Cargo.lock Cargo.lock
+
+                cargo build --frozen --release --target xtensa-esp32s3-espidf --verbose 2>&1
               '';
               installPhase = ''
                 mkdir -p $out
-                cp build/nimrs-firmware.bin $out/
-                cp build/bootloader/bootloader.bin $out/
-                cp build/partition_table/partition-table.bin $out/
-                cp build/nimrs-firmware.elf $out/
+                if [ -f target/xtensa-esp32s3-espidf/release/nimrs-firmware ]; then
+                  cp target/xtensa-esp32s3-espidf/release/nimrs-firmware $out/
+                fi
+                if [ -f target/xtensa-esp32s3-espidf/release/nimrs-firmware.elf ]; then
+                  cp target/xtensa-esp32s3-espidf/release/nimrs-firmware.elf $out/
+                fi
+                ls -la $out/
               '';
             };
 

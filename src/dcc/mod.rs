@@ -18,10 +18,16 @@ pub fn setup() {
     unsafe {
         gpio_reset_pin(pinout::SUPERCAP_CTRL as i32);
         gpio_set_direction(pinout::SUPERCAP_CTRL as i32, gpio_mode_t_GPIO_MODE_OUTPUT);
-        gpio_set_drive_capability(pinout::SUPERCAP_CTRL as i32, gpio_drive_cap_t_GPIO_DRIVE_CAP_3);
+        gpio_set_drive_capability(
+            pinout::SUPERCAP_CTRL as i32,
+            gpio_drive_cap_t_GPIO_DRIVE_CAP_3,
+        );
 
         let sc_enable = dcc_get_cv(cv::SUPERCAP_ENABLE);
-        gpio_set_level(pinout::SUPERCAP_CTRL as i32, if sc_enable > 0 { 0 } else { 1 });
+        gpio_set_level(
+            pinout::SUPERCAP_CTRL as i32,
+            if sc_enable > 0 { 0 } else { 1 },
+        );
 
         dcc_init(pinout::TRACK_LEFT_3V3, 13, 10, 0x02);
         log::info!("DCC: Listening on pin {}", pinout::TRACK_LEFT_3V3);
@@ -29,17 +35,13 @@ pub fn setup() {
 }
 
 pub fn loop_once() {
-    unsafe { dcc_process(); }
+    unsafe {
+        dcc_process();
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn notifyDccSpeed(
-    addr: u16,
-    _addr_type: u8,
-    speed: u8,
-    dir: u8,
-    _steps: u8,
-) {
+pub extern "C" fn notifyDccSpeed(addr: u16, _addr_type: u8, speed: u8, dir: u8, _steps: u8) {
     let direction = dir != 0;
     let target_speed = if speed > 1 { speed } else { 0 };
     let mut state = SYSTEM_STATE.lock().unwrap();
@@ -60,16 +62,11 @@ pub extern "C" fn notifyDccSpeed(
 }
 
 #[no_mangle]
-pub extern "C" fn notifyDccFunc(
-    _addr: u16,
-    _addr_type: u8,
-    func_grp: u8,
-    func_state: u8,
-) {
+pub extern "C" fn notifyDccFunc(_addr: u16, _addr_type: u8, func_grp: u8, func_state: u8) {
     let base_index: u8 = match func_grp {
-        0 => 0, // FN_0_4
-        1 => 5, // FN_5_8
-        2 => 9, // FN_9_12
+        0 => 0,  // FN_0_4
+        1 => 5,  // FN_5_8
+        2 => 9,  // FN_9_12
         3 => 13, // FN_13_20
         4 => 21, // FN_21_28
         _ => return,
@@ -121,7 +118,10 @@ pub extern "C" fn notifyCVAck() {
 
     let sc_enable = unsafe { dcc_get_cv(cv::SUPERCAP_ENABLE) };
     unsafe {
-        gpio_set_level(pinout::SUPERCAP_CTRL as i32, if sc_enable > 0 { 0 } else { 1 });
+        gpio_set_level(
+            pinout::SUPERCAP_CTRL as i32,
+            if sc_enable > 0 { 0 } else { 1 },
+        );
     }
 }
 
@@ -130,7 +130,9 @@ pub extern "C" fn notifyCVResetFactoryDefault() {
     log::info!("DCC: Factory Reset");
     for def in nimrs_core::cv::CV_DEFS {
         if def.id != 8 {
-            unsafe { dcc_set_cv(def.id, def.default_value); }
+            unsafe {
+                dcc_set_cv(def.id, def.default_value);
+            }
         }
     }
 }

@@ -49,8 +49,12 @@ pub fn parse_header(buf: &[u8]) -> Result<WavInfo, WavError> {
             return Err(WavError::NoData);
         }
         let chunk_id = &buf[offset..offset + 4];
-        let chunk_size =
-            u32::from_le_bytes([buf[offset + 4], buf[offset + 5], buf[offset + 6], buf[offset + 7]]);
+        let chunk_size = u32::from_le_bytes([
+            buf[offset + 4],
+            buf[offset + 5],
+            buf[offset + 6],
+            buf[offset + 7],
+        ]);
 
         if chunk_id == b"data" {
             return Ok(WavInfo {
@@ -83,7 +87,8 @@ mod tests {
         header.extend_from_slice(&1u16.to_le_bytes());
         header.extend_from_slice(&channels.to_le_bytes());
         header.extend_from_slice(&sample_rate.to_le_bytes());
-        header.extend_from_slice(&(sample_rate * channels as u32 * (bits / 16) as u32).to_le_bytes());
+        header
+            .extend_from_slice(&(sample_rate * channels as u32 * (bits / 16) as u32).to_le_bytes());
         header.extend_from_slice(&(channels * (bits / 8)).to_le_bytes());
         header.extend_from_slice(&bits.to_le_bytes());
         header.extend_from_slice(b"data");
@@ -111,6 +116,9 @@ mod tests {
     fn test_unsupported_format() {
         let mut wav = make_wav_header(44100, 1, 16, 100);
         wav[20] = 3; // Change to unsupported format
-        assert!(matches!(parse_header(&wav), Err(WavError::UnsupportedFormat)));
+        assert!(matches!(
+            parse_header(&wav),
+            Err(WavError::UnsupportedFormat)
+        ));
     }
 }

@@ -43,12 +43,7 @@ pub fn did_rollback() -> bool {
     let mut val: u8 = 0;
     unsafe {
         let mut handle: nvs_handle_t = 0;
-        if nvs_open(
-            "bootloop\0".as_ptr(),
-            0,
-            &mut handle,
-        ) == ESP_OK as i32
-        {
+        if nvs_open("bootloop\0".as_ptr(), 0, &mut handle) == ESP_OK as i32 {
             nvs_get_u8(handle, "rolledback\0".as_ptr(), &mut val);
             nvs_close(handle);
         }
@@ -62,18 +57,15 @@ pub fn perform_factory_reset() {
     crate::dcc::notifyCVResetFactoryDefault();
     log::info!("Factory Reset: Complete. Rebooting...");
     std::thread::sleep(std::time::Duration::from_secs(1));
-    unsafe { esp_idf_sys::esp_restart(); }
+    unsafe {
+        esp_idf_sys::esp_restart();
+    }
 }
 
 pub fn clear_rollback() {
     unsafe {
         let mut handle: nvs_handle_t = 0;
-        if nvs_open(
-            "bootloop\0".as_ptr(),
-            1,
-            &mut handle,
-        ) == ESP_OK as i32
-        {
+        if nvs_open("bootloop\0".as_ptr(), 1, &mut handle) == ESP_OK as i32 {
             nvs_set_u8(handle, "rolledback\0".as_ptr(), 0);
             nvs_set_u8(handle, "acknowledged\0".as_ptr(), 1);
             nvs_commit(handle);

@@ -36,10 +36,7 @@ impl Mp3Decoder {
                 outbuf: *mut i16,
                 blockSize: i32,
             ) -> i32;
-            fn MP3GetLastFrameInfo(
-                handle: *mut core::ffi::c_void,
-                frameInfo: *mut MP3FrameInfo,
-            );
+            fn MP3GetLastFrameInfo(handle: *mut core::ffi::c_void, frameInfo: *mut MP3FrameInfo);
         }
 
         let mut bytes_left = input.len() as i32;

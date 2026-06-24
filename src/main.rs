@@ -1,11 +1,11 @@
-mod motor;
+mod audio;
+mod boot;
+mod dcc;
 mod lighting;
 mod logger;
-mod boot;
-mod ota_overrides;
+mod motor;
 mod net;
-mod dcc;
-mod audio;
+mod ota_overrides;
 
 fn main() {
     esp_idf_sys::link_patches();
