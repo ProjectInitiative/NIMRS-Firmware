@@ -8,7 +8,7 @@ impl FileManager {
         unsafe {
             let mut conf: esp_vfs_spiffs_conf_t = core::mem::zeroed();
             conf.base_path = b"/spiffs\0".as_ptr();
-            conf.partition_label = core::ptr::null();
+            conf.partition_label = b"spiffs\0".as_ptr();
             conf.max_files = 10;
             conf.format_if_mount_failed = false;
 

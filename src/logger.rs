@@ -12,8 +12,6 @@ static LOG_LINES: Lazy<Mutex<VecDeque<String>>> =
 static DATA_LINES: Lazy<Mutex<VecDeque<String>>> =
     Lazy::new(|| Mutex::new(VecDeque::with_capacity(MAX_DATA_LINES)));
 
-static CURRENT_LINE: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
-
 struct NimrsLogger;
 
 impl log::Log for NimrsLogger {

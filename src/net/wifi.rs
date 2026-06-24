@@ -41,10 +41,26 @@ impl WifiManager {
             let mut cfg: wifi_init_config_t = core::mem::zeroed();
             cfg.wifi_task_core_id = 0;
             esp_wifi_init(&cfg);
-            esp_wifi_set_mode(1); // WIFI_MODE_STA
-            esp_wifi_start();
+
+            let (ref ssid, ref pass) = CREDENTIALS.lock().unwrap().clone();
+            if !ssid.is_empty() {
+                let mut sta_cfg: wifi_config_t = core::mem::zeroed();
+                let ssid_bytes = ssid.as_bytes();
+                let pass_bytes = pass.as_bytes();
+                let len = ssid_bytes.len().min(32);
+                sta_cfg.sta.ssid[..len].copy_from_slice(&ssid_bytes[..len]);
+                let plen = pass_bytes.len().min(64);
+                sta_cfg.sta.password[..plen].copy_from_slice(&pass_bytes[..plen]);
+                esp_wifi_set_mode(1);
+                esp_wifi_set_config(0, &mut sta_cfg);
+                esp_wifi_start();
+                log::info!("WiFi: connecting to {}", ssid);
+            } else {
+                esp_wifi_set_mode(1);
+                esp_wifi_start();
+                log::info!("WiFi: no credentials, will fall back to AP");
+            }
         }
-        log::info!("WiFi: STA connecting...");
     }
 
     pub fn loop_once(&mut self) {

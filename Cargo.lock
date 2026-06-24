@@ -816,9 +816,11 @@ version = "0.1.0"
 dependencies = [
  "embuild",
  "esp-idf-sys",
+ "libc",
  "log",
  "nimrs-core",
  "once_cell",
+ "serde_json",
 ]
 
 [[package]]
