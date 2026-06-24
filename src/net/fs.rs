@@ -7,7 +7,7 @@ impl FileManager {
     pub fn init() -> bool {
         unsafe {
             let mut conf: esp_vfs_spiffs_conf_t = core::mem::zeroed();
-            conf.base_path = b"/spiffs\0".as_ptr() as *const i8;
+            conf.base_path = b"/spiffs\0".as_ptr();
             conf.partition_label = core::ptr::null();
             conf.max_files = 10;
             conf.format_if_mount_failed = false;
@@ -45,7 +45,7 @@ impl FileManager {
     pub fn list() -> Vec<String> {
         let mut files = Vec::new();
         unsafe {
-            let dir = libc::opendir(b"/spiffs\0".as_ptr() as *const i8);
+            let dir = libc::opendir(b"/spiffs\0".as_ptr());
             if !dir.is_null() {
                 loop {
                     let entry = libc::readdir(dir);
@@ -70,7 +70,7 @@ impl FileManager {
         let full = format!("{}{}", full, path);
         unsafe {
             let cpath = std::ffi::CString::new(full).unwrap();
-            let file = libc::fopen(cpath.as_ptr(), b"r\0".as_ptr() as *const i8);
+            let file = libc::fopen(cpath.as_ptr(), b"r\0".as_ptr());
             if !file.is_null() {
                 libc::fclose(file);
                 true
@@ -106,7 +106,7 @@ impl FileManager {
         let full = format!("{}{}", full, path);
         unsafe {
             let cpath = std::ffi::CString::new(full).unwrap();
-            let file = libc::fopen(cpath.as_ptr(), b"r\0".as_ptr() as *const i8);
+            let file = libc::fopen(cpath.as_ptr(), b"r\0".as_ptr());
             if file.is_null() {
                 return None;
             }
@@ -130,7 +130,7 @@ impl FileManager {
         let full = format!("{}{}", full, path);
         unsafe {
             let cpath = std::ffi::CString::new(full).unwrap();
-            let file = libc::fopen(cpath.as_ptr(), b"w\0".as_ptr() as *const i8);
+            let file = libc::fopen(cpath.as_ptr(), b"w\0".as_ptr());
             if file.is_null() {
                 return false;
             }

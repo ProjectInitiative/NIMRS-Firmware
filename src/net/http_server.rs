@@ -104,14 +104,14 @@ impl Drop for HttpServer {
 
 fn send_json(req: *mut httpd_req_t, json: &str) {
     unsafe {
-        httpd_resp_set_type(req, b"application/json\0".as_ptr() as *const i8);
-        httpd_resp_send(req, json.as_ptr() as *const i8, json.len() as isize);
+        httpd_resp_set_type(req, b"application/json\0".as_ptr());
+        httpd_resp_send(req, json.as_ptr(), json.len() as isize);
     }
 }
 
 fn send_text(req: *mut httpd_req_t, text: &str, _status: i32) {
     unsafe {
-        httpd_resp_send(req, text.as_ptr() as *const i8, text.len() as isize);
+        httpd_resp_send(req, text.as_ptr(), text.len() as isize);
     }
 }
 
@@ -122,22 +122,22 @@ fn millis() -> u32 {
 // --- Static handlers ---
 unsafe extern "C" fn static_index(req: *mut httpd_req_t) -> esp_err_t {
     let html = nimrs_core::net::webassets::INDEX_HTML;
-    httpd_resp_set_type(req, b"text/html\0".as_ptr() as *const i8);
-    httpd_resp_send(req, html.as_ptr() as *const i8, html.len() as isize);
+    httpd_resp_set_type(req, b"text/html\0".as_ptr());
+    httpd_resp_send(req, html.as_ptr(), html.len() as isize);
     ESP_OK
 }
 
 unsafe extern "C" fn static_style(req: *mut httpd_req_t) -> esp_err_t {
     let css = nimrs_core::net::webassets::STYLE_CSS;
-    httpd_resp_set_type(req, b"text/css\0".as_ptr() as *const i8);
-    httpd_resp_send(req, css.as_ptr() as *const i8, css.len() as isize);
+    httpd_resp_set_type(req, b"text/css\0".as_ptr());
+    httpd_resp_send(req, css.as_ptr(), css.len() as isize);
     ESP_OK
 }
 
 unsafe extern "C" fn static_app_js(req: *mut httpd_req_t) -> esp_err_t {
     let js = nimrs_core::net::webassets::APP_JS;
-    httpd_resp_set_type(req, b"application/javascript\0".as_ptr() as *const i8);
-    httpd_resp_send(req, js.as_ptr() as *const i8, js.len() as isize);
+    httpd_resp_set_type(req, b"application/javascript\0".as_ptr());
+    httpd_resp_send(req, js.as_ptr(), js.len() as isize);
     ESP_OK
 }
 
@@ -344,7 +344,7 @@ unsafe extern "C" fn api_logs_get(req: *mut httpd_req_t) -> esp_err_t {
         let mut val = [0i8; 64];
         if httpd_query_key_value(
             query.as_ptr(),
-            b"type\0".as_ptr() as *const i8,
+            b"type\0".as_ptr(),
             val.as_mut_ptr(),
             val.len() as u32,
         ) == ESP_OK
@@ -448,7 +448,7 @@ fn wifi_save_hostname(name: &str) {
     unsafe {
         let mut handle: nvs_handle_t = 0;
         if nvs_open(b"config\0".as_ptr(), 1, &mut handle) == ESP_OK as i32 {
-            nvs_set_str(handle, b"hostname\0".as_ptr(), name.as_ptr() as *const i8);
+            nvs_set_str(handle, b"hostname\0".as_ptr(), name.as_ptr());
             nvs_commit(handle);
             nvs_close(handle);
         }
@@ -478,8 +478,8 @@ unsafe extern "C" fn api_config_webauth(req: *mut httpd_req_t) -> esp_err_t {
         unsafe {
             let mut h: nvs_handle_t = 0;
             if nvs_open(b"config\0".as_ptr(), 1, &mut h) == ESP_OK as i32 {
-                nvs_set_str(h, b"web_user\0".as_ptr(), user.as_ptr() as *const i8);
-                nvs_set_str(h, b"web_pass\0".as_ptr(), pass.as_ptr() as *const i8);
+                nvs_set_str(h, b"web_user\0".as_ptr(), user.as_ptr());
+                nvs_set_str(h, b"web_pass\0".as_ptr(), pass.as_ptr());
                 nvs_commit(h);
                 nvs_close(h);
             }
@@ -567,6 +567,6 @@ unsafe extern "C" fn api_ota_update(req: *mut httpd_req_t) -> esp_err_t {
 
 // --- 404 ---
 unsafe extern "C" fn not_found_handler(req: *mut httpd_req_t) -> esp_err_t {
-    httpd_resp_send_err(req, 0x0019, b"Not Found\0".as_ptr() as *const i8);
+    httpd_resp_send_err(req, 0x0019, b"Not Found\0".as_ptr());
     ESP_OK
 }

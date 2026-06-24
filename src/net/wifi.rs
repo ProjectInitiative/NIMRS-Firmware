@@ -124,8 +124,8 @@ pub fn save_credentials(ssid: &str, pass: &str) {
     unsafe {
         let mut handle: nvs_handle_t = 0;
         if nvs_open(b"config\0".as_ptr(), 1, &mut handle) == ESP_OK as i32 {
-            nvs_set_str(handle, b"wifi_ssid\0".as_ptr(), ssid.as_ptr() as *const i8);
-            nvs_set_str(handle, b"wifi_pass\0".as_ptr(), pass.as_ptr() as *const i8);
+            nvs_set_str(handle, b"wifi_ssid\0".as_ptr(), ssid.as_ptr());
+            nvs_set_str(handle, b"wifi_pass\0".as_ptr(), pass.as_ptr());
             nvs_commit(handle);
             nvs_close(handle);
         }
