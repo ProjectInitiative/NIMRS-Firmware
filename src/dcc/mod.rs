@@ -6,12 +6,71 @@ use nimrs_core::pinout;
 use crate::boot;
 use crate::motor::hal;
 
-extern "C" {
-    pub fn dcc_init(pin: u8, mfr: u8, ver: u8, flags: u8);
-    pub fn dcc_process() -> u8;
-    pub fn dcc_get_cv(cv: u16) -> u8;
-    pub fn dcc_set_cv(cv: u16, value: u8) -> u8;
-    pub fn dcc_get_addr() -> u16;
+// CV storage backed by NVS (namespace "cvs")
+use esp_idf_sys::*;
+use nimrs_core::cv;
+
+const NVS_NAMESPACE: &[u8] = b"cvs\0";
+
+fn nvs_write_cv(cv: u16, value: u8) {
+    unsafe {
+        let mut handle: nvs_handle_t = 0;
+        if nvs_open(NVS_NAMESPACE.as_ptr(), 1, &mut handle) == ESP_OK as i32 {
+            let key = format!("cv{}\0", cv);
+            nvs_set_u8(handle, key.as_ptr(), value);
+            nvs_commit(handle);
+            nvs_close(handle);
+        }
+    }
+}
+
+fn nvs_read_cv(cv: u16) -> u8 {
+    let mut val: u8 = 0;
+    unsafe {
+        let mut handle: nvs_handle_t = 0;
+        if nvs_open(NVS_NAMESPACE.as_ptr(), 0, &mut handle) == ESP_OK as i32 {
+            let key = format!("cv{}\0", cv);
+            nvs_get_u8(handle, key.as_ptr(), &mut val);
+            nvs_close(handle);
+        }
+    }
+    val
+}
+
+pub fn dcc_get_cv(cv: u16) -> u8 {
+    let val = nvs_read_cv(cv);
+    if val == 0 {
+        cv::cv_default(cv)
+    } else {
+        val
+    }
+}
+
+pub fn dcc_set_cv(cv: u16, value: u8) -> u8 {
+    nvs_write_cv(cv, value);
+    value
+}
+
+pub fn setup() {
+    unsafe {
+        gpio_reset_pin(pinout::SUPERCAP_CTRL as i32);
+        gpio_set_direction(pinout::SUPERCAP_CTRL as i32, gpio_mode_t_GPIO_MODE_OUTPUT);
+        gpio_set_drive_capability(
+            pinout::SUPERCAP_CTRL as i32,
+            gpio_drive_cap_t_GPIO_DRIVE_CAP_3,
+        );
+
+        let sc_enable = dcc_get_cv(cv::SUPERCAP_ENABLE);
+        gpio_set_level(
+            pinout::SUPERCAP_CTRL as i32,
+            if sc_enable > 0 { 0 } else { 1 },
+        );
+        log::info!("DCC: setup complete");
+    }
+}
+
+pub fn loop_once() {
+    // DCC processing — will read DCC packets from track pins via GPIO interrupt
 }
 
 pub fn setup() {
