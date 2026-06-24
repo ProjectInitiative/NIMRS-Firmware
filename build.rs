@@ -86,9 +86,16 @@ fn shell_split(s: &str) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
     let mut in_quote = false;
+    let mut quote_char = '\0';
     for c in s.chars() {
         match c {
-            '"' => in_quote = !in_quote,
+            '\'' | '"' if !in_quote => {
+                in_quote = true;
+                quote_char = c;
+            }
+            c if in_quote && c == quote_char => {
+                in_quote = false;
+            }
             ' ' if !in_quote => {
                 if !current.is_empty() {
                     args.push(std::mem::take(&mut current));
