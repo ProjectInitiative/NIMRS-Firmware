@@ -1,11 +1,23 @@
-mod lighting;
 mod motor;
+mod lighting;
+mod logger;
+mod boot;
+mod ota_overrides;
+mod net;
 
 fn main() {
     esp_idf_sys::link_patches();
-    println!("NIMRS-Firmware (Rust) starting up...");
+    logger::init();
+    boot::check();
+    log::info!("NIMRS-Firmware (Rust) starting up...");
+
+    let mut wifi = net::wifi::WifiManager::new("NIMRS-Decoder");
+    wifi.begin_connect();
+
+    let _server = net::http_server::HttpServer::new();
+
     loop {
-        std::thread::sleep(std::time::Duration::from_secs(5));
-        println!("tick");
+        wifi.loop_once();
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
 }
