@@ -180,7 +180,7 @@ fn format_functions(fns: &[bool; 29]) -> String {
 // --- /api/control ---
 unsafe extern "C" fn api_control(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 256];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Body missing", 400);
         return ESP_OK;
@@ -239,7 +239,7 @@ unsafe extern "C" fn api_control(req: *mut httpd_req_t) -> esp_err_t {
 // --- /api/cv ---
 unsafe extern "C" fn api_cv(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 128];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Body missing", 400);
         return ESP_OK;
@@ -292,7 +292,7 @@ unsafe extern "C" fn api_cv_all_get(req: *mut httpd_req_t) -> esp_err_t {
 // --- /api/cv/all POST ---
 unsafe extern "C" fn api_cv_all_post(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 1024];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Body missing", 400);
         return ESP_OK;
@@ -337,19 +337,18 @@ unsafe extern "C" fn api_cv_defs(req: *mut httpd_req_t) -> esp_err_t {
 
 // --- /api/logs GET ---
 unsafe extern "C" fn api_logs_get(req: *mut httpd_req_t) -> esp_err_t {
-    let mut query = [0i8; 64];
-    let has_query =
-        httpd_req_get_url_query_str(req, query.as_mut_ptr(), query.len() as u32) == ESP_OK;
+    let mut query = [0u8; 64];
+    let has_query = httpd_req_get_url_query_str(req, query.as_mut_ptr(), query.len()) == ESP_OK;
     let filter = if has_query {
-        let mut val = [0i8; 64];
+        let mut val = [0u8; 64];
         if httpd_query_key_value(
             query.as_ptr(),
             b"type\0".as_ptr(),
             val.as_mut_ptr(),
-            val.len() as u32,
+            val.len(),
         ) == ESP_OK
         {
-            let s = std::ffi::CStr::from_ptr(val.as_ptr())
+            let s = std::ffi::CStr::from_ptr(val.as_ptr() as *const u8)
                 .to_string_lossy()
                 .into_owned();
             match s.as_str() {
@@ -377,7 +376,7 @@ unsafe extern "C" fn api_logs_delete(req: *mut httpd_req_t) -> esp_err_t {
 // --- /api/wifi/save ---
 unsafe extern "C" fn api_wifi_save(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 256];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Missing body", 400);
         return ESP_OK;
@@ -426,7 +425,7 @@ unsafe extern "C" fn api_wifi_scan(req: *mut httpd_req_t) -> esp_err_t {
 // --- /api/config/hostname ---
 unsafe extern "C" fn api_config_hostname(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 128];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Missing name", 400);
         return ESP_OK;
@@ -458,7 +457,7 @@ fn wifi_save_hostname(name: &str) {
 // --- /api/config/webauth ---
 unsafe extern "C" fn api_config_webauth(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 256];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Missing user or pass", 400);
         return ESP_OK;
@@ -532,7 +531,7 @@ unsafe extern "C" fn api_files_list(req: *mut httpd_req_t) -> esp_err_t {
 
 unsafe extern "C" fn api_files_delete(req: *mut httpd_req_t) -> esp_err_t {
     let mut buf = [0u8; 256];
-    let len = httpd_req_recv(req, buf.as_mut_ptr() as *mut i8, buf.len() as isize);
+    let len = httpd_req_recv(req, buf.as_mut_ptr(), buf.len());
     if len < 0 {
         send_text(req, "Missing path", 400);
         return ESP_OK;

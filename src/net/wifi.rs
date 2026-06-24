@@ -150,7 +150,7 @@ pub fn reset_credentials() {
         esp_wifi_disconnect();
         // Clear stored AP
         let mut cfg: wifi_config_t = core::mem::zeroed();
-        esp_wifi_set_config(0, &cfg); // WIFI_IF_STA
+        esp_wifi_set_config(0, &mut cfg); // WIFI_IF_STA
     }
 }
 
@@ -170,12 +170,7 @@ fn load_credentials() -> (String, String) {
                 && len > 0
             {
                 let mut buf = vec![0u8; len];
-                nvs_get_str(
-                    handle,
-                    b"wifi_ssid\0".as_ptr(),
-                    buf.as_mut_ptr() as *mut i8,
-                    &mut len,
-                );
+                nvs_get_str(handle, b"wifi_ssid\0".as_ptr(), buf.as_mut_ptr(), &mut len);
                 ssid = String::from_utf8_lossy(&buf[..len - 1]).into_owned();
             }
             if nvs_get_str(
@@ -187,12 +182,7 @@ fn load_credentials() -> (String, String) {
                 && len > 0
             {
                 let mut buf = vec![0u8; len];
-                nvs_get_str(
-                    handle,
-                    b"wifi_pass\0".as_ptr(),
-                    buf.as_mut_ptr() as *mut i8,
-                    &mut len,
-                );
+                nvs_get_str(handle, b"wifi_pass\0".as_ptr(), buf.as_mut_ptr(), &mut len);
                 pass = String::from_utf8_lossy(&buf[..len - 1]).into_owned();
             }
             nvs_close(handle);
