@@ -10,7 +10,7 @@ fn main() {
     // `cargo:rustc-link-arg-bins=` for the final binary.
     // The env var DEP_ESP_IDF_<LINK_ARGS_VAR> holds the propagated args.
     // embuild uses LINK_ARGS_VAR = "LINK_ARGS"
-    if let Ok(link_args) = std::env::var("DEP_ESP_IDF_LINK_ARGS") {
+    if let Ok(link_args) = std::env::var("DEP_ESP_IDF_EMBUILD_LINK_ARGS") {
         // The args are joined with spaces (unix-style by embuild's cli::join_unix_args)
         // We need to split them and emit each one as a separate cargo:rustc-link-arg-bins
         for arg in shell_split(&link_args) {
