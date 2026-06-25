@@ -15,8 +15,8 @@ All development commands are available directly in the devenv shell:
 | `cargo test`                  | Run unit tests (host target)                            |
 | `cargo clippy`                | Run Rust linter                                         |
 | `cargo fmt --check`           | Check Rust formatting                                   |
-| `cargo espflash flash`        | Build (release) + flash via USB-Serial                  |
-| `cargo espflash monitor`      | Flash + open serial monitor                             |
+| `espflash flash`              | Build (release) + flash via USB-Serial                  |
+| `espflash monitor`            | Flash + open serial monitor                             |
 | `upload-firmware <PORT\|IP>`  | Upload firmware via Serial or OTA                       |
 | `flash-all <PORT>`            | Flash bootloader + partition table + app via Serial     |
 | `erase-flash <PORT>`          | Wipe the entire chip                                    |

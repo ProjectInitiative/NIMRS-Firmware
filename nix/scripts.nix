@@ -1,9 +1,4 @@
-{
-  pkgs,
-  arduinoLibs,
-  nimrsDeps,
-  lamejs,
-}:
+{ pkgs }:
 
 let
   mkFormattingTools =
@@ -175,107 +170,9 @@ let
     python3 tools/generate_api_docs.py
   '';
 
-  setupProject = pkgs.writeShellScriptBin "setup-project" ''
-    set -e
-    echo "=== Setting up NIMRS-Firmware Project Environment ==="
-
-    # 0. Generate LameJs.h
-    echo "-> Generating LameJs.h..."
-    if [ -n "$LAMEJS_PATH" ] && [ -f "$LAMEJS_PATH" ]; then
-        mkdir -p main/src
-        python3 tools/generate_lamejs_header.py "$LAMEJS_PATH" "main/src/LameJs.h"
-    else
-        echo "Warning: LAMEJS_PATH not set or file not found. Skipping LameJs.h generation."
-    fi
-
-    # 1. Setup Component Symlinks
-    echo "-> Linking components from Nix store..."
-
-    # Link Arduino components
-    if [ -n "$ARDUINO_COMPONENTS_PATH" ]; then
-        if [ -L components ]; then rm components; fi
-        if [ -d components ]; then echo "Warning: components/ is a real directory, skipping link"; else
-            ln -sf "$ARDUINO_COMPONENTS_PATH" components
-            echo "   Linked components -> $ARDUINO_COMPONENTS_PATH"
-        fi
-    fi
-
-    # Link Managed components
-    if [ -n "$NIMRS_DEPS_PATH" ]; then
-        if [ -L managed_components ]; then rm managed_components; fi
-        if [ -d managed_components ]; then echo "Warning: managed_components/ is a real directory, skipping link"; else
-            ln -sf "$NIMRS_DEPS_PATH/managed_components" managed_components
-            echo "   Linked managed_components -> $NIMRS_DEPS_PATH/managed_components"
-        fi
-        
-        # Sync dependencies.lock
-        if [ -f "$NIMRS_DEPS_PATH/dependencies.lock" ]; then
-            cp -f "$NIMRS_DEPS_PATH/dependencies.lock" dependencies.lock
-            chmod u+w dependencies.lock
-            echo "   Synced dependencies.lock from Nix store"
-        fi
-    fi
-
-    # 2. Ensure config.h exists
-    echo "-> Checking config.h..."
-    if [ ! -f main/config.h ]; then
-        if [ -f config.example.h ]; then
-            cp config.example.h main/config.h
-        elif [ -f main/config.example.h ]; then
-            cp main/config.example.h main/config.h
-        fi
-    fi
-
-    echo "=== Setup Complete ==="
-  '';
-
-  # Build Firmware Script (Local Wrapper)
-  buildFirmware = pkgs.writeShellScriptBin "build-firmware" ''
-    set -e
-    # Run setup first
-    ${setupProject}/bin/setup-project
-
-    echo "=== Building Firmware (IDF) ==="
-    idf.py build
-
-    echo "=== Checking Firmware Size ==="
-    python3 tools/check_firmware_size.py build/nimrs-firmware.bin partitions.csv app0
-  '';
-
-  motorSim = pkgs.writeShellScriptBin "motor-sim" ''
-    set -e
-    echo "=== Compiling PID Simulator Harness ==="
-    g++ -o build/motor-sim \
-        -I main/src \
-        -I tests/mocks \
-        -I tests/simulator \
-        -DUNIT_TEST \
-        -DSKIP_MOCK_MOTOR_CONTROLLER \
-        tests/test_PID_Simulator.cpp \
-        tests/simulator/MotorSimulator.cpp \
-        tests/mocks/SimulatedMotorHal.cpp \
-        tests/mocks/mocks.cpp \
-        main/src/MotorTask.cpp \
-        main/src/BemfEstimator.cpp \
-        main/src/DspFilters.cpp \
-        main/src/RippleDetector.cpp \
-        main/src/Logger.cpp
-
-    echo "=== Running Simulation ==="
-    ./build/motor-sim | tee build/sim_results.txt
-
-    if [ -f "tools/plot_sim_results.py" ]; then
-        echo "=== Plotting Results ==="
-        python3 tools/plot_sim_results.py build/sim_results.txt
-    fi
-  '';
-
 in
 {
   inherit
-    setupProject
-    buildFirmware
-    motorSim
     nimrsLogs
     nimrsTelemetry
     ciReady

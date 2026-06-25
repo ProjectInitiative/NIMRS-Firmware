@@ -49,53 +49,15 @@
             sha256 = "1x3dxi4c7h9dv8akhb58h1s4y1yc0z7fd3d633yxnfvvb3i8blhm";
           };
 
-          # ---------------------------------------------------------
-          # Arduino Library Handling (Ported from arduino-nix context)
-          # ---------------------------------------------------------
-
-          # Setup overlays for arduino-nix
-          overlays = [
-            (inputs.arduino-nix.overlay)
-            (inputs.arduino-nix.mkArduinoPackageOverlay (inputs.arduino-indexes + "/index/package_index.json"))
-            (inputs.arduino-nix.mkArduinoPackageOverlay (
-              inputs.arduino-indexes + "/index/package_esp32_index.json"
-            ))
-            (inputs.arduino-nix.mkArduinoLibraryOverlay (inputs.arduino-indexes + "/index/library_index.json"))
-          ];
-
-          # Create pkgs with Arduino overlays
-          pkgsWithArduino = import pkgs.path { inherit system overlays; };
-
           # Extract git hash for versioning
           gitHash = self.rev or self.dirtyRev or "unknown";
 
-          # Get libraries from nix/common-libs.nix
-          arduinoLibs = import ./nix/common-libs.nix { inherit pkgsWithArduino pkgs; };
-
-          # Arduino components derivation
-          arduinoComponents = pkgs.callPackage ./nix/arduino-components.nix {
-            inherit arduinoLibs;
-          };
-
-          # The dependency derivation (vendored managed components)
-          nimrsDeps = pkgs.callPackage ./nix/dependencies.nix {
-            esp-idf = inputs.esp-dev.packages.${system}.esp-idf-full;
-          };
-
           # Import scripts
           scripts = pkgs.callPackage ./nix/scripts.nix {
-            inherit
-              pkgs
-              arduinoLibs
-              nimrsDeps
-              lamejs
-              ;
+            inherit pkgs;
           };
 
           inherit (scripts)
-            setupProject
-            buildFirmware
-            motorSim
             nimrsLogs
             nimrsTelemetry
             ciReady
@@ -150,13 +112,13 @@
             '';
             outputHashAlgo = "sha256";
             outputHashMode = "recursive";
-            outputHash = "sha256-+IRFRtZSZ5xo4Jdugo1zzuj66UorgtCiSd5D+k1ko3M=";
+            outputHash = "sha256-RYjgx8Fb9rDU+EOYGBmIksM3dEpavBUkUWzWovZ8z7Y=";
           };
         in
         {
           packages = {
-            dependencies = nimrsDeps;
-            arduino-components = arduinoComponents;
+            # ESP-IDF (from esp-dev flake input)
+            esp-idf-full = espIdfFull;
 
             # Xtensa Rust toolchain (FOD — first build downloads ~500MB)
             "esp-rust-toolchain" = espRustToolchain;
@@ -348,44 +310,6 @@
 
           devenv.shells.default = {
             imports = [ ./devenv.nix ];
-
-            packages = [
-              espRustToolchain
-              espIdfFull
-              pkgs.ldproxy
-              setupProject
-              buildFirmware
-              motorSim
-            ]
-            ++ (mkFormattingTools pkgs)
-            ++ [
-              nimrsLogs
-              nimrsTelemetry
-              ciReady
-              agentCheck
-              uploadFirmware
-              monitorFirmware
-              flashAll
-              flashFactory
-              eraseFlash
-              resetOta
-              generateApiDocs
-              pkgs.python3
-              pkgs.esptool
-            ];
-
-            env = {
-              IDF_PATH = "${espIdfFull}";
-              LAMEJS_PATH = "${lamejs}";
-              ARDUINO_COMPONENTS_PATH = "${arduinoComponents}";
-              MANAGED_COMPONENTS_PATH = "${nimrsDeps}/managed_components";
-              NIMRS_DEPS_PATH = "${nimrsDeps}";
-              GIT_HASH = "${gitHash}";
-              ESP_IDF_TOOLS_INSTALL_DIR = "fromenv";
-              LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-              MCU = "esp32s3";
-            };
-
           };
 
           formatter = pkgs.nixfmt;

@@ -1,6 +1,68 @@
-{ pkgs, config, ... }:
+{
+  pkgs,
+  config,
+  inputs,
+  lib,
+  options,
+  ...
+}:
+let
+  system = pkgs.system;
+  espRustToolchain = pkgs.callPackage ./nix/esp-rust.nix {
+    inherit (pkgs) rustup;
+  };
+  espIdfFull =
+    (builtins.getFlake "github:mirrexagon/nixpkgs-esp-dev/5287d6e1ca9e15ebd5113c41b9590c468e1e001b")
+    .packages.${system}.esp-idf-full;
+  lamejs = pkgs.fetchurl {
+    url = "https://raw.githubusercontent.com/zhuker/lamejs/master/lame.min.js";
+    sha256 = "1x3dxi4c7h9dv8akhb58h1s4y1yc0z7fd3d633yxnfvvb3i8blhm";
+  };
+  scripts = pkgs.callPackage ./nix/scripts.nix { inherit pkgs; };
+
+  formattingTools = with pkgs; [
+    treefmt
+    clang-tools
+    prettier
+    nixfmt
+    black
+    shfmt
+    git
+  ];
+in
 {
   cachix.enable = false;
+
+  packages = [
+    espRustToolchain
+    pkgs.ldproxy
+    pkgs.espflash
+    pkgs.python3
+    pkgs.esptool
+  ]
+  ++ formattingTools
+  ++ [
+    scripts.nimrsLogs
+    scripts.nimrsTelemetry
+    scripts.ciReady
+    scripts.agentCheck
+    scripts.uploadFirmware
+    scripts.monitorFirmware
+    scripts.flashAll
+    scripts.flashFactory
+    scripts.eraseFlash
+    scripts.resetOta
+    scripts.generateApiDocs
+  ];
+
+  env = {
+    IDF_PATH = "${espIdfFull}";
+    LAMEJS_PATH = "${lamejs}";
+    GIT_HASH = if inputs.self ? rev then inputs.self.rev else "unknown";
+    ESP_IDF_TOOLS_INSTALL_DIR = "fromenv";
+    LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+    MCU = "esp32s3";
+  };
 
   enterShell = ''
         PATH="$IDF_PATH/tools:$PATH"
@@ -23,8 +85,8 @@
         echo "    nix build                   : Sandboxed Rust firmware build"
         echo ""
         echo "  FLASH & MONITOR"
-        echo "    cargo espflash flash        : Build + flash Rust firmware"
-        echo "    cargo espflash monitor      : Flash + open serial monitor"
+        echo "    espflash flash              : Build + flash Rust firmware"
+        echo "    espflash monitor            : Flash + open serial monitor"
         echo "    upload-firmware <PORT|IP>   : Upload via Serial or OTA"
         echo "    flash-all <PORT>            : Flash bootloader + partition + app"
         echo "    erase-flash <PORT>          : Wipe entire chip"
@@ -49,7 +111,7 @@
     echo "  cargo build                 : Build Rust firmware (dev)"
     echo "  cargo test                  : Run Rust unit tests (host)"
     echo "  cargo clippy                : Rust linter"
-    echo "  cargo espflash flash        : Build + flash Rust firmware"
+    echo "  espflash flash              : Build + flash Rust firmware"
     echo "  upload-firmware <PORT|IP>   : Upload via Serial or OTA"
     echo "  flash-all <PORT>            : Flash bootloader + partition + app"
     echo "  erase-flash <PORT>          : Wipe entire chip"
